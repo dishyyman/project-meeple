@@ -1,0 +1,1759 @@
+{
+  "waypoint": {
+    "schemaVersion": 1,
+    "title": "Waypoint Core Compendium",
+    "version": "0.1.0",
+    "updated": "2026-09-10",
+    "author": "Mikey"
+  },
+  "classes": [
+    {
+      "id": "class.barbarian",
+      "name": "Barbarian",
+      "desc": "description"
+    },
+    {
+      "id": "class.fighter",
+      "name": "Fighter",
+      "desc": "description"
+    },
+    {
+      "id": "class.knight",
+      "name": "Knight",
+      "desc": "description"
+    },
+    {
+      "id": "class.assassin",
+      "name": "Assassin",
+      "desc": "description"
+    },
+    {
+      "id": "class.monk",
+      "name": "Monk",
+      "desc": "description"
+    },
+    {
+      "id": "class.ranger",
+      "name": "Ranger",
+      "desc": "description"
+    },
+    {
+      "id": "class.elementalist",
+      "name": "Elementalist",
+      "desc": "description"
+    },
+    {
+      "id": "class.magician",
+      "name": "Magician",
+      "desc": "description"
+    },
+    {
+      "id": "class.occultist",
+      "name": "Occultist",
+      "desc": "description"
+    }
+  ],
+  "subclasses": [
+    {
+      "id": "subclass.the-beast",
+      "name": "The Beast",
+      "classId": "class.barbarian",
+      "hp": 15,
+      "wounds": 5,
+      "patches": 3,
+      "armorTypes": [
+        "Light",
+        "Medium",
+        "Heavy",
+        "Shields"
+      ],
+      "weaponTypes": [
+        "1H Melee",
+        "2H Melee"
+      ],
+      "startingMana": 10,
+      "manaPerLevel": 1,
+      "manaModel": "pool",
+      "roles": [
+        "Control",
+        "Burst Damage",
+        "Durability"
+      ],
+      "desc": "description"
+    },
+    {
+      "id": "subclass.primal",
+      "name": "Primal",
+      "classId": "class.barbarian",
+      "hp": 15,
+      "wounds": 4,
+      "patches": 3,
+      "armorTypes": [
+        "Light",
+        "Medium",
+        "Heavy",
+        "Shields"
+      ],
+      "weaponTypes": [
+        "1H Melee",
+        "2H Melee",
+        "1H Focus",
+        "2H Focus"
+      ],
+      "startingMana": 10,
+      "manaPerLevel": 2,
+      "manaModel": "pool",
+      "roles": [
+        "Damage over Time",
+        "Support",
+        "Durability"
+      ],
+      "desc": "description"
+    },
+    {
+      "id": "subclass.berserker",
+      "name": "Berserker",
+      "classId": "class.barbarian",
+      "hp": 15,
+      "wounds": 4,
+      "patches": 3,
+      "armorTypes": [
+        "Light",
+        "Medium",
+        "Heavy",
+        "Shields"
+      ],
+      "weaponTypes": [
+        "1H Melee",
+        "2H Melee"
+      ],
+      "startingMana": 10,
+      "manaPerLevel": 1,
+      "manaModel": "pool",
+      "roles": [
+        "Burst Damage",
+        "Sustained Damage",
+        "Mobility"
+      ],
+      "desc": "description"
+    },
+    {
+      "id": "subclass.the-jugg",
+      "name": "The Jugg",
+      "classId": "class.fighter",
+      "hp": 15,
+      "wounds": 4,
+      "patches": 4,
+      "armorTypes": [
+        "Light",
+        "Medium",
+        "Heavy",
+        "Shields"
+      ],
+      "weaponTypes": [
+        "1H Melee",
+        "2H Melee",
+        "1H Range",
+        "2H Range"
+      ],
+      "startingMana": 10,
+      "manaPerLevel": 1,
+      "manaModel": "pool",
+      "roles": [
+        "Damage over Time",
+        "Mobility",
+        "Durability"
+      ],
+      "desc": "description"
+    },
+    {
+      "id": "subclass.spellsword",
+      "name": "Spellsword",
+      "classId": "class.fighter",
+      "hp": 12,
+      "wounds": 4,
+      "patches": 4,
+      "armorTypes": [
+        "Light",
+        "Medium",
+        "Heavy",
+        "Shields"
+      ],
+      "weaponTypes": [
+        "1H Melee",
+        "2H Melee",
+        "1H Range",
+        "2H Range",
+        "1H Focus"
+      ],
+      "startingMana": 0,
+      "manaPerLevel": 0,
+      "manaModel": "generated",
+      "roles": [
+        "Support",
+        "Sustained Damage",
+        "Durability"
+      ],
+      "desc": "description",
+      "note": "Additional Note: the Spellsword's main mechanic is to generate Mana in combat by fight enemies. Mana can be spent to increase damage, heal targets, or cast Spells. The Spellsword can use any available weapon as a Focus for the sake of casting Spells. The Spellsword's abilities usually cost X Mana, X being an amount of Mana up to the total amount they have generated in combat."
+    },
+    {
+      "id": "subclass.paladin",
+      "name": "Paladin",
+      "classId": "class.knight",
+      "hp": 15,
+      "wounds": 4,
+      "patches": 6,
+      "armorTypes": [
+        "Light",
+        "Medium",
+        "Heavy",
+        "Shields"
+      ],
+      "weaponTypes": [
+        "1H Melee",
+        "2H Melee",
+        "1H Focus",
+        "2H Focus"
+      ],
+      "startingMana": 10,
+      "manaPerLevel": 2,
+      "manaModel": "pool",
+      "roles": [
+        "Burst Damage",
+        "Durability",
+        "Support"
+      ],
+      "desc": "description"
+    },
+    {
+      "id": "subclass.crusader",
+      "name": "Crusader",
+      "classId": "class.knight",
+      "hp": 15,
+      "wounds": 4,
+      "patches": 4,
+      "armorTypes": [
+        "Light",
+        "Medium",
+        "Heavy",
+        "Shields"
+      ],
+      "weaponTypes": [
+        "1H Melee",
+        "2H Melee",
+        "1H Range",
+        "2H Range",
+        "1H Focus"
+      ],
+      "startingMana": 10,
+      "manaPerLevel": 2,
+      "manaModel": "pool",
+      "roles": [
+        "Support",
+        "Durability",
+        "Control"
+      ],
+      "desc": "description"
+    },
+    {
+      "id": "subclass.death",
+      "name": "Death",
+      "classId": "class.knight",
+      "hp": 12,
+      "wounds": 4,
+      "patches": 5,
+      "armorTypes": [
+        "Light",
+        "Medium",
+        "Heavy",
+        "Shields"
+      ],
+      "weaponTypes": [
+        "1H Melee",
+        "2H Melee",
+        "1H Focus",
+        "2H Focus"
+      ],
+      "startingMana": 10,
+      "manaPerLevel": 2,
+      "manaModel": "pool",
+      "roles": [
+        "Burst Damage",
+        "Damage over Time",
+        "Durability"
+      ],
+      "desc": "description"
+    },
+    {
+      "id": "subclass.deadly",
+      "name": "Deadly",
+      "classId": "class.assassin",
+      "hp": 9,
+      "wounds": 4,
+      "patches": 4,
+      "armorTypes": [
+        "Light",
+        "Shields"
+      ],
+      "weaponTypes": [
+        "1H Melee",
+        "1H Range",
+        "2H Range"
+      ],
+      "startingMana": 10,
+      "manaPerLevel": 1,
+      "manaModel": "pool",
+      "roles": [
+        "Burst Damage",
+        "Burst Damage",
+        "Mobility"
+      ],
+      "desc": "description"
+    },
+    {
+      "id": "subclass.venomous",
+      "name": "Venomous",
+      "classId": "class.assassin",
+      "hp": 10,
+      "wounds": 4,
+      "patches": 4,
+      "armorTypes": [
+        "Light",
+        "Medium",
+        "Shields"
+      ],
+      "weaponTypes": [
+        "1H Melee",
+        "1H Range",
+        "2H Range"
+      ],
+      "startingMana": 10,
+      "manaPerLevel": 1,
+      "manaModel": "pool",
+      "roles": [
+        "Damage over Time",
+        "Sustained Damage",
+        "Mobility"
+      ],
+      "desc": "description"
+    },
+    {
+      "id": "subclass.scoundrel",
+      "name": "Scoundrel",
+      "classId": "class.assassin",
+      "hp": 12,
+      "wounds": 4,
+      "patches": 4,
+      "armorTypes": [
+        "Light",
+        "Medium",
+        "Shields"
+      ],
+      "weaponTypes": [
+        "1H Melee",
+        "1H Range",
+        "2H Range"
+      ],
+      "startingMana": 10,
+      "manaPerLevel": 1,
+      "manaModel": "pool",
+      "roles": [
+        "Control",
+        "Sustained Damage",
+        "Durability"
+      ],
+      "desc": "description"
+    },
+    {
+      "id": "subclass.the-master",
+      "name": "The Master",
+      "classId": "class.monk",
+      "hp": 15,
+      "wounds": 4,
+      "patches": 3,
+      "armorTypes": [
+        "Light",
+        "Medium"
+      ],
+      "weaponTypes": [
+        "1H Melee",
+        "2H Melee",
+        "1H Range",
+        "2H Range"
+      ],
+      "startingMana": 10,
+      "manaPerLevel": 1,
+      "manaModel": "pool",
+      "roles": [
+        "Sustained Damage",
+        "Durability",
+        "Control"
+      ],
+      "desc": "description"
+    },
+    {
+      "id": "subclass.ninja",
+      "name": "Ninja",
+      "classId": "class.monk",
+      "hp": 9,
+      "wounds": 4,
+      "patches": 4,
+      "armorTypes": [
+        "Light",
+        "Shields"
+      ],
+      "weaponTypes": [
+        "1H Melee",
+        "1H Range",
+        "2H Range"
+      ],
+      "startingMana": 10,
+      "manaPerLevel": 1,
+      "manaModel": "pool",
+      "roles": [
+        "Support",
+        "Control",
+        "Mobility"
+      ],
+      "desc": "description"
+    },
+    {
+      "id": "subclass.acolyte",
+      "name": "Acolyte",
+      "classId": "class.monk",
+      "hp": 12,
+      "wounds": 4,
+      "patches": 4,
+      "armorTypes": [
+        "Light",
+        "Medium",
+        "Shields"
+      ],
+      "weaponTypes": [
+        "1H Melee",
+        "1H Range",
+        "2H Range"
+      ],
+      "startingMana": 10,
+      "manaPerLevel": 2,
+      "manaModel": "pool",
+      "roles": [
+        "Damage over Time",
+        "Control",
+        "Support"
+      ],
+      "desc": "description"
+    },
+    {
+      "id": "subclass.marksman",
+      "name": "Marksman",
+      "classId": "class.ranger",
+      "hp": 9,
+      "wounds": 4,
+      "patches": 6,
+      "armorTypes": [
+        "Light",
+        "Medium",
+        "Heavy",
+        "Shields"
+      ],
+      "weaponTypes": [
+        "1H Melee",
+        "1H Range",
+        "2H Range"
+      ],
+      "startingMana": 10,
+      "manaPerLevel": 1,
+      "manaModel": "pool",
+      "roles": [
+        "Burst Damage",
+        "Sustained Damage",
+        "Mobility"
+      ],
+      "desc": "description"
+    },
+    {
+      "id": "subclass.druid",
+      "name": "Druid",
+      "classId": "class.ranger",
+      "hp": 12,
+      "wounds": 4,
+      "patches": 7,
+      "armorTypes": [
+        "Light",
+        "Medium",
+        "Shields"
+      ],
+      "weaponTypes": [
+        "1H Melee",
+        "1H Range",
+        "2H Range",
+        "1H Focus",
+        "2H Focus"
+      ],
+      "startingMana": 10,
+      "manaPerLevel": 2,
+      "manaModel": "pool",
+      "roles": [
+        "Control",
+        "Support",
+        "Durability"
+      ],
+      "desc": "description"
+    },
+    {
+      "id": "subclass.hunter",
+      "name": "Hunter",
+      "classId": "class.ranger",
+      "hp": 12,
+      "wounds": 4,
+      "patches": 6,
+      "armorTypes": [
+        "Light",
+        "Medium",
+        "Heavy",
+        "Shields"
+      ],
+      "weaponTypes": [
+        "1H Melee",
+        "1H Range",
+        "2H Range",
+        "1H Focus",
+        "2H Focus"
+      ],
+      "startingMana": 10,
+      "manaPerLevel": 1,
+      "manaModel": "pool",
+      "roles": [
+        "Mobility",
+        "Damage over Time",
+        "Sustained Damage"
+      ],
+      "desc": "description"
+    },
+    {
+      "id": "subclass.fire",
+      "name": "Fire",
+      "classId": "class.elementalist",
+      "hp": 12,
+      "wounds": 4,
+      "patches": 4,
+      "armorTypes": [
+        "Light",
+        "Medium",
+        "Heavy",
+        "Shields"
+      ],
+      "weaponTypes": [
+        "1H Melee",
+        "2H Melee",
+        "1H Range",
+        "2H Range",
+        "1H Focus",
+        "2H Focus"
+      ],
+      "startingMana": 10,
+      "manaPerLevel": 4,
+      "manaModel": "pool",
+      "roles": [
+        "Burst Damage",
+        "Mobility",
+        "Damage over Time"
+      ],
+      "desc": "description"
+    },
+    {
+      "id": "subclass.ice",
+      "name": "Ice",
+      "classId": "class.elementalist",
+      "hp": 9,
+      "wounds": 4,
+      "patches": 4,
+      "armorTypes": [
+        "Light",
+        "Shields"
+      ],
+      "weaponTypes": [
+        "1H Melee",
+        "2H Melee",
+        "1H Range",
+        "2H Range",
+        "1H Focus",
+        "2H Focus"
+      ],
+      "startingMana": 10,
+      "manaPerLevel": 4,
+      "manaModel": "pool",
+      "roles": [
+        "Burst Damage",
+        "Sustained Damage",
+        "Control"
+      ],
+      "desc": "description"
+    },
+    {
+      "id": "subclass.lightning",
+      "name": "Lightning",
+      "classId": "class.elementalist",
+      "hp": 12,
+      "wounds": 4,
+      "patches": 4,
+      "armorTypes": [
+        "Light",
+        "Medium",
+        "Shields"
+      ],
+      "weaponTypes": [
+        "1H Melee",
+        "2H Melee",
+        "1H Range",
+        "2H Range",
+        "1H Focus",
+        "2H Focus"
+      ],
+      "startingMana": 10,
+      "manaPerLevel": 4,
+      "manaModel": "pool",
+      "roles": [
+        "Sustained Damage",
+        "Sustained Damage",
+        "Mobility"
+      ],
+      "desc": "description"
+    },
+    {
+      "id": "subclass.chronomancy",
+      "name": "Chronomancy",
+      "classId": "class.magician",
+      "hp": 12,
+      "wounds": 4,
+      "patches": 4,
+      "armorTypes": [
+        "Light",
+        "Medium",
+        "Heavy",
+        "Shields"
+      ],
+      "weaponTypes": [
+        "1H Focus",
+        "2H Focus"
+      ],
+      "startingMana": 10,
+      "manaPerLevel": 4,
+      "manaModel": "pool",
+      "roles": [
+        "Support",
+        "Durability",
+        "Sustained Damage"
+      ],
+      "desc": "description"
+    },
+    {
+      "id": "subclass.duplicity",
+      "name": "Duplicity",
+      "classId": "class.magician",
+      "hp": 9,
+      "wounds": 4,
+      "patches": 4,
+      "armorTypes": [
+        "Light",
+        "Shields"
+      ],
+      "weaponTypes": [
+        "1H Melee",
+        "1H Focus",
+        "2H Focus"
+      ],
+      "startingMana": 10,
+      "manaPerLevel": 2,
+      "manaModel": "pool",
+      "roles": [
+        "Mobility",
+        "Mobility",
+        "Burst Damage"
+      ],
+      "desc": "description"
+    },
+    {
+      "id": "subclass.psychic",
+      "name": "Psychic",
+      "classId": "class.magician",
+      "hp": 10,
+      "wounds": 4,
+      "patches": 4,
+      "armorTypes": [
+        "Light",
+        "Medium",
+        "Shields"
+      ],
+      "weaponTypes": [
+        "1H Focus",
+        "2H Focus"
+      ],
+      "startingMana": 10,
+      "manaPerLevel": 4,
+      "manaModel": "pool",
+      "roles": [
+        "Damage over Time",
+        "Control",
+        "Sustained Damage"
+      ],
+      "desc": "description"
+    },
+    {
+      "id": "subclass.reaper",
+      "name": "Reaper",
+      "classId": "class.occultist",
+      "hp": 12,
+      "wounds": 4,
+      "patches": 4,
+      "armorTypes": [
+        "Light",
+        "Medium",
+        "Heavy",
+        "Shields"
+      ],
+      "weaponTypes": [
+        "1H Melee",
+        "2H Melee",
+        "1H Range",
+        "2H Range",
+        "1H Focus",
+        "2H Focus"
+      ],
+      "startingMana": 10,
+      "manaPerLevel": 4,
+      "manaModel": "pool",
+      "roles": [
+        "Burst Damage",
+        "Durability",
+        "Mobility"
+      ],
+      "desc": "description"
+    },
+    {
+      "id": "subclass.chaos",
+      "name": "Chaos",
+      "classId": "class.occultist",
+      "hp": 9,
+      "wounds": 4,
+      "patches": 4,
+      "armorTypes": [
+        "Light",
+        "Shields"
+      ],
+      "weaponTypes": [
+        "1H Melee",
+        "2H Melee",
+        "1H Range",
+        "2H Range",
+        "1H Focus",
+        "2H Focus"
+      ],
+      "startingMana": 10,
+      "manaPerLevel": 2,
+      "manaModel": "pool",
+      "roles": [
+        "Burst Damage",
+        "Burst Damage",
+        "Burst Damage"
+      ],
+      "desc": "description"
+    },
+    {
+      "id": "subclass.curses",
+      "name": "Curses",
+      "classId": "class.occultist",
+      "hp": 12,
+      "wounds": 4,
+      "patches": 4,
+      "armorTypes": [
+        "Light",
+        "Medium",
+        "Shields"
+      ],
+      "weaponTypes": [
+        "1H Melee",
+        "2H Melee",
+        "1H Range",
+        "2H Range",
+        "1H Focus",
+        "2H Focus"
+      ],
+      "startingMana": 10,
+      "manaPerLevel": 4,
+      "manaModel": "pool",
+      "roles": [
+        "Damage over Time",
+        "Damage over Time",
+        "Control"
+      ],
+      "desc": "description"
+    }
+  ],
+  "armor": [
+    {
+      "id": "armor.light",
+      "name": "Light Armor",
+      "type": "Armor",
+      "prof": "Light",
+      "armorMod": 0,
+      "evasionMod": 4,
+      "speedMod": 1,
+      "desc": "Boiled leather and quilted cloth. Trades protection for freedom of movement — the fastest and most evasive of the three.",
+      "source": "core"
+    },
+    {
+      "id": "armor.medium",
+      "name": "Medium Armor",
+      "type": "Armor",
+      "prof": "Medium",
+      "armorMod": 2,
+      "evasionMod": 2,
+      "speedMod": 0,
+      "desc": "Mail and scale over a padded gambeson. The middle road: real protection without surrendering agility.",
+      "source": "core"
+    },
+    {
+      "id": "armor.heavy",
+      "name": "Heavy Armor",
+      "type": "Armor",
+      "prof": "Heavy",
+      "armorMod": 4,
+      "evasionMod": 0,
+      "speedMod": -1,
+      "desc": "Full plate over mail. The most protection available, bought with speed and evasion.",
+      "source": "core"
+    }
+  ],
+  "weapons": [
+    {
+      "id": "weapon.1h-melee",
+      "name": "1H Melee",
+      "type": "Weapon",
+      "hands": 1,
+      "prof": "1H Melee",
+      "threat": 1,
+      "damage": "1d6",
+      "damageType": "Physical",
+      "weaponTags": [
+        "Super Heavy",
+        "Light",
+        "Loading",
+        "Reach"
+      ],
+      "examples": [
+        "Dagger",
+        "Shortsword",
+        "Axe",
+        "Mace",
+        "Flail",
+        "Spear"
+      ],
+      "desc": "A one-handed arm for close work. Every weapon of this class shares the same base damage, so the name is flavour and the stat line is the rule.",
+      "source": "core"
+    },
+    {
+      "id": "weapon.2h-melee",
+      "name": "2H Melee",
+      "type": "Weapon",
+      "hands": 2,
+      "prof": "2H Melee",
+      "threat": 1,
+      "damage": "2d8",
+      "damageType": "Physical",
+      "weaponTags": [
+        "Super Heavy",
+        "Light",
+        "Loading",
+        "Reach"
+      ],
+      "examples": [
+        "Greatsword",
+        "Greataxe",
+        "Maul",
+        "Halberd"
+      ],
+      "desc": "A two-handed arm swung with the whole body. Costs both hands, and pays for them in damage.",
+      "source": "core"
+    },
+    {
+      "id": "weapon.1h-range",
+      "name": "1H Range",
+      "type": "Weapon",
+      "hands": 1,
+      "prof": "1H Range",
+      "range": 5,
+      "damage": "1d4",
+      "damageType": "Physical",
+      "weaponTags": [
+        "Super Heavy",
+        "Light",
+        "Loading",
+        "Reach"
+      ],
+      "examples": [
+        "Hand Crossbow",
+        "Slingshot",
+        "Rock",
+        "Light Firearms"
+      ],
+      "desc": "A one-handed ranged arm. Leaves a hand free for a shield or a second weapon, at the cost of reach and damage.",
+      "source": "core"
+    },
+    {
+      "id": "weapon.2h-range",
+      "name": "2H Range",
+      "type": "Weapon",
+      "hands": 2,
+      "prof": "2H Range",
+      "range": 10,
+      "damage": "2d6",
+      "damageType": "Physical",
+      "weaponTags": [
+        "Super Heavy",
+        "Light",
+        "Loading",
+        "Reach"
+      ],
+      "examples": [
+        "Bow",
+        "Crossbow",
+        "Firearms"
+      ],
+      "desc": "A two-handed ranged arm. The longest reach available, and the reason to keep both hands on it.",
+      "source": "core"
+    },
+    {
+      "id": "weapon.1h-focus",
+      "name": "1H Focus",
+      "type": "Weapon",
+      "hands": 1,
+      "prof": "1H Focus",
+      "examples": [
+        "Wand",
+        "Amulet"
+      ],
+      "desc": "Spend 1 less Mana to cast a spell.",
+      "source": "core"
+    },
+    {
+      "id": "weapon.2h-focus",
+      "name": "2H Focus",
+      "type": "Weapon",
+      "hands": 2,
+      "prof": "2H Focus",
+      "examples": [
+        "Staff",
+        "Musical Instrument"
+      ],
+      "desc": "Increase the range of your spells according to their range type: Burst +1; Line +3; Cone +2; Range +3; Blast +1.",
+      "source": "core"
+    },
+    {
+      "id": "shield.armor",
+      "name": "Shield (Armor)",
+      "type": "Shield",
+      "hands": 1,
+      "prof": "Shields",
+      "armorMod": 2,
+      "evasionMod": 0,
+      "desc": "A heavy shield braced to turn blows aside rather than avoid them.",
+      "source": "core"
+    },
+    {
+      "id": "shield.evasion",
+      "name": "Shield (Evasion)",
+      "type": "Shield",
+      "hands": 1,
+      "prof": "Shields",
+      "armorMod": 0,
+      "evasionMod": 2,
+      "desc": "A light shield carried to deflect and slip aside rather than absorb.",
+      "source": "core"
+    },
+    {
+      "id": "shield.balanced",
+      "name": "Shield (Balanced)",
+      "type": "Shield",
+      "hands": 1,
+      "prof": "Shields",
+      "armorMod": 1,
+      "evasionMod": 1,
+      "desc": "A shield balancing bulk against handling, giving a little of both.",
+      "source": "core"
+    }
+  ],
+  "equipment": [
+    {
+      "id": "consumable.health-potion",
+      "name": "Health Potion",
+      "type": "Consumable",
+      "refill": "long-rest",
+      "desc": "Spend 1 AP and reset the HP of yourself or an adjacent creature.",
+      "source": "core"
+    },
+    {
+      "id": "consumable.mana-potion",
+      "name": "Mana Potion",
+      "type": "Consumable",
+      "refill": "long-rest",
+      "desc": "Spend 1 AP to drink the potion yourself or give it to an adjacent creature. The target restores half of their Max Mana pool.",
+      "source": "core"
+    },
+    {
+      "id": "consumable.acid-vial",
+      "name": "Acid Vial",
+      "type": "Consumable",
+      "refill": "long-rest",
+      "desc": "Use to melt through objects up to 5 feet by 5 feet. Can be thrown at a creature; on a hit, apply 5 Vulnerable to the creature.",
+      "source": "core"
+    },
+    {
+      "id": "consumable.fire-bomb",
+      "name": "Fire Bomb",
+      "type": "Consumable",
+      "refill": "long-rest",
+      "desc": "Use to catch a flammable object on fire in an instant, given the proper non-wet conditions. Can be thrown to damage an enemy and apply 5 Burn.",
+      "source": "core"
+    },
+    {
+      "id": "consumable.poison-vial",
+      "name": "Poison Vial",
+      "type": "Consumable",
+      "refill": "long-rest",
+      "desc": "If ingested, the creature gains 5 Poison. Spend 1 AP to coat your weapon with this poison. When attacks hit with that weapon, the target gains 1 Poison per hit.",
+      "source": "core"
+    },
+    {
+      "id": "consumable.big-als-lotion",
+      "name": "Big Al's Condition Smiter Lotion",
+      "type": "Consumable",
+      "refill": "short-rest",
+      "desc": "Spend 1 AP to drink this potion to remove all stacks of one unique Condition.",
+      "source": "core"
+    },
+    {
+      "id": "consumable.wide-als-lotion",
+      "name": "Wide Al's Condition Smiter Lotion",
+      "type": "Consumable",
+      "refill": "short-rest",
+      "desc": "Spend 1 AP to drink this potion to remove 1 stack of every Condition affecting you.",
+      "source": "core"
+    },
+    {
+      "id": "consumable.healers-field-kit",
+      "name": "Healer's Field Kit",
+      "type": "Consumable",
+      "refill": "long-rest",
+      "desc": "Spend it during a Short Rest to restore 1 Wound without spending a Patch.",
+      "source": "core"
+    },
+    {
+      "id": "consumable.holy-water",
+      "name": "Holy Water",
+      "type": "Consumable",
+      "refill": "long-rest",
+      "desc": "Spend 1 AP to drink and gain a buff or something.",
+      "source": "core"
+    },
+    {
+      "id": "consumable.featherfall-charm",
+      "name": "Featherfall Charm",
+      "type": "Consumable",
+      "refill": "long-rest",
+      "desc": "Spend 1 AP to activate this magical item to negate fall damage from any height as you drift down safely.",
+      "source": "core"
+    },
+    {
+      "id": "consumable.darkvision-tincture",
+      "name": "Darkvision Tincture",
+      "type": "Consumable",
+      "refill": "long-rest",
+      "desc": "Drink to see in total darkness until the end of the next skirmish.",
+      "source": "core"
+    },
+    {
+      "id": "gear.grappling-hook",
+      "name": "Grappling Hook",
+      "type": "Gear",
+      "desc": "Spend 1 AP to throw the grappling hook at an unoccupied space up to 4 spaces high and quickly pull yourself to that space.",
+      "tags": [
+        "climbing"
+      ],
+      "source": "core"
+    },
+    {
+      "id": "gear.climbing-rope",
+      "name": "Climbing Rope (50 ft)",
+      "type": "Gear",
+      "desc": "Climbable without a check on most surfaces; can bind, lower, or rig a pulley.",
+      "tags": [
+        "climbing"
+      ],
+      "source": "core"
+    },
+    {
+      "id": "gear.collapsible-pole",
+      "name": "Collapsible Pole",
+      "type": "Gear",
+      "desc": "Ordinarily this item is collapsed to the size of a pencil. It extends up to 20 ft to cross gaps or probe floors ahead for traps, among other uses. Has 10 HP and 10 Evasion.",
+      "tags": [
+        "climbing"
+      ],
+      "source": "core"
+    },
+    {
+      "id": "gear.piton-set",
+      "name": "Piton Set & Hammer",
+      "type": "Gear",
+      "desc": "Drive anchors into rock to make a sheer climb safe, removing fall risk on a failed check.",
+      "tags": [
+        "climbing"
+      ],
+      "source": "core"
+    },
+    {
+      "id": "gear.everburning-sprite",
+      "name": "Everburning Sprite",
+      "type": "Gear",
+      "desc": "Spend 1 AP to activate this ethereal sprite to float over your head and move with you, shedding light in an area of Burst 10. It is never consumed, but its glow can't be hidden while active. Spend 1 AP to diminish the flame and put the sprite away.",
+      "tags": [
+        "light"
+      ],
+      "source": "core"
+    },
+    {
+      "id": "gear.hooded-lantern",
+      "name": "Hooded Lantern",
+      "type": "Gear",
+      "desc": "Can be strapped to your shoulder to give light in an area of Cone 10. Can be shut off and on using 1 AP in combat.",
+      "tags": [
+        "light"
+      ],
+      "source": "core"
+    },
+    {
+      "id": "gear.mirage-spectacles",
+      "name": "Mirage Spectacles",
+      "type": "Gear",
+      "desc": "You can wear this pair of spectacles to ignore the Invisible condition on creatures.",
+      "tags": [
+        "scouting"
+      ],
+      "source": "core"
+    },
+    {
+      "id": "gear.tinderbox",
+      "name": "Tinderbox & Cloth",
+      "type": "Gear",
+      "desc": "Reliably start a fire in seconds without a check, even in poor conditions.",
+      "tags": [
+        "light"
+      ],
+      "source": "core"
+    },
+    {
+      "id": "gear.foldable-cover",
+      "name": "Foldable Cover",
+      "type": "Gear",
+      "desc": "Spend 2 AP to place this item, which takes up 2 by 1 Spaces and grants Hard Cover. This item has 25 HP and 10 Evasion.",
+      "tags": [
+        "battlefield"
+      ],
+      "source": "core"
+    },
+    {
+      "id": "gear.tent-of-concealment",
+      "name": "Tent of Concealment",
+      "type": "Gear",
+      "desc": "A camouflaged shelter of various shapes and sizes to fill all your party's needs; passersby are far less likely to notice your party's camp.",
+      "tags": [
+        "stealth"
+      ],
+      "source": "core"
+    },
+    {
+      "id": "gear.muffling-wraps",
+      "name": "Muffling Wraps",
+      "type": "Gear",
+      "desc": "Wrap boots and buckles to gain Advantage on moving unseen.",
+      "tags": [
+        "stealth"
+      ],
+      "source": "core"
+    },
+    {
+      "id": "gear.thieves-tools",
+      "name": "Thieves' Tools",
+      "type": "Gear",
+      "desc": "Required to pick locks and disarm mechanical traps.",
+      "tags": [
+        "entry"
+      ],
+      "source": "core"
+    },
+    {
+      "id": "gear.caltrop-bag",
+      "name": "Caltrop Bag",
+      "type": "Gear",
+      "desc": "Spend 1 AP to scatter caltrops in an area of Blast 1 within Range 5. The zone becomes dangerous terrain, dealing 1 Armor Piercing damage per Space a creature moves through it. The caltrops can be retrieved at the end of combat.",
+      "tags": [
+        "battlefield"
+      ],
+      "source": "core"
+    },
+    {
+      "id": "gear.disguise-wardrobe",
+      "name": "Magically Compact Disguise Wardrobe",
+      "type": "Gear",
+      "desc": "This small silver box fits in your pocket but contains a plethora of useful items. You can assemble a believable disguise from the contents, and it grants Advantage on checks concerning your disguise.",
+      "tags": [
+        "stealth"
+      ],
+      "source": "core"
+    },
+    {
+      "id": "gear.false-bottom-coffer",
+      "name": "False-Bottom Coffer",
+      "type": "Gear",
+      "desc": "Smuggle a small item past all but a thorough, deliberate search.",
+      "tags": [
+        "stealth"
+      ],
+      "source": "core"
+    },
+    {
+      "id": "gear.magical-wire-spool",
+      "name": "Magical Wire Spool",
+      "type": "Gear",
+      "desc": "String a tripline that warns you when a creature triggers the wire.",
+      "tags": [
+        "battlefield"
+      ],
+      "source": "core"
+    },
+    {
+      "id": "gear.cartographers-kit",
+      "name": "Cartographer's Kit",
+      "type": "Gear",
+      "desc": "Map as you explore; prevents getting lost in retraced ground and reveals patterns.",
+      "tags": [
+        "scouting"
+      ],
+      "source": "core"
+    },
+    {
+      "id": "gear.monster-bestiary",
+      "name": "Magical Monster Bestiary",
+      "type": "Gear",
+      "desc": "As a free action, recall the Vulnerabilities of a creature from the known world. This book magically updates itself as members of the magical society discover new Vulnerabilities, and someone is always studying. It may have limits when researching highly rare beings.",
+      "tags": [
+        "scouting"
+      ],
+      "source": "core"
+    },
+    {
+      "id": "gear.arcane-tuning-fork",
+      "name": "Arcane Tuning Fork",
+      "type": "Gear",
+      "desc": "Strike near stonework to detect hollow spaces, hidden doors, or unstable floors.",
+      "tags": [
+        "scouting"
+      ],
+      "source": "core"
+    },
+    {
+      "id": "gear.identifiers-magnifier",
+      "name": "Identifier's Magnifier",
+      "type": "Gear",
+      "desc": "Examine an item to learn its magical properties and its nature. However, it is highly deficient at determining whether something is cursed.",
+      "tags": [
+        "scouting"
+      ],
+      "source": "core"
+    },
+    {
+      "id": "gear.crowbar",
+      "name": "Crowbar",
+      "type": "Gear",
+      "desc": "Advantage on forcing doors, lids, and bars; doubles as an improvised weapon in a pinch.",
+      "tags": [
+        "entry"
+      ],
+      "source": "core"
+    },
+    {
+      "id": "gear.portable-ram",
+      "name": "Portable Ram",
+      "type": "Gear",
+      "desc": "You can use this item to breach a non-magically sealed barred door in a single forceful and loud action.",
+      "tags": [
+        "entry"
+      ],
+      "source": "core"
+    },
+    {
+      "id": "gear.eversearching-manacles",
+      "name": "Eversearching Manacles",
+      "type": "Gear",
+      "desc": "Throw these at a target to subdue them as the magical restraints hog-tie them. Restrained creatures cannot cast spells while tied up.",
+      "tags": [
+        "battlefield"
+      ],
+      "source": "core"
+    },
+    {
+      "id": "gear.door-jam",
+      "name": "Not Your Mom's Door Jam",
+      "type": "Gear",
+      "desc": "Magically jam a door from either side.",
+      "tags": [
+        "entry"
+      ],
+      "source": "core"
+    },
+    {
+      "id": "gear.spyglass",
+      "name": "Spyglass",
+      "type": "Gear",
+      "desc": "Scout ahead, gaining insight into your enemy before engaging.",
+      "tags": [
+        "scouting"
+      ],
+      "source": "core"
+    },
+    {
+      "id": "gear.talk-rock",
+      "name": "Talk Rock",
+      "type": "Gear",
+      "desc": "You can verbally speak into this rock and think of a creature. As long as they are on the same plane of existence as you, they hear your voice. For the next 10 seconds, the creature can verbally respond to your message and you will hear it.",
+      "tags": [
+        "sundry"
+      ],
+      "source": "core"
+    },
+    {
+      "id": "gear.bonding-resin",
+      "name": "Alchemist's Bonding Resin",
+      "type": "Gear",
+      "desc": "Glue two objects fast, or seal a breach; sets in seconds and holds under strain.",
+      "tags": [
+        "sundry"
+      ],
+      "source": "core"
+    }
+  ],
+  "skills": [
+    {
+      "id": "skill.hold-yer-liquor",
+      "name": "Hold Yer Liquor",
+      "category": "Body",
+      "desc": "You have an iron stomach and can hold your own and then some. This is but one example of your girthiness. Another is that you’ve taken enough hits to the face that you’ve stopped flinching. This positively impacts your ability to stave off disease, withstand extreme environments, and do party tricks like eating a nail."
+    },
+    {
+      "id": "skill.gentle-giant",
+      "name": "Gentle Giant",
+      "category": "Body",
+      "desc": "There’s strong and then there’s you. You’ve learned that sometimes the answer isn’t to pick the lock, it’s to remove the door. Perhaps even the best way through a door is to throw something heavy at it. Feats of raw power such as holding a door closed with a horde of zombies on the other side, lifting and moving objects of absurd weight, and even juggling your friends all fall within the wheelhouse of someone who treats boulders like a pebble."
+    },
+    {
+      "id": "skill.gymnast",
+      "name": "Gymnast",
+      "category": "Body",
+      "desc": "You jump and climb, and you keep doing it long after everyone else has stopped. Walls, cliffs, rooftops, rigging, open water, it's all just terrain that hasn't been crossed yet. You might be afraid of heights but that doesn't mean you can't get around quickly, whether that's threading a packed market at a dead sprint or crossing grassland ahead of raiders who know it better than you do. You never tire. You never stop. Never back down, never what?"
+    },
+    {
+      "id": "skill.do-a-flip",
+      "name": "Do a Flip",
+      "category": "Body",
+      "desc": "Perform a particularly dexterous feat such as \"doing a flip.\" This isn't just sticking a landing, although that's definitely in your normal wheelhouse, it's also about making it look like you know what you're doing when getting around or showing off with physical feats. Intentional acrobatics are your party trick. That same body control works when nobody's watching too: catching the vial before it hits the floor, throwing yourself clear of something too large to catch, or folding yourself out of manacles, a straitjacket, or a cell window that was never meant to fit a person. Tight spaces and bad timing are problems for people with normal joints."
+    },
+    {
+      "id": "skill.in-the-saddle",
+      "name": "In the Saddle",
+      "category": "Body",
+      "desc": "You and your mount have an understanding. Whether it’s a horse, a wyvern, or something considerably weirder, you’ve developed the instinct for how animals move and the body language to get them moving the way you need. Riding hard, staying mounted when things get sideways, or simply convincing a stubborn beast that you’re worth listening to, you’ve earned that trust. Maybe you look like one of them, watch out in mating season."
+    },
+    {
+      "id": "skill.move-unseen",
+      "name": "Move Unseen",
+      "category": "Sleight",
+      "desc": "Get somewhere in an extraordinarily sneaky manner as you’ve learned to cover your tracks and avoid all kinds of patrols."
+    },
+    {
+      "id": "skill.hat-trick",
+      "name": "Hat Trick",
+      "category": "Sleight",
+      "desc": "Whether it’s to obtain something that doesn’t quite belong to you, or for a simple card, your hands have mastered their ability to perform showy sleights without your target being the wiser. Keep in mind, you have innately quick fingers but your real skill is your aptitude for misdirection."
+    },
+    {
+      "id": "skill.quick-fingers",
+      "name": "Quick Fingers",
+      "category": "Sleight",
+      "desc": "Where hat tricks are about misleading viewers and your showmanship itself, this is about unfettered nimbleness and hand-eye coordination. Threading a lock, cutting a purse string, or swapping out a document before someone turns around are all in your domain. You little rascal, you."
+    },
+    {
+      "id": "skill.wear-a-face",
+      "name": "Wear a Face",
+      "category": "Sleight",
+      "desc": "You’ve proven adept at the skill of impersonation. A different walk, a borrowed accent, the practiced confidence of a station above your own or the cultivated invisibility of one below it. You don’t need a costume to disappear into a crowd, you just need a moment to decide who you’re going to be today."
+    },
+    {
+      "id": "skill.eye-for-forgery",
+      "name": "Eye for Forgery",
+      "category": "Sleight",
+      "desc": "You’ve developed an eye for the value and legitimacy of rare items. Due to your discerning eye, you can create believable forgeries. This includes deeds, titles, immigration papers, legal contracts, accounting numbers, and other boring things that might be made more interesting with your input. Additionally, when it comes to gems, artifacts, paintings, forged documents, suspiciously cheap armor, you can attempt to assess the worth of almost anything given a closer look."
+    },
+    {
+      "id": "skill.book-smarts",
+      "name": "Book Smarts",
+      "category": "Study",
+      "desc": "Due to the surplus of hours you've spent with your nose in a book, random facts, useful or useless, have been catalogued away for just the right time. You know about religions and the histories of all sorts of societies. You don't necessarily know every language from the day you hatched either, but you've become extensively cultured through the pages of books about the history of languages, and beyond your original tongue, you can speak, read, and understand most of them given enough time… Nerd."
+    },
+    {
+      "id": "skill.field-guide",
+      "name": "Field Guide",
+      "category": "Study",
+      "desc": "You know what's out there, what it eats, and whether it's supposed to be here. Creatures of all kinds, their habits, their nests, their anatomy, and which parts are worth cutting out afterward. The same goes for anything that grows: which mushroom is dinner, which one is a very bad afternoon. Sometimes the useful thing isn't knowing what something is, it's knowing that nothing like it has ever lived within a hundred miles of here."
+    },
+    {
+      "id": "skill.inventor",
+      "name": "Inventor",
+      "category": "Study",
+      "desc": "Your mind turns its gears to understand the way things work and this has made putting together creative mechanisms a common pastime for a tinkerer like yourself. Whether you’re mending a broken wagon or building a society-changing technology, you’re a natural."
+    },
+    {
+      "id": "skill.imbued",
+      "name": "Imbued",
+      "category": "Study",
+      "desc": "You’ve studied the academic side of magical craftsmanship, how enchantments work, what runes mean structurally, how a magical item was likely made and by whom. You can’t necessarily cast spells but you understand the architecture of magic as it exists in physical forms. Useful for figuring out what a mysterious item does, how to safely dismantle it, or in the right circumstances, how to make something magical yourself given the materials and time."
+    },
+    {
+      "id": "skill.alchemist",
+      "name": "Alchemist",
+      "category": "Study",
+      "desc": "You’ve learned the ways of the herb, you understand how to put together medicines that heal infections or to concoct vile poisons with effects only limited by your imagination, given the right ingredients are available, and that same knowledge doesn't abandon you when there's no table, no time, and someone bleeding out at your feet."
+    },
+    {
+      "id": "skill.path-less-taken",
+      "name": "Path Less Taken",
+      "category": "Study",
+      "desc": "You are good at navigating through the wilderness and surviving for weeks with only a yard of twine and two smooth stones. Paths you’ve walked once feel like your daily route. Retracing your steps and avoiding getting lost are your bread and butter. Maybe it was all those maps you memorized as a kid when you sat alone in the schoolyard, regardless, you know the land."
+    },
+    {
+      "id": "skill.keep-an-eye-out",
+      "name": "Keep an Eye Out",
+      "category": "Instinct",
+      "desc": "You’ve developed an instinct for the physical lay of the land, out in the wilderness and within the walls of the city. Entrances, exits, the guy near the door who’s a little too still, the table that’s bolted to the floor for no good reason, you’re particularly good at picking it up. It might even be to find a hidden passageway because of the dust formation on a frame or the covered tracks in the mud. What it means is up to you."
+    },
+    {
+      "id": "skill.something-in-the-air",
+      "name": "Something in the Air",
+      "category": "Instinct",
+      "desc": "You don't need a textbook to know when magic has been at work in a place, on a person, or inside an object. You feel it the way some people feel a change in weather — in your chest, behind your eyes, at the back of your teeth. You couldn't always explain how you know, and honestly you've stopped trying. Whether it's residual energy in a room where a spell was cast, the particular wrongness of a cursed item, or the shimmer of something that doesn't want to be found, you notice what others walk right past. Imbued tells you how magic was made. This tells you that it was there at all."
+    },
+    {
+      "id": "skill.bad-feeling",
+      "name": "I Got A Bad Feeling About This",
+      "category": "Instinct",
+      "desc": "Some things you just know about without being able to explain how. Gut feelings, bad vibes, a slight tremor in the ground, your intuition has been sharpened by experiences, loss, or something you don’t like talking about. Maybe you’re just old and have seen it all, but your gut tells you something ain’t right. Magic, though, somehow slips right past you… perhaps magic is more about Something in the Air."
+    },
+    {
+      "id": "skill.read-a-person",
+      "name": "Read a Person",
+      "category": "Instinct",
+      "desc": "You’ve become an excellent judge of character, either from age or being wronged so many times you’ve seen it all, you can read people to try to sniff out lies or to question the authenticity of their intentions, said or unsaid."
+    },
+    {
+      "id": "skill.presence",
+      "name": "Presence",
+      "category": "Influence",
+      "desc": "You’ve got a presence that hits before your fists do. A well placed shout matched with your intimidating stature has a way of making people reconsider their choices. Sometimes all you need is to stare as the vein pops in your forehead. This clearly isn’t charm either, it’s the physical weight of your existence as you clearly don’t need to prove anything to anyone in the room."
+    },
+    {
+      "id": "skill.silver-tongue",
+      "name": "Silver Tongue",
+      "category": "Influence",
+      "desc": "You have a way with words, which helps you to get your way in many situations. You have a likeable charm about you that gives you the edge when getting better prices on goods, gaining allies, or convincing someone to act particularly courageous or out of character."
+    },
+    {
+      "id": "skill.believable",
+      "name": "Believable",
+      "category": "Influence",
+      "desc": "You’re a scoundrel and people might know you’re lying but can’t help but wish you were telling the truth. It doesn’t matter what you’re wearing or where you’re caught, there’s always a chance that your words can get you out of a sticky situation. The stories you spin up often don’t feel too farfetched, regardless of how rationally farfetched they truly sound."
+    },
+    {
+      "id": "skill.natural-born-star",
+      "name": "Natural-Born Star",
+      "category": "Influence",
+      "desc": "When there’s a show you put on, whether it’s singing, dancing, or playing a tune, you have the je ne sais quoi. That something about you is what can draw a crowd as the eyes of your enamored fans are focused solely on you."
+    },
+    {
+      "id": "skill.high-brow",
+      "name": "High Brow",
+      "category": "Influence",
+      "desc": "You know about political corruption, its extent, and its purpose in the highest upper echelon of civilizations. You know the networks necessary to get the word out or get word on something you’re looking into from the most prominent figures in society."
+    },
+    {
+      "id": "skill.street-smarts",
+      "name": "Street Smarts",
+      "category": "Influence",
+      "desc": "Who needs those high brow aristocrats? As the people’s champ, you know the people that line the depth of the streets. You’ve built a genuine network among the riff raff of contacts, informants, neighbors, debtors, and as always, Ricard, who is basically the king of the dirt bags. You understand the way the world works and how to make the system work for you. If you need information, a favor, a safe place, you can always call on someone, and if no one answers, you’ll run into good ole Ricard probably."
+    },
+    {
+      "id": "skill.keep-it-together",
+      "name": "Keep It Together",
+      "category": "Influence",
+      "desc": "When things fall apart, as they usually do with a group of strangers on a mission to kill a god, someone has to hold the line. You’ve developed a steadiness under pressure that keeps panic at bay. It lets you make clear decisions when everything around you is on fire, literally and figuratively, and that calming presence can seep to others to even attempt to prevent mass hysteria."
+    }
+  ],
+  "traits": [
+    {
+      "id": "trait.barbarian-t0",
+      "name": "Barbarian Tier 0",
+      "tier": 0,
+      "grantedBy": "class.barbarian",
+      "desc": "Placeholder — the Tier 0 Trait every Barbarian receives on choosing the class has not been written yet."
+    },
+    {
+      "id": "trait.fighter-t0",
+      "name": "Fighter Tier 0",
+      "tier": 0,
+      "grantedBy": "class.fighter",
+      "desc": "Placeholder — the Tier 0 Trait every Fighter receives on choosing the class has not been written yet."
+    },
+    {
+      "id": "trait.knight-t0",
+      "name": "Knight Tier 0",
+      "tier": 0,
+      "grantedBy": "class.knight",
+      "desc": "Placeholder — the Tier 0 Trait every Knight receives on choosing the class has not been written yet."
+    },
+    {
+      "id": "trait.assassin-t0",
+      "name": "Assassin Tier 0",
+      "tier": 0,
+      "grantedBy": "class.assassin",
+      "desc": "Placeholder — the Tier 0 Trait every Assassin receives on choosing the class has not been written yet."
+    },
+    {
+      "id": "trait.monk-t0",
+      "name": "Monk Tier 0",
+      "tier": 0,
+      "grantedBy": "class.monk",
+      "desc": "Placeholder — the Tier 0 Trait every Monk receives on choosing the class has not been written yet."
+    },
+    {
+      "id": "trait.ranger-t0",
+      "name": "Ranger Tier 0",
+      "tier": 0,
+      "grantedBy": "class.ranger",
+      "desc": "Placeholder — the Tier 0 Trait every Ranger receives on choosing the class has not been written yet."
+    },
+    {
+      "id": "trait.elementalist-t0",
+      "name": "Elementalist Tier 0",
+      "tier": 0,
+      "grantedBy": "class.elementalist",
+      "desc": "Placeholder — the Tier 0 Trait every Elementalist receives on choosing the class has not been written yet."
+    },
+    {
+      "id": "trait.magician-t0",
+      "name": "Magician Tier 0",
+      "tier": 0,
+      "grantedBy": "class.magician",
+      "desc": "Placeholder — the Tier 0 Trait every Magician receives on choosing the class has not been written yet."
+    },
+    {
+      "id": "trait.occultist-t0",
+      "name": "Occultist Tier 0",
+      "tier": 0,
+      "grantedBy": "class.occultist",
+      "desc": "Placeholder — the Tier 0 Trait every Occultist receives on choosing the class has not been written yet."
+    },
+    {
+      "id": "trait.the-beast-t0",
+      "name": "The Beast Tier 0",
+      "tier": 0,
+      "grantedBy": "subclass.the-beast",
+      "desc": "Placeholder — the Tier 0 Trait a Barbarian receives on choosing The Beast has not been written yet."
+    },
+    {
+      "id": "trait.primal-t0",
+      "name": "Primal Tier 0",
+      "tier": 0,
+      "grantedBy": "subclass.primal",
+      "desc": "Placeholder — the Tier 0 Trait a Barbarian receives on choosing Primal has not been written yet."
+    },
+    {
+      "id": "trait.berserker-t0",
+      "name": "Berserker Tier 0",
+      "tier": 0,
+      "grantedBy": "subclass.berserker",
+      "desc": "Placeholder — the Tier 0 Trait a Barbarian receives on choosing Berserker has not been written yet."
+    },
+    {
+      "id": "trait.the-jugg-t0",
+      "name": "The Jugg Tier 0",
+      "tier": 0,
+      "grantedBy": "subclass.the-jugg",
+      "desc": "Placeholder — the Tier 0 Trait a Fighter receives on choosing The Jugg has not been written yet."
+    },
+    {
+      "id": "trait.spellsword-t0",
+      "name": "Spellsword Tier 0",
+      "tier": 0,
+      "grantedBy": "subclass.spellsword",
+      "desc": "Placeholder — the Tier 0 Trait a Fighter receives on choosing Spellsword has not been written yet."
+    },
+    {
+      "id": "trait.paladin-t0",
+      "name": "Paladin Tier 0",
+      "tier": 0,
+      "grantedBy": "subclass.paladin",
+      "desc": "Placeholder — the Tier 0 Trait a Knight receives on choosing Paladin has not been written yet."
+    },
+    {
+      "id": "trait.crusader-t0",
+      "name": "Crusader Tier 0",
+      "tier": 0,
+      "grantedBy": "subclass.crusader",
+      "desc": "Placeholder — the Tier 0 Trait a Knight receives on choosing Crusader has not been written yet."
+    },
+    {
+      "id": "trait.death-t0",
+      "name": "Death Tier 0",
+      "tier": 0,
+      "grantedBy": "subclass.death",
+      "desc": "Placeholder — the Tier 0 Trait a Knight receives on choosing Death has not been written yet."
+    },
+    {
+      "id": "trait.deadly-t0",
+      "name": "Deadly Tier 0",
+      "tier": 0,
+      "grantedBy": "subclass.deadly",
+      "desc": "Placeholder — the Tier 0 Trait an Assassin receives on choosing Deadly has not been written yet."
+    },
+    {
+      "id": "trait.venomous-t0",
+      "name": "Venomous Tier 0",
+      "tier": 0,
+      "grantedBy": "subclass.venomous",
+      "desc": "Placeholder — the Tier 0 Trait an Assassin receives on choosing Venomous has not been written yet."
+    },
+    {
+      "id": "trait.scoundrel-t0",
+      "name": "Scoundrel Tier 0",
+      "tier": 0,
+      "grantedBy": "subclass.scoundrel",
+      "desc": "Placeholder — the Tier 0 Trait an Assassin receives on choosing Scoundrel has not been written yet."
+    },
+    {
+      "id": "trait.the-master-t0",
+      "name": "The Master Tier 0",
+      "tier": 0,
+      "grantedBy": "subclass.the-master",
+      "desc": "Placeholder — the Tier 0 Trait a Monk receives on choosing The Master has not been written yet."
+    },
+    {
+      "id": "trait.ninja-t0",
+      "name": "Ninja Tier 0",
+      "tier": 0,
+      "grantedBy": "subclass.ninja",
+      "desc": "Placeholder — the Tier 0 Trait a Monk receives on choosing Ninja has not been written yet."
+    },
+    {
+      "id": "trait.acolyte-t0",
+      "name": "Acolyte Tier 0",
+      "tier": 0,
+      "grantedBy": "subclass.acolyte",
+      "desc": "Placeholder — the Tier 0 Trait a Monk receives on choosing Acolyte has not been written yet."
+    },
+    {
+      "id": "trait.marksman-t0",
+      "name": "Marksman Tier 0",
+      "tier": 0,
+      "grantedBy": "subclass.marksman",
+      "desc": "Placeholder — the Tier 0 Trait a Ranger receives on choosing Marksman has not been written yet."
+    },
+    {
+      "id": "trait.druid-t0",
+      "name": "Druid Tier 0",
+      "tier": 0,
+      "grantedBy": "subclass.druid",
+      "desc": "Placeholder — the Tier 0 Trait a Ranger receives on choosing Druid has not been written yet."
+    },
+    {
+      "id": "trait.hunter-t0",
+      "name": "Hunter Tier 0",
+      "tier": 0,
+      "grantedBy": "subclass.hunter",
+      "desc": "Placeholder — the Tier 0 Trait a Ranger receives on choosing Hunter has not been written yet."
+    },
+    {
+      "id": "trait.fire-t0",
+      "name": "Fire Tier 0",
+      "tier": 0,
+      "grantedBy": "subclass.fire",
+      "desc": "Placeholder — the Tier 0 Trait an Elementalist receives on choosing Fire has not been written yet."
+    },
+    {
+      "id": "trait.ice-t0",
+      "name": "Ice Tier 0",
+      "tier": 0,
+      "grantedBy": "subclass.ice",
+      "desc": "Placeholder — the Tier 0 Trait an Elementalist receives on choosing Ice has not been written yet."
+    },
+    {
+      "id": "trait.lightning-t0",
+      "name": "Lightning Tier 0",
+      "tier": 0,
+      "grantedBy": "subclass.lightning",
+      "desc": "Placeholder — the Tier 0 Trait an Elementalist receives on choosing Lightning has not been written yet."
+    },
+    {
+      "id": "trait.chronomancy-t0",
+      "name": "Chronomancy Tier 0",
+      "tier": 0,
+      "grantedBy": "subclass.chronomancy",
+      "desc": "Placeholder — the Tier 0 Trait a Magician receives on choosing Chronomancy has not been written yet."
+    },
+    {
+      "id": "trait.duplicity-t0",
+      "name": "Duplicity Tier 0",
+      "tier": 0,
+      "grantedBy": "subclass.duplicity",
+      "desc": "Placeholder — the Tier 0 Trait a Magician receives on choosing Duplicity has not been written yet."
+    },
+    {
+      "id": "trait.psychic-t0",
+      "name": "Psychic Tier 0",
+      "tier": 0,
+      "grantedBy": "subclass.psychic",
+      "desc": "Placeholder — the Tier 0 Trait a Magician receives on choosing Psychic has not been written yet."
+    },
+    {
+      "id": "trait.reaper-t0",
+      "name": "Reaper Tier 0",
+      "tier": 0,
+      "grantedBy": "subclass.reaper",
+      "desc": "Placeholder — the Tier 0 Trait an Occultist receives on choosing Reaper has not been written yet."
+    },
+    {
+      "id": "trait.chaos-t0",
+      "name": "Chaos Tier 0",
+      "tier": 0,
+      "grantedBy": "subclass.chaos",
+      "desc": "Placeholder — the Tier 0 Trait an Occultist receives on choosing Chaos has not been written yet."
+    },
+    {
+      "id": "trait.curses-t0",
+      "name": "Curses Tier 0",
+      "tier": 0,
+      "grantedBy": "subclass.curses",
+      "desc": "Placeholder — the Tier 0 Trait an Occultist receives on choosing Curses has not been written yet."
+    }
+  ]
+}

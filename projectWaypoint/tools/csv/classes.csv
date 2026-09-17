@@ -1,0 +1,10 @@
+id,name,desc
+class.barbarian,Barbarian,description
+class.fighter,Fighter,description
+class.knight,Knight,description
+class.assassin,Assassin,description
+class.monk,Monk,description
+class.ranger,Ranger,description
+class.elementalist,Elementalist,description
+class.magician,Magician,description
+class.occultist,Occultist,description
