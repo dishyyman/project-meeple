@@ -1,0 +1,336 @@
+    <!-- ================= CHARACTER SHEET ================= -->
+    <section class="screen screen--sheet sheet">
+      <div class="sheet__scroll">
+
+        <!-- ---------- CHARACTER TAB ---------- -->
+        <div class="tabpage tabpage--character">
+          <div class="hero">
+            <!-- The portrait itself. An <img> rather than a CSS background:
+                 it is content, so it gets alt text and the browser's own
+                 decoding. `src` is set by JS and removed when there is no
+                 photo, which is why no placeholder URL appears here. -->
+            <div class="hero__img">
+              <img class="hero__photo" data-portrait-img alt="">
+              <!-- Empty state. Sits dead centre of the hero because with no
+                   photo there is nothing else in that space competing for it. -->
+              <div class="portrait-empty">
+                <button class="portrait-drop" data-portrait-pick>
+                  <span class="portrait-drop__glyph" aria-hidden="true">
+                    <svg width="30" height="30" viewBox="0 0 30 30" fill="none"><rect x="3" y="6.5" width="24" height="18" rx="2.5" stroke="currentColor" stroke-width="1.8"/><circle cx="15" cy="15.5" r="4.6" stroke="currentColor" stroke-width="1.8"/><path d="M10.5 6.5 12 3.6h6l1.5 2.9" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
+                  </span>
+                  <span class="portrait-drop__label">Add a Portrait</span>
+                  <span class="portrait-drop__hint">Library, camera, or a file</span>
+                </button>
+                <p class="portrait-fail" data-bind="portraitError" data-portrait-error role="alert" hidden></p>
+              </div>
+              <!-- Progress + failure both report here so the hero never sits
+                   silent while a 5 MB photo is being re-encoded. -->
+              <div class="portrait-busy" aria-hidden="true"><span class="portrait-busy__spinner"></span></div>
+            </div>
+            <div class="hero__scrim"></div>
+            <button class="glass-btn hero__btn-home" data-nav="home" aria-label="Home">
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M3 9.2 10 3.5l7 5.7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M4.7 8.4V16h10.6V8.4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+            <button class="glass-btn glass-btn--menu hero__btn-menu" data-menu="open" aria-label="Menu">
+              <span></span><span></span><span></span>
+            </button>
+            <button class="glass-btn glass-btn--accent hero__btn-dice" data-action="roll" aria-label="Roll dice">
+              <span class="dice"><span></span><span></span><span></span><span></span><span></span></span>
+            </button>
+            <div class="hero__caption">
+              <div class="hero__name" data-bind="name"></div>
+              <div class="hero__meta" data-bind="meta"></div>
+            </div>
+          </div>
+
+          <div class="sheet__pad">
+            <!-- VITALS -->
+            <div class="vitals">
+              <span class="vitals__corner vitals__corner--tl"></span>
+              <span class="vitals__corner vitals__corner--tr"></span>
+              <span class="vitals__corner vitals__corner--bl"></span>
+              <span class="vitals__corner vitals__corner--br"></span>
+
+              <div class="vital" data-resource="health">
+                <div class="vital__head">
+                  <span class="eyebrow vital__label">Health</span>
+                  <span class="vital__value"><span data-bind="healthCur"></span> / <span data-bind="healthMax"></span></span>
+                </div>
+                <div class="vital__row">
+                  <button class="stepper" data-step="health:-1" aria-label="Health minus">−</button>
+                  <div class="vital__track" data-calc="health" data-cells="health"></div>
+                  <button class="stepper" data-step="health:1" aria-label="Health plus">+</button>
+                </div>
+              </div>
+
+              <div class="vital" data-resource="mana">
+                <div class="vital__head">
+                  <span class="eyebrow vital__label">Mana</span>
+                  <span class="vital__value"><span data-bind="manaCur"></span> / <span data-bind="manaMax"></span></span>
+                </div>
+                <div class="vital__row">
+                  <button class="stepper" data-step="mana:-1" aria-label="Mana minus">−</button>
+                  <div class="vital__track" data-calc="mana" data-cells="mana"></div>
+                  <button class="stepper" data-step="mana:1" aria-label="Mana plus">+</button>
+                </div>
+              </div>
+
+              <div class="wounds">
+                <span class="eyebrow wounds__label">Wounds</span>
+                <!-- Pips and their reset share a wrapper so the row keeps its
+                     label-left / controls-right split as pips come and go. The
+                     reset leads the pips, sitting just left of the first one. -->
+                <div class="wounds__controls">
+                  <button class="wounds__reset" data-wound-reset aria-disabled="true" aria-label="Clear all wounds" title="Clear all wounds">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M7.13 3.08A5 5 0 1 1 7.13 12.92"/>
+                      <path d="M9.10 15.00L7.13 12.92L9.69 11.65"/>
+                      <path d="M8.87 12.92A5 5 0 1 1 8.87 3.08"/>
+                      <path d="M6.90 1.00L8.87 3.08L6.31 4.35"/>
+                    </svg>
+                  </button>
+                  <div class="wounds__pips" data-cells="wounds"></div>
+                </div>
+              </div>
+
+              <!-- PATCHES — the Wound counter's other half. Wounds are what you
+                   have taken; Patches are what you have left to undo them with,
+                   so they read as one pair, sit together, and are counted the
+                   same way: tap a box to set how many you have left, exactly as
+                   tapping a Wound pip sets how many you have taken.
+
+                   TWO gestures, deliberately. A tap is BOOKKEEPING — it moves
+                   the number and touches nothing else, so a player correcting a
+                   miscount cannot accidentally heal themselves. A press-and-hold
+                   is the RULE — it opens the spend dialog, which resets HP and
+                   clears a Wound for you. The destructive-ish one is the one you
+                   have to mean, which is the same reason the dice roller puts
+                   "clear the whole expression" behind a hold and a single
+                   backspace on a tap.
+
+                   Each Patch is the same tally box a Wound pip is, holding a
+                   bare medical cross instead of the drawn med-kit case that
+                   used to sit in it. -->
+              <div class="patches">
+                <span class="eyebrow patches__label">Patches</span>
+                <div class="patches__boxes" data-cells="patches"></div>
+              </div>
+
+            </div>
+
+            <!-- COMBAT -->
+            <div class="combat-grid" data-list="combat"></div>
+
+            <!-- BOONS & CONDITIONS -->
+            <!-- Rows and the trailing "+" tile are both emitted by JS, so the
+                 tile always sits after however many effects are active. -->
+            <!-- The heading carries the clear-all, because that is the one
+                 action that applies to the whole list rather than to a row.
+                 Hidden while the list is empty: nothing to clear. -->
+            <div class="rule">
+              <span class="rule__label">✦ Boons &amp; Conditions ✦</span>
+              <button class="rule__action" data-effects-clear hidden>Clear all</button>
+            </div>
+            <div class="effects" data-list="effects"></div>
+
+            <!-- GEAR (summary) -->
+            <div class="rule"><span class="rule__label">✦ Gear ✦</span></div>
+            <div class="stack" data-list="gearSummary"></div>
+
+            <!-- ACTIONS — abilities and spells
+                 One section, two sub-lists. The heading is what these have in
+                 common: they are the things you spend an action on, which is
+                 why a cost line rather than a category is what each row leads
+                 with. They are split beneath it because at the table you reach
+                 for one kind or the other, not for whichever happens to be
+                 next in the list.
+
+                 Both sub-lists are hidden by default and revealed by
+                 renderContent() only if they have something in them — an
+                 empty "Spells" heading over blank space reads as a render
+                 that failed rather than as a character who knows no spells. -->
+            <div class="rule"><span class="rule__label">✦ Actions ✦</span></div>
+            <div data-block="abilities" hidden>
+              <div class="rule rule--sub"><span class="rule__label">Abilities</span></div>
+              <div class="stack" data-list="abilities"></div>
+            </div>
+            <div data-block="spells" hidden>
+              <div class="rule rule--sub"><span class="rule__label">Spells</span></div>
+              <div class="stack" data-list="spells"></div>
+            </div>
+            <div class="empty-note" data-block="abilitiesEmpty" hidden>No abilities or spells yet.</div>
+
+            <!-- TRAITS
+                 Granted by the class and subclass, never bought and never
+                 stored on the character — derived from the build, so this
+                 list is empty in the markup and filled by renderContent(). -->
+            <div class="rule"><span class="rule__label">✦ Traits ✦</span></div>
+            <div class="stack" data-list="traits"></div>
+
+            <!-- PASSIVES -->
+            <div class="rule"><span class="rule__label">✦ Passives ✦</span></div>
+            <div class="stack" data-list="passives"></div>
+          </div>
+        </div>
+
+        <!-- ---------- STATS TAB ---------- -->
+        <div class="tabpage tabpage--stats">
+          <div class="topbar topbar--between">
+            <button class="icon-btn icon-btn--back" data-nav="home" aria-label="Home">
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M3 9.2 10 3.5l7 5.7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M4.7 8.4V16h10.6V8.4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+            <h2 class="title">Stats</h2>
+            <button class="icon-btn icon-btn--menu" data-menu="open" aria-label="Menu"><span></span><span></span><span></span></button>
+          </div>
+          <div class="divider"></div>
+          <div class="sheet__pad">
+            <div class="rule"><span class="rule__label">✦ Attributes ✦</span></div>
+            <div class="stats-grid" data-list="stats"></div>
+            <!-- Skills are bought with points: 4 at creation, +1 per level.
+                 The count is a REPORT, not a gate — over-budget is flagged and
+                 still allowed, the same way untrained gear is. A skill's text
+                 describes the kind of action it covers rather than naming a
+                 fixed check, so the rows carry the full prose one tap in.
+
+                 Read-only here, category and rank included. Ranks are assigned
+                 in Edit Character, which is the only screen that sees the whole
+                 spread and can hold it to the four-skill rule. -->
+            <div class="rule">
+              <span class="rule__label">✦ Skills ✦</span>
+              <span class="rule__count" data-bind="skillPoints"></span>
+            </div>
+            <p class="note-line" data-bind="skillNote" hidden></p>
+            <div class="stack" data-list="skills"></div>
+            <!-- Shown by renderSkillBudget() only while a point is waiting to
+                 be spent, and hidden again the moment it is not: an add button
+                 that is always there promises a spend the budget cannot pay
+                 for. It opens the same editor the pen in Edit Character does —
+                 the box is the invitation, not a second way to edit. -->
+            <button class="btn-dashed" data-skill-edit data-skill-room hidden>
+              <span class="plus"></span><span>Add Skill</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- ---------- GEAR TAB ---------- -->
+        <div class="tabpage tabpage--gear">
+          <div class="topbar topbar--between">
+            <button class="icon-btn icon-btn--back" data-nav="home" aria-label="Home">
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M3 9.2 10 3.5l7 5.7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M4.7 8.4V16h10.6V8.4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+            <h2 class="title">Gear</h2>
+            <button class="icon-btn icon-btn--menu" data-menu="open" aria-label="Menu"><span></span><span></span><span></span></button>
+          </div>
+          <div class="divider"></div>
+          <div class="sheet__pad">
+            <!-- Weapons and shields share one budget: 2 hands worth of gear
+                 (guide, ch.4). Grouping them under a hand count is what makes
+                 the real choice — second weapon or shield — visible. Rows carry
+                 the name only; what a thing does lives one tap away. -->
+            <div class="rule">
+              <span class="rule__label">✦ Gear ✦</span>
+              <span class="rule__count" data-bind="handsCount"></span>
+            </div>
+            <div class="stack stack--tight" data-list="gearSlots"></div>
+            <button class="btn-dashed btn-dashed--sm" data-gear-add>
+              <span class="plus"></span><span>Add Gear</span>
+            </button>
+
+            <!-- Armour has its own slot and costs no hands, so it is kept
+                 apart from the budget above rather than listed inside it. -->
+            <div class="rule"><span class="rule__label">✦ Armor ✦</span></div>
+            <div class="stack stack--tight" data-list="armorSlot"></div>
+            <button class="btn-dashed btn-dashed--sm" data-armor-add>
+              <span class="plus"></span><span>Add Armor</span>
+            </button>
+
+            <div class="rule">
+              <span class="rule__label">✦ Equipment ✦</span>
+              <span class="rule__count" data-bind="equipCount"></span>
+            </div>
+            <div class="stack stack--tight" data-list="equipment"></div>
+            <button class="btn-dashed btn-dashed--sm" data-action="add-equipment">
+              <span class="plus"></span><span>Add Equipment</span>
+            </button>
+
+            <!-- Inventory: player-created items. Rows show the name only;
+                 tapping one opens the Backpack, where descriptions live. -->
+            <div class="rule">
+              <span class="rule__label">✦ Inventory ✦</span>
+              <button class="rule__add" data-inv-add aria-label="Add inventory item">+</button>
+            </div>
+            <div class="ledger" data-list="inventory"></div>
+          </div>
+        </div>
+
+        <!-- ---------- NOTES TAB ---------- -->
+        <div class="tabpage tabpage--notes">
+          <div class="topbar topbar--between">
+            <!-- Back, not Home: Notes has no seat on the tab bar and is only
+                 ever reached from the drawer, so leaving it means returning to
+                 the sheet rather than out of the character altogether. Plain
+                 data-tab, so the existing tab handler carries it. -->
+            <button class="icon-btn icon-btn--back" data-tab="character" aria-label="Back to character sheet">
+              <svg width="12" height="20" viewBox="0 0 12 20" fill="none" aria-hidden="true"><path d="M10 2 2 10l8 8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+            <h2 class="title">Notes</h2>
+            <button class="icon-btn icon-btn--menu" data-menu="open" aria-label="Menu"><span></span><span></span><span></span></button>
+          </div>
+          <div class="divider"></div>
+          <div class="sheet__pad">
+            <!-- Toolbar. Compose sits left of search because writing is the
+                 common act and searching only matters once notes exist. -->
+            <div class="notes-bar">
+              <button class="notes-bar__add" data-note-add aria-label="New note">+</button>
+              <div class="notes-search">
+                <svg class="notes-search__icon" width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                  <circle cx="7" cy="7" r="4.6" stroke="currentColor" stroke-width="1.5"/>
+                  <path d="M10.4 10.4 14 14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                </svg>
+                <input class="notes-search__input" type="search" data-note-search
+                       placeholder="Search notes…" aria-label="Search notes">
+              </div>
+            </div>
+
+            <!-- Composer. Lives at the top so writing never means scrolling
+                 past the whole journal, even though the saved note lands at
+                 the bottom of it. Serves new notes and edits alike. -->
+            <div class="note-form" data-note-form hidden>
+              <label class="field">
+                <span class="field__label">Title</span>
+                <input class="field__input" data-note-title type="text" maxlength="80" placeholder="Name this note…">
+              </label>
+              <label class="field">
+                <span class="field__label">Note <span class="field__optional">optional</span></span>
+                <textarea class="field__area note-form__area" data-note-body maxlength="4000"
+                          placeholder="Session notes, quest threads, names to remember…"></textarea>
+              </label>
+              <p class="field__error" data-note-error hidden>A note needs a title.</p>
+              <div class="form-actions">
+                <button class="btn-ghost" data-note-cancel>Cancel</button>
+                <button class="btn-save" data-note-save>Save</button>
+              </div>
+            </div>
+
+            <div class="ledger" data-list="notes"></div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- BOTTOM TAB BAR -->
+      <nav class="tabbar">
+        <button class="tabbar__btn" data-tab="character">
+          <svg width="22" height="22" viewBox="0 0 22 22" fill="none"><circle cx="11" cy="7" r="3.4" stroke="currentColor" stroke-width="1.8"/><path d="M4.5 18.5c0-3.6 3-6 6.5-6s6.5 2.4 6.5 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+          <span>Character</span>
+        </button>
+        <button class="tabbar__btn" data-tab="stats">
+          <svg width="22" height="22" viewBox="0 0 22 22"><rect x="3" y="12" width="3.6" height="7" rx="1" fill="currentColor"/><rect x="9.2" y="7" width="3.6" height="12" rx="1" fill="currentColor"/><rect x="15.4" y="3" width="3.6" height="16" rx="1" fill="currentColor"/></svg>
+          <span>Stats</span>
+        </button>
+        <button class="tabbar__btn" data-tab="gear">
+          <svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M8.2 5.5h5.6c1 0 1.8.9 1.7 1.9l-.8 9c-.12 1.4-1.3 2.5-2.7 2.5H9.9c-1.4 0-2.58-1.1-2.7-2.5l-.8-9c-.1-1 .7-1.9 1.7-1.9z"/><rect x="3.3" y="10.2" width="2.7" height="5.6" rx="1.3"/><rect x="16" y="10.2" width="2.7" height="5.6" rx="1.3"/><path d="M6.85 10.3c1.25 1 2.6 1.5 4.15 1.5s2.9-.5 4.15-1.5"/></svg>
+          <span>Gear</span>
+        </button>
+      </nav>
+    </section>

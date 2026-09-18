@@ -1,0 +1,105 @@
+    <!-- ================= CREATE CHARACTER =================
+         The six steps of character creation (player's guide, ch.2), one
+         panel per step. Which panel shows is decided by data-create-step
+         on .app, the same way views, tabs and modals already switch.
+
+         Almost every panel is empty here: its contents are the library —
+         nine classes, twenty-six subclasses, twenty-seven skills, the item
+         catalog — and none of that is known until library.js has loaded.
+         What IS in the markup is the frame that never changes: the rail,
+         the headings, and the footer that moves between steps. -->
+    <section class="screen screen--create">
+      <div class="topbar topbar--between">
+        <button class="icon-btn icon-btn--back" data-wiz="back" aria-label="Back a step">
+          <svg width="12" height="20" viewBox="0 0 12 20" fill="none"><path d="M10 2 2 10l8 8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <h2 class="title">Create Character</h2>
+        <button class="icon-btn icon-btn--close" data-wiz="cancel" aria-label="Cancel creation">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M1 1l12 12M13 1L1 13" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        </button>
+      </div>
+      <div class="divider"></div>
+
+      <!-- The rail is navigation, not decoration: every step you have already
+           reached is a button back to it. -->
+      <nav class="wizard__rail" data-list="wizRail" aria-label="Creation steps"></nav>
+
+      <div class="wizard__scroll">
+        <div class="sheet__pad">
+
+          <!-- STEP 1 — CHOOSE A CLASS -->
+          <div class="wizard__page" data-wiz-page="class">
+            <div class="rule"><span class="rule__label">&#10022; Choose a Class &#10022;</span></div>
+            <p class="wizard__lede">Nine classes across three families. Choosing one grants its Tier&nbsp;0 Trait. Tap a name to read it before you commit.</p>
+            <div data-list="wizClasses"></div>
+          </div>
+
+          <!-- STEP 2 — CHOOSE A SUBCLASS -->
+          <div class="wizard__page" data-wiz-page="subclass">
+            <div class="rule"><span class="rule__label">&#10022; Choose a Subclass &#10022;</span></div>
+            <!-- Returns to step 1 with the chosen class already open, so
+                 comparing two classes' subclasses is back, expand, continue. -->
+            <button class="wizard__chip" data-wiz="back">
+              <span class="wizard__chip-arrow">&#8249;</span>
+              <span data-bind="wizClassChip"></span>
+            </button>
+            <p class="wizard__lede">Your subclass grants a second Tier&nbsp;0 Trait, and sets your health, wounds, mana and what you are trained to carry.</p>
+            <div data-list="wizSubclasses"></div>
+          </div>
+
+          <!-- STEP 3 — ASSIGN ATTRIBUTE POINTS -->
+          <div class="wizard__page" data-wiz-page="attributes">
+            <div class="rule"><span class="rule__label">&#10022; Assign Attributes &#10022;</span></div>
+            <p class="wizard__lede">Every attribute starts at 0. You have four points to place, one point to an attribute at a time.</p>
+            <div class="wizard__budget" data-bind="wizAttrBudget"></div>
+            <div data-list="wizAttrs"></div>
+          </div>
+
+          <!-- STEP 4 — ASSIGN SKILL POINTS -->
+          <div class="wizard__page" data-wiz-page="skills">
+            <div class="rule"><span class="rule__label">&#10022; Assign Skills &#10022;</span></div>
+            <p class="wizard__lede">Four points, each worth&nbsp;+2, into four <em>different</em> skills. Later levels may stack onto these or open new ones.</p>
+            <div class="wizard__budget" data-bind="wizSkillBudget"></div>
+            <div data-list="wizSkills"></div>
+          </div>
+
+          <!-- STEP 5 — CHOOSE YOUR LOADOUT -->
+          <!-- Three accordions: hands, then armour, then adventuring gear.
+               Completing one opens the next, and every header stays tappable
+               to go back. All of it is painted by renderWizLoadout(), because
+               which section is open and how many slots each has are both
+               decided at runtime. -->
+          <div class="wizard__page" data-wiz-page="loadout">
+            <div class="rule"><span class="rule__label">&#10022; Choose Your Loadout &#10022;</span></div>
+            <p class="wizard__lede">Two hands&rsquo; worth of weapons and shields, armour your class is trained in, and three pieces of adventuring gear.</p>
+            <div data-list="wizLoadout"></div>
+          </div>
+
+          <!-- STEP 6 — DEFINE YOUR ORIGIN -->
+          <div class="wizard__page" data-wiz-page="origin">
+            <div class="rule"><span class="rule__label">&#10022; Define Your Origin &#10022;</span></div>
+            <label class="field">
+              <span class="field__label">Name</span>
+              <input class="field__input" data-wiz-name type="text" maxlength="60" placeholder="Who are you?">
+            </label>
+            <p class="field__error" data-wiz-error hidden>A character needs a name.</p>
+
+            <div class="rule rule--sub"><span class="rule__label">Backstory</span></div>
+            <p class="wizard__lede">Entirely up to you, and entirely optional &mdash; show up and discover your character at the table if you would rather. If you do want prompts: who are you, where did you grow up, how did you end up here, what did you do before this, are you law-abiding, do locals know your name?</p>
+            <label class="field">
+              <span class="field__label">Origin <span class="field__optional">optional</span></span>
+              <textarea class="field__area" data-wiz-origin rows="7" placeholder="Write as much or as little as you like. This is saved as your first journal note."></textarea>
+            </label>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- The footer is one pair of buttons for all six steps; their labels
+           and disabled state are rewritten per step by renderWizardFoot(). -->
+      <div class="wizard__foot">
+        <button class="btn-ghost" data-wiz="back" data-bind="wizBack"></button>
+        <button class="btn-save" data-wiz="next" data-bind="wizNext"></button>
+      </div>
+      <p class="wizard__hint" data-bind="wizHint"></p>
+    </section>

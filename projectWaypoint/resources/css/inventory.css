@@ -1,0 +1,574 @@
+/* WAYPOINT · inventory.css
+   Inventory (§14) and boons & conditions (§15).
+   Part of the stylesheet loaded by style.css. Appearance only — no layout
+   decisions that belong to structure, and no values that belong in tokens.css. */
+
+/* ----------------------------------------------------------------- */
+/* 14. INVENTORY — player-created items                               */
+/* ----------------------------------------------------------------- */
+
+/* The add button rides at the far right of the section rule, sharing the
+   trailing slot with .rule__count (see the divider block above). */
+.rule__add,
+.notes-bar__add {
+  width: 26px; height: 26px; flex-shrink: 0;
+  border: 1.5px solid var(--line-gold); border-radius: 50%;
+  background: var(--bg-card); color: var(--gold);
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-label); font-size: 19px; line-height: 1;
+  box-shadow: var(--shadow-soft);
+  transition: transform 0.06s ease;
+}
+/* The add button's own placement is handled with .rule__count above. Its
+   :active nudge has to restate the centring transform, or pressing it would
+   drop the button half its height down the rule. */
+.rule__add:active { transform: translateY(-50%) translate(1px, 1px); box-shadow: none; }
+
+/* A rule whose trailing control sits BESIDE the hairline rather than on top of
+   it. The gutter is padded on BOTH sides — the label is centred in the content
+   box, so shortening only the right-hand hairline would drag it off centre and
+   out of line with every other rule on the screen, which is the whole reason
+   this furniture is out of flow to begin with. 37px = the 26px control, its
+   2px offset from the edge, and a 9px gap that matches the rule's own rhythm. */
+.rule--action { padding-left: 37px; padding-right: 37px; }
+
+/* Same circle, a drawn mark instead of a typed one: the glyph version rides on
+   the font's baseline, an SVG needs centring and a size of its own. */
+.rule__add--pen { color: var(--gold); }
+.rule__add--pen svg { display: block; }
+.notes-bar__add:active { transform: translate(1px, 1px); box-shadow: none; }
+
+/* The inventory reads as a ledger rather than a stack of cards: rows sit
+   flush and are parted by a hairline inset from both edges, so the eye runs
+   down the column of names instead of counting boxes. Weapons and Equipment
+   keep their boxed treatment — only this list changes.
+   The row IS the button, so nothing nests inside it and it stays keyboard
+   operable with no role/tabindex patchwork. */
+.ledger { display: flex; flex-direction: column; }
+.inv-row {
+  position: relative;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  width: 100%; text-align: left;
+  background: transparent; padding: 11px 4px;
+}
+/* the partial rule: deliberately short of the full width, ledger-style */
+.inv-row + .inv-row::before {
+  content: ""; position: absolute; top: 0; left: 10px; right: 10px;
+  height: 1px; background: var(--line-soft);
+}
+.inv-row:active { background: var(--bg-parchment2); }
+.inv-row__body { flex: 1; min-width: 0; }
+.inv-row__name { display: block; font-family: var(--font-display); font-size: 16px; color: var(--ink); }
+/* Subtitle carries modifiers only. Descriptions stay in the backpack — the
+   ledger is an index, not a reading view. */
+.inv-row__mods {
+  display: block; margin-top: 2px;
+  font-family: var(--font-label); font-size: 11px; letter-spacing: 0.06em;
+  color: var(--ink-muted);
+}
+
+/* Shared by every list that can legitimately be empty (inventory, gear
+   summary) — one voice for "there is nothing here", not one per section. */
+.empty-note {
+  font-family: var(--font-body); font-style: italic; font-size: 13px;
+  color: var(--ink-faint); padding: 2px 2px 4px;
+}
+
+/* ---- backpack: one item at a time ---- */
+.modal--backpack .modal__card { display: flex; flex-direction: column; max-height: 100%; }
+.bp-card { flex: 1; min-height: 0; overflow-y: auto; margin: 0 -2px; padding: 0 2px; }
+.bp-card__head { display: flex; align-items: center; gap: 6px; }
+.bp-card__name { flex: 1; min-width: 0; font-family: var(--font-display); font-size: 22px; line-height: 1.15; color: var(--ink); }
+/* Round edit/delete affordance, shared by the backpack card and note rows —
+   the same two acts should not look like two different controls. */
+.icon-act {
+  width: 30px; height: 30px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  border: 1px solid var(--line-hair); border-radius: 50%;
+  background: var(--bg-card); color: var(--ink-faint);
+  transition: transform 0.06s ease, color 0.12s ease;
+}
+.icon-act:active { transform: translate(1px, 1px); }
+.icon-act--edit:active { color: var(--accent); }
+.icon-act--delete:active { color: var(--damage); }
+.bp-card__mods { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 9px; }
+.bp-card__mod {
+  font-family: var(--font-label); font-size: 11px; letter-spacing: 0.06em;
+  border: 1px solid var(--line-gold); border-radius: 20px;
+  padding: 3px 10px; color: var(--gold);
+}
+.bp-card__desc {
+  font-family: var(--font-body); font-size: 14px; line-height: 1.6;
+  color: var(--ink-soft); margin-top: 13px;
+}
+.bp-card__desc--none { font-style: italic; color: var(--ink-faint); }
+/* paging strip: the sheet's list is the index, so this only steps through */
+.bp-nav {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line-soft);
+}
+.bp-nav__btn {
+  width: 34px; height: 34px; flex-shrink: 0;
+  border: 1.5px solid var(--line); border-radius: 50%;
+  background: var(--bg-card); color: var(--ink-muted);
+  display: flex; align-items: center; justify-content: center;
+}
+.bp-nav__btn:active { transform: translate(1px, 1px); }
+.bp-nav__pos {
+  font-family: var(--font-label); font-size: 11px;
+  letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-faint);
+}
+
+/* ---- modifier rows in the item form ---- */
+.mods { display: flex; flex-direction: column; gap: 10px; margin-bottom: 10px; }
+.mods:empty { margin-bottom: 0; }
+.mod-row {
+  display: flex; gap: 10px; align-items: center;
+  border: 1px solid var(--line-hair); border-radius: var(--r-xs);
+  background: var(--bg-card); padding: 10px;
+}
+.mod-row__left { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+.mod-row__stat {
+  width: 100%;
+  border: 1.5px solid var(--line); border-radius: var(--r-xs);
+  background: var(--bg-input); padding: 9px 10px;
+  font-family: var(--font-body); font-size: 14px; color: var(--ink);
+}
+.mod-row__remove {
+  text-align: left; padding: 2px;
+  font-family: var(--font-label); font-size: 10px;
+  letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-faint);
+}
+.mod-row__remove:active { color: var(--damage); }
+
+/* Vertical value picker. Three stops are visible and scrolling carries on to
+   ±20; the selected value sits in the middle, so the row's select lines up
+   with the zero by default.
+
+   Two numbers here are load-bearing and must move together:
+     · the scroller's height is (visible cells × cell height)
+     · the list's padding is ((visible cells − 1) ÷ 2) × cell height
+   That padding is what lets ±20 reach the centre, and it is also what makes
+   the JS's `scrollTop = (MAX − value) × cellHeight` come out exact.
+   The cell height itself is declared HERE and read back from the DOM by the
+   JS, so the two can never disagree about where a value sits. */
+.picker { position: relative; flex-shrink: 0; width: 76px; }
+.picker__scroll {
+  height: 78px;                  /* 3 cells × 26px */
+  overflow-y: auto;
+  scroll-snap-type: y mandatory;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  outline: none;
+}
+.picker__scroll::-webkit-scrollbar { display: none; }
+.picker__list { padding: 26px 0; }   /* 1 cell, so ±20 can still reach centre */
+.picker__cell {
+  height: 26px; scroll-snap-align: center;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-label); font-size: 15px; color: var(--ink-faint);
+  transition: color 0.12s ease, font-size 0.12s ease;
+}
+.picker__cell.is-selected { color: var(--ink); font-size: 19px; }
+/* the band marks the live value: fixed in place while the numbers scroll under it */
+.picker__band {
+  position: absolute; left: 0; right: 0; top: 50%; height: 26px;
+  transform: translateY(-50%); pointer-events: none;
+  border-top: 1px solid var(--line-gold); border-bottom: 1px solid var(--line-gold);
+  background: rgba(217,193,135,0.18);
+}
+.picker__scroll:focus-visible + .picker__band { border-color: var(--accent); background: rgba(181,98,58,0.12); }
+
+/* ---- form fields (the add / edit item dialog) ---- */
+.field { display: block; margin-bottom: 14px; }
+.field__label {
+  display: block; margin-bottom: 5px;
+  font-family: var(--font-label); font-size: 10px;
+  letter-spacing: 0.14em; text-transform: uppercase; color: var(--gold);
+}
+.field__optional {
+  font-family: var(--font-body); font-style: italic;
+  letter-spacing: 0; text-transform: none; color: var(--ink-faint);
+}
+.field__input,
+.field__area {
+  width: 100%;
+  border: 1.5px solid var(--ink-soft); border-radius: var(--r-xs);
+  background: var(--bg-input); padding: 10px 12px;
+  font-family: var(--font-body); font-size: 15px; color: var(--ink);
+  outline: none;
+}
+.field__area { min-height: 92px; resize: vertical; font-size: 14px; line-height: 1.5; }
+.field__input::placeholder,
+.field__area::placeholder { color: var(--ink-faint); font-style: italic; }
+.field__error {
+  margin: -6px 0 12px;
+  font-family: var(--font-body); font-style: italic; font-size: 12.5px;
+  color: var(--damage);
+}
+
+/* A stack of choices, for a modal that offers destinations rather than a
+   decision. Distinct from .form-actions on purpose: a row of equal buttons
+   reads as "pick one and commit", a stack reads as "here is what you can do". */
+.menu-stack { display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px; }
+.menu-stack__btn {
+  width: 100%; text-align: left;
+  border: 1.5px solid var(--line-warm); border-radius: var(--r-sm);
+  background: var(--bg-card); padding: 13px 14px;
+  font-family: var(--font-label); font-size: 13px;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-soft);
+}
+/* Nothing below the stack, so its bottom margin would be dead space against
+   the card's own padding. */
+.menu-stack--last { margin-bottom: 0; }
+/* A row that explains itself: the label in the stack's own label face, the
+   effect beneath it in body text, since it is a sentence rather than a
+   control. Only rows that pass a note become two lines. */
+.menu-stack__label { display: block; }
+.menu-stack__note {
+  display: block; margin-top: 4px;
+  font-family: var(--font-body); font-size: 12.5px;
+  letter-spacing: 0; text-transform: none; color: var(--ink-muted);
+}
+.menu-stack__btn:active { transform: translateY(1px); background: var(--bg-parchment2); }
+/* Destructive choice takes the oxblood, the same signal .btn-save--danger uses. */
+.menu-stack__btn--danger { color: var(--heading); border-color: var(--heading); }
+
+/* button pair, laid out like the calculator's Heal / Damage row */
+.form-actions { display: flex; gap: 10px; }
+.btn-ghost,
+.btn-save {
+  flex: 1; border-radius: var(--r-sm); padding: 13px;
+  font-family: var(--font-label); font-size: 14px;
+  letter-spacing: 0.08em; text-transform: uppercase;
+}
+.btn-ghost { border: 1.5px solid var(--line-warm); background: transparent; color: var(--ink-muted); }
+.btn-save {
+  border: 1.5px solid var(--accent-deep); background: var(--accent); color: #f7ecd8;
+  box-shadow: 2px 2px 0 rgba(59,46,33,0.2);
+}
+/* Nothing to save: drained of the accent and of its shadow, so it reads as a
+   statement ("saved") rather than an invitation. Kept visible rather than
+   hidden — a Save that vanishes when clean leaves the section looking unfinished
+   and gives the eye nothing to come back to. */
+.btn-save:disabled {
+  border-color: var(--line-warm); background: transparent;
+  color: var(--ink-faint); box-shadow: none; cursor: default;
+}
+/* Destructive save: oxblood instead of rust. Must follow .btn-save — same
+   specificity, so source order is what decides which colour lands. */
+.btn-save--danger { border-color: var(--heading); background: var(--heading); }
+
+/* ----------------------------------------------------------------- */
+/* 14b. RULES — the Player's Guide, searchable                        */
+/* ----------------------------------------------------------------- */
+/* The field is pinned and the list scrolls under it, so the search stays
+   reachable however far down the guide you have read. */
+.rules__search { padding: 12px 18px 10px; flex-shrink: 0; }
+/* Count left, control right. Baseline-aligned rather than centred so the two
+   bits of small caps sit on one line the eye can run along. */
+.rules__meta {
+  display: flex; align-items: baseline; justify-content: space-between;
+  gap: 12px; margin: 7px 2px 0;
+}
+.rules__count {
+  margin: 0;
+  font-family: var(--font-label); font-size: 10px;
+  letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-faint);
+}
+/* A text control, not a button-looking button: it sits in a line of captions
+   and a filled or bordered control here would outweigh the search field above
+   it. Gold and underlined is how this app already marks a quiet affordance. */
+.rules__toggle {
+  flex-shrink: 0;
+  padding: 0 0 1px; border: 0; border-bottom: 1px solid var(--line-gold);
+  background: none; color: var(--gold);
+  font-family: var(--font-label); font-size: 10px;
+  letter-spacing: 0.12em; text-transform: uppercase;
+}
+.rules__scroll { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+
+/* Body copy, set for reading rather than for scanning — this is the one
+   place in the app with paragraphs long enough to need a reading measure. */
+.rules__body { font-family: var(--font-body); font-size: 14px; line-height: 1.6; color: #5c4d3a; }
+.rules__p { margin: 0 0 11px; }
+.rules__body > *:last-child { margin-bottom: 0; }
+/* A sub-heading inside a section — "Harder Tasks", "Move — 1 AP". Set in the
+   display face so it reads as a heading, but small enough not to compete with
+   the section title in the row above it. */
+.rules__h {
+  margin: 15px 0 7px;
+  font-family: var(--font-display); font-size: 14.5px;
+  font-weight: normal; color: var(--ink);
+}
+.rules__body > .rules__h:first-child { margin-top: 0; }
+.rules__list { margin: 0 0 11px; padding-left: 18px; }
+.rules__list li { margin-bottom: 4px; }
+
+/* Tables keep their columns. A five-column table cannot be made to fit a
+   phone, and folding one into stacked rows loses the comparison that is the
+   entire reason the guide drew a grid — so the WRAPPER scrolls sideways and
+   the page itself never does. */
+.rules__tablewrap { overflow-x: auto; -webkit-overflow-scrolling: touch; margin: 0 0 13px; }
+.rules__table { border-collapse: collapse; width: 100%; font-size: 13px; }
+.rules__table th, .rules__table td {
+  border: 1px solid var(--line-hair);
+  padding: 6px 9px; text-align: left; vertical-align: top;
+}
+.rules__table th {
+  font-family: var(--font-label); font-size: 9.5px;
+  letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--gold); background: var(--bg-parchment2); white-space: nowrap;
+}
+.rules__table td:first-child { white-space: nowrap; }
+
+/* ----------------------------------------------------------------- */
+/* 15. BOONS & CONDITIONS — stack tracker + picker                    */
+/* ----------------------------------------------------------------- */
+.effects { display: flex; flex-direction: column; gap: 8px; }
+
+.effect-row {
+  position: relative; overflow: hidden;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  border: 1.5px solid var(--ink-soft); border-radius: var(--r-sm);
+  background: var(--bg-card); padding: 11px 12px 11px 15px;
+  box-shadow: var(--shadow-soft);
+}
+/* kind reads as colour, not words: gilt spine for a boon, oxblood for a
+   condition — so the two are separable at a glance mid-combat. */
+.effect-row::before {
+  content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 4px;
+}
+.effect-row--boon::before      { background: var(--gold-bright); }
+.effect-row--condition::before { background: var(--damage); }
+
+.effect-row__text { min-width: 0; }
+.effect-row__name { font-family: var(--font-display); font-size: 17px; color: var(--ink); }
+.effect-row__effect {
+  font-family: var(--font-body); font-size: 12.5px; line-height: 1.45;
+  color: var(--ink-muted); margin-top: 2px;
+}
+
+/* stack stepper — the heal/damage control at sheet scale */
+.effect-step { display: flex; align-items: center; gap: 5px; flex-shrink: 0; }
+.effect-step__btn,
+.skill-step__btn {
+  width: 28px; height: 28px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  border: 1.5px solid var(--line); border-radius: var(--r-xs);
+  background: var(--bg-page); color: var(--accent-deep);
+  font-family: var(--font-label); font-size: 17px; line-height: 1;
+  transition: transform 0.06s ease;
+}
+.effect-step__btn:active,
+.skill-step__btn:active { transform: translate(1px, 1px); background: var(--bg-parchment2); }
+.effect-step__count,
+.skill-step__count {
+  min-width: 24px; text-align: center;
+  font-family: var(--font-display); font-size: 21px; line-height: 1; color: var(--ink);
+}
+
+/* the add tile — rendered last in the list, so it never moves. Full width to
+   match the effect rows above it, so the column reads as one stack of boxes. */
+.effect-add {
+  width: 100%; height: 44px;
+  display: flex; align-items: center; justify-content: center;
+  border: 1.5px dashed var(--line-warm); border-radius: var(--r-sm);
+  background: transparent; color: var(--gold);
+  transition: transform 0.06s ease, background 0.12s ease;
+}
+.effect-add:active { transform: translate(1px, 1px); background: var(--bg-parchment2); }
+
+/* ---- picker (shares .modal / .modal__card with the other dialogs) ---- */
+/* The card grows to fit the catalog but never past the phone frame; the list
+   scrolls inside it, so the heading and close button stay put. Bounded by the
+   frame rather than the viewport — vh would be the wrong ruler here. */
+.modal--effects .modal__card,
+.modal--skill-edit .modal__card,
+.modal--wiz-pick .modal__card,
+.modal--pick .modal__card { display: flex; flex-direction: column; max-height: 100%; }
+.effect-picker { flex: 1; min-height: 0; overflow-y: auto; margin: 0 -2px; padding: 0 2px; }
+.effect-picker__group {
+  font-family: var(--font-label);
+  font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--gold); padding: 14px 2px 8px;
+}
+.effect-picker__group:first-child { padding-top: 0; }
+.effect-pick,
+.skill-pick,
+.armor-pick {
+  display: block; width: 100%; text-align: left;
+  border: 1px solid var(--line-hair); border-radius: var(--r-xs);
+  background: var(--bg-card); padding: 9px 12px;
+}
+/* .skill-pick is deliberately absent: an editor row is a div wrapping a
+   stepper, and :active on an ancestor would tint the whole row every time a
+   +/- inside it is pressed. The steppers carry their own press state. */
+.effect-pick:active,
+.armor-pick:active { background: var(--bg-parchment2); }
+.effect-pick__name,
+.skill-pick__name,
+.armor-pick__name {
+  display: block; font-family: var(--font-display); font-size: 16px; color: var(--ink);
+}
+/* The set currently worn, so the picker shows state instead of just offering
+   choices — it opens already answering "what am I in?". */
+.armor-pick.is-on { background: var(--bg-parchment2); border-color: var(--accent); }
+.armor-pick.is-on .armor-pick__name { color: var(--accent-deep); }
+.armor-pick[disabled] { opacity: .5; }
+
+/* ---- skills ---------------------------------------------------------
+   A skill row is an ordinary collapsible carrying two extra things: the
+   category chip and the bonus in the head, and the rank stepper in the body.
+   Nothing here is a new visual idea — the chip borrows the label treatment
+   used for section eyebrows, and the stepper is the boon stepper. */
+
+/* The category chip. Deliberately quiet: a category is a shelf a player
+   browsed the skill from, not a rule, so it must not compete with the bonus
+   beside it for attention. */
+.skill-tag {
+  font-family: var(--font-label);
+  font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--gold);
+  border: 1px solid var(--line-warm); border-radius: var(--r-xs);
+  padding: 3px 6px; white-space: nowrap;
+}
+
+/* The category and the rank sit under the prose, divided from it, so an open
+   skill reads "here is what it covers" first and "what it is, and what it
+   cost" second. Both are readouts — the rank is assigned in the editor. */
+.skill-rank {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-top: 12px; padding-top: 11px;
+  border-top: 1px solid var(--line-soft);
+}
+.skill-rank__label {
+  font-family: var(--font-label);
+  font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--ink-muted);
+}
+/* The number in the display face, so it reads as a value rather than more
+   label — the same treatment the stepper's count had, minus the buttons. */
+.skill-rank__value { display: flex; align-items: baseline; gap: 7px; }
+.skill-rank__num { font-family: var(--font-display); font-size: 17px; color: var(--ink); }
+
+/* One definition, two uses: a rank stepper and a stack stepper are the same
+   control doing the same job, so they share the block above rather than
+   growing a second look that would drift from it.
+
+   A size down from it, though. The stack stepper is a dialog's main control,
+   pressed once or twice; this one repeats down 27 list rows beside prose, and
+   at the shared 28px it read as the loudest thing in the modal. */
+.skill-step { display: flex; align-items: center; gap: 5px; flex-shrink: 0; }
+.skill-step__btn { width: 24px; height: 24px; font-size: 15px; }
+.skill-step__count { min-width: 20px; font-size: 18px; }
+
+/* Editor rows: two ruled bands. The row itself stays display:block from the
+   shared rule above and each band lays itself out. */
+.skill-pick { margin-bottom: 6px; }
+/* The decision line: what the skill is, and what you are spending on it. */
+.skill-pick__head {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+}
+.skill-pick__name { display: flex; align-items: baseline; gap: 8px; }
+/* The reading band, and the expand control in one: the prose runs the full
+   width of the card rather than the column left over beside the stepper, and
+   tapping any of it opens the rest. A real button, which is only possible
+   because the row itself is a div — reset to look like the text it wraps. */
+.skill-pick__body {
+  display: flex; flex-direction: column; gap: 7px;
+  width: 100%; text-align: left; background: transparent; padding: 0;
+  border: 0; border-top: 1px solid var(--line-soft);
+  margin-top: 8px; padding-top: 8px;
+}
+/* Bottom right, closing the band it belongs to — the same caret every
+   collapsible in the app uses, and it turns over the same way. */
+.skill-pick__body .collapse__caret { align-self: flex-end; }
+.skill-pick.is-open .collapse__caret { transform: rotate(180deg); }
+/* Clamped to two lines: 27 skills at full length is a wall of prose to scroll
+   past when you are only looking for a name. */
+.skill-pick__desc {
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  overflow: hidden;
+  margin-top: 3px;
+  font-family: var(--font-body); font-size: 12.5px; line-height: 1.45;
+  color: var(--ink-muted);
+}
+/* Expanded, the clamp simply goes: -webkit-line-clamp only bites on a
+   -webkit-box, so returning the element to a block IS the release. Choosing a
+   skill is the one moment its full text matters. */
+.skill-pick.is-open .skill-pick__desc { display: block; }
+/* A skill already taken shows its bonus, so the picker opens answering "what
+   have I got?" — the same reason .armor-pick marks the set currently worn. */
+.skill-pick.is-on { border-color: var(--line-gold); background: var(--bg-parchment2); }
+.skill-pick__rank {
+  font-family: var(--font-display); font-size: 14px; color: var(--accent-deep);
+}
+
+/* A line of plain guidance under a section rule — used for the skill budget.
+   Quiet by default because "3 points left to spend" is information; only an
+   actually illegal sheet earns the accent. */
+.note-line {
+  margin: -2px 0 10px;
+  font-family: var(--font-body); font-size: 12.5px; line-height: 1.45;
+  color: var(--ink-muted);
+}
+.note-line--warn { color: var(--accent); }
+
+/* Standing instruction at the top of a picker, above its scrolling list. */
+.modal__note {
+  margin: -8px 0 14px;
+  font-family: var(--font-body); font-size: 12.5px; line-height: 1.45;
+  color: var(--ink-muted);
+}
+
+/* Detail window: what a piece of gear does, stated once, where it is asked for
+   rather than crowded into a badge on every row. */
+.detail-line {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 16px;
+  padding: 9px 0; border-bottom: 1px solid var(--line-hair);
+}
+.detail-line:last-child { border-bottom: 0; }
+.detail-line__key {
+  font-family: var(--font-label); font-size: 11px; letter-spacing: .08em;
+  text-transform: uppercase; color: var(--ink-muted); white-space: nowrap;
+}
+.detail-line__val { font-family: var(--font-body); font-size: 14px; color: var(--ink); text-align: right; }
+
+/* Weapon tags: a menu of which AT MOST ONE may be chosen, so they are styled
+   as a radio set rather than as toggles — the chosen one is filled in, the
+   rest recede. Sits below the readout lines because it is the one control in
+   a window that otherwise only states facts. */
+.tag-picks { padding-top: 12px; border-top: 1px solid var(--line-hair); }
+.tag-picks__label {
+  font-family: var(--font-label); font-size: 11px; letter-spacing: .08em;
+  text-transform: uppercase; color: var(--ink-muted); margin-bottom: 8px;
+}
+.tag-picks__row { display: flex; flex-wrap: wrap; gap: 6px; }
+.tag-pick {
+  font-family: var(--font-body); font-size: 13px; color: var(--ink-muted);
+  border: 1px solid var(--line-hair); border-radius: var(--r-xs);
+  background: var(--bg-card); padding: 6px 11px;
+}
+.tag-pick:active { background: var(--bg-parchment2); }
+.tag-pick.is-on {
+  background: var(--bg-parchment2); border-color: var(--accent); color: var(--accent-deep);
+}
+.armor-pick__flag {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-left: 8px;
+}
+.slot-row--empty .slot-row__name { color: var(--ink-faint); font-style: italic; }
+.slot-row[role="button"] { cursor: pointer; }
+.slot-row[role="button"]:active { background: var(--bg-parchment2); }
+
+.effect-pick__effect,
+.armor-pick__effect {
+  display: block; font-family: var(--font-body); font-size: 12.5px; line-height: 1.45;
+  color: var(--ink-muted); margin-top: 2px;
+}
+

@@ -1,0 +1,210 @@
+    <!-- ================= HEAL / DAMAGE MODAL ================= -->
+    <!-- One calculator for both vitals. `data-resource` on the card is what
+         tells it which — the same attribute, with the same two values, that
+         the vital bars themselves switch on, so the colour of the button you
+         press matches the bar it moves. openCalc() writes it, along with the
+         two verbs: you Heal and take Damage to Health, but you Restore and
+         Spend Mana. -->
+    <div class="modal modal--calc">
+      <div class="modal__scrim" data-modal="close"></div>
+      <div class="modal__card" data-resource="health">
+        <div class="modal__head">
+          <div class="modal__title" data-bind="calcTitle"></div>
+          <div class="modal__meta"><span data-bind="calcCur"></span> / <span data-bind="calcMax"></span></div>
+        </div>
+        <div class="calc-row">
+          <button class="calc-step" data-calc-step="-1" aria-label="Decrease">−</button>
+          <input class="calc-input" type="number" inputmode="numeric" data-calc-input value="0">
+          <button class="calc-step" data-calc-step="1" aria-label="Increase">+</button>
+        </div>
+        <!-- The same control as the roll card's, for the same rule: healing
+             entered here is healing RECEIVED, so Poison reduces it. Shown on
+             Health only — Mana is spent and restored, not healed — and only
+             when stacks are present. It changes the Heal button alone; Damage
+             is untouched by it. -->
+        <button class="poison-toggle" data-poison-toggle aria-pressed="false" hidden>
+            <span class="poison-toggle__box" aria-hidden="true"></span>
+            <span class="poison-toggle__label" data-bind="calcPoisonLabel"></span>
+          </button>
+        <div class="calc-actions">
+          <button class="btn-heal" data-calc-apply="heal" data-bind="calcHeal">Heal</button>
+          <button class="btn-damage" data-calc-apply="damage" data-bind="calcDamage">Damage</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= QUICK ROLL RESULT ================= -->
+    <div class="modal modal--roll">
+      <div class="modal__scrim" data-modal="close"></div>
+      <div class="modal__card roll-card">
+        <div class="roll-card__source" data-bind="outSource"></div>
+        <div class="roll-card__kind" data-bind="outKind"></div>
+        <!-- The pool's name, empty on a straight roll so the card reads
+             exactly as it did before advantage existed. -->
+        <div class="roll-card__adv" data-bind="outAdv"></div>
+        <!-- CRITICAL STRIKE — shown only when the natural d20 lands inside the
+             Lethality threshold, and only once the dice have SETTLED. It sits
+             above the total because it is the headline: you read what happened
+             before you read the number it happened to.
+
+             Hidden by default and toggled with the `hidden` attribute rather
+             than a class, so a card that somehow renders without JS shows no
+             claim about a roll that has not been made.
+
+             The second line names the window and is empty at Lethality 0 —
+             see paintCrit(). role="status" so a screen reader is told the
+             result arrived, rather than having to notice a silent insertion
+             between two lines it has already read. -->
+        <div class="roll-card__crit" data-crit hidden role="status">
+          <span class="roll-card__crit-label">Critical Strike</span>
+          <span class="roll-card__crit-window" data-bind="critWindow"></span>
+        </div>
+        <!-- The total, flanked by the two numbers a damage roll most often
+             becomes at the table: HALF for a resisted hit, DOUBLE for a
+             Critical Strike. Stated, never applied — the app is a reference
+             tracker, not a virtual tabletop, so the player picks the one their
+             situation calls for.
+
+             Both flanks are hidden on a to-hit roll, which is a threshold you
+             meet or miss rather than a quantity, and the total falls back to
+             sitting centred on its own. -->
+        <div class="roll-card__readout">
+          <div class="roll-card__flank" data-flank="half" hidden>
+            <span class="roll-card__flank-val" data-bind="outHalf"></span>
+            <span class="roll-card__flank-label">Half</span>
+          </div>
+          <div class="roll-card__total" data-bind="outTotal"></div>
+          <div class="roll-card__flank" data-flank="double" hidden>
+            <span class="roll-card__flank-val" data-bind="outDouble"></span>
+            <span class="roll-card__flank-label">Double</span>
+          </div>
+        </div>
+        <!-- The roll as an EXPRESSION — "(2 + 8) + 2" — rather than the boxed
+             chips this used to draw. A box says "token"; parentheses say where
+             the number came from, in the notation already used at the table. -->
+        <div class="roll-card__dice" data-out-dice></div>
+        <!-- POISON, on a healing roll only, and only when the character has
+             stacks. It is a toggle rather than an automatic deduction because
+             nothing on this sheet knows WHO you healed: Fortune is yours and
+             always applies, Poison belongs to the target and only applies when
+             that target is you. The app cannot decide that, so it asks.
+
+             Off by default — the plain roll is what an ally receives, and the
+             deduction is the special case. Toggling recomputes the roll that
+             already happened; it never re-rolls, so it cannot be flicked to
+             fish for a better number. -->
+        <button class="poison-toggle" data-poison-toggle aria-pressed="false" hidden>
+            <span class="poison-toggle__box" aria-hidden="true"></span>
+            <span class="poison-toggle__label" data-bind="rollPoisonLabel"></span>
+          </button>
+        <div class="roll-card__notation" data-bind="outNotation"></div>
+        <!-- One action, not two. The card is dismissed by clicking the scrim
+             or pressing Escape (wired in wire()), so a Done button was a
+             second way to do what tapping outside already does — and it sat
+             beside Reroll competing for the same thumb. The d20 is the same
+             glyph the calculator's Roll key carries: the two are the same
+             gesture in two places, so they are the same mark. It is
+             decorative here because the word beside it already says what the
+             button does, which is why it is aria-hidden. -->
+        <div class="roll-card__actions">
+          <button class="roll-card__again" data-roll-again>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 2.2 20.6 7.1v9.8L12 21.8 3.4 16.9V7.1z"/><path d="M12 5.4 17.6 15H6.4z"/><path d="M12 2.2V5.4M3.4 7.1 6.4 15M20.6 7.1 17.6 15M6.4 15 12 21.8 17.6 15"/></svg>
+            <span>Reroll</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= ADVANTAGE CHOOSER =================
+         Opened by HOLDING a To-Hit box; a plain tap still rolls a straight
+         d20. Rooted on the box that was held rather than centred, because
+         there can be several To-Hit boxes on screen and a centred sheet would
+         lose track of which one you meant — its position comes from --adv-x
+         and --adv-y, written by openAdv() the way --pull and --pv-* are.
+
+         Four rows, and no fifth for "straight roll": that is what the tap is.
+         Each row names the pool it picks up. "Take highest" is deliberately
+         NOT written — the option's own name says which way it goes, and the
+         result card shows the discarded die struck through. -->
+    <div class="modal modal--adv">
+      <div class="modal__scrim" data-modal="close"></div>
+      <div class="adv-menu" data-adv-menu>
+          <button class="adv-menu__row" data-adv="2">
+            <span class="adv-menu__label">2 Advantage</span>
+            <span class="adv-menu__dice">3d20</span>
+          </button>
+          <button class="adv-menu__row" data-adv="1">
+            <span class="adv-menu__label">Advantage</span>
+            <span class="adv-menu__dice">2d20</span>
+          </button>
+          <button class="adv-menu__row" data-adv="-1">
+            <span class="adv-menu__label">Disadvantage</span>
+            <span class="adv-menu__dice">2d20</span>
+          </button>
+          <button class="adv-menu__row" data-adv="-2">
+            <span class="adv-menu__label">2 Disadvantage</span>
+            <span class="adv-menu__dice">3d20</span>
+          </button>
+      </div>
+    </div>
+
+    <!-- ================= DICE ROLLER ================= -->
+    <div class="modal modal--dice">
+      <div class="modal__scrim" data-modal="close"></div>
+      <div class="dice-sheet">
+        <div class="dice-sheet__grab"></div>
+
+        <div class="dice-sheet__head">
+          <button class="dice-sheet__close" data-modal="close" aria-label="Close"></button>
+        </div>
+
+        <div class="dice-sheet__display">
+          <div class="dice-sheet__expr" data-dice-expr></div>
+          <div class="dice-sheet__out">
+            <div class="dice-sheet__breakdown" data-dice-breakdown></div>
+            <div class="dice-sheet__result" data-dice-result>—</div>
+          </div>
+        </div>
+
+        <div class="keypad">
+          <div class="keypad__main">
+            <button class="key key--die" data-key="d">dx</button>
+            <button class="key key--die" data-key="d2">d2</button>
+            <button class="key key--die" data-key="d3">d3</button>
+            <button class="key key--die" data-key="d4">d4</button>
+            <button class="key key--die" data-key="d6">d6</button>
+            <button class="key key--die" data-key="d8">d8</button>
+            <button class="key key--die" data-key="d10">d10</button>
+            <button class="key key--die" data-key="d12">d12</button>
+            <button class="key key--die" data-key="d20">d20</button>
+            <button class="key" data-key="7">7</button>
+            <button class="key" data-key="8">8</button>
+            <button class="key" data-key="9">9</button>
+            <button class="key" data-key="4">4</button>
+            <button class="key" data-key="5">5</button>
+            <button class="key" data-key="6">6</button>
+            <button class="key" data-key="1">1</button>
+            <button class="key" data-key="2">2</button>
+            <button class="key" data-key="3">3</button>
+            <button class="key" data-key="0">0</button>
+            <button class="key key--paren" data-key="(">(</button>
+            <button class="key key--paren" data-key=")">)</button>
+          </div>
+          <div class="keypad__side">
+            <button class="key key--back" data-dice-back aria-label="Backspace — hold to clear">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M8 5h12a1.5 1.5 0 011.5 1.5v11A1.5 1.5 0 0120 19H8L2 12z" stroke-linejoin="round"/><path d="M11.5 9.5 16.5 14.5M16.5 9.5 11.5 14.5"/></svg>
+            </button>
+            <button class="key key--op" data-key="÷">÷</button>
+            <button class="key key--op" data-key="×">×</button>
+            <button class="key key--op" data-key="−">−</button>
+            <button class="key key--op" data-key="+">+</button>
+            <button class="key key--roll" data-dice-roll>
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M12 2.2 20.6 7.1v9.8L12 21.8 3.4 16.9V7.1z"/><path d="M12 5.4 17.6 15H6.4z"/><path d="M12 2.2V5.4M3.4 7.1 6.4 15M20.6 7.1 17.6 15M6.4 15 12 21.8 17.6 15"/></svg>
+              <span>Roll</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+

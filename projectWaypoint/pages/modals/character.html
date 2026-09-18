@@ -1,0 +1,391 @@
+    <!-- ================= SKILL EDITOR ================= -->
+    <!-- Every skill in the library, grouped by category. Categories are
+         shelves for browsing 27 entries, nothing more: they grant no bonus and
+         gate no choice.
+
+         Reached from Edit Character, and the only place a rank changes. Every
+         step edits a DRAFT — Cancel, the scrim and the close button all leave
+         the character untouched, and Save is unavailable until the spread is
+         legal. See openSkillEditor(). -->
+    <div class="modal modal--skill-edit">
+      <div class="modal__scrim" data-modal="close"></div>
+      <div class="modal__card">
+        <div class="modal__head">
+          <div class="modal__title">Assign Skills</div>
+          <button class="modal__close" data-modal="close" aria-label="Close"></button>
+        </div>
+        <p class="modal__note">Every point is worth&nbsp;+2. Four <em>different</em> skills is the minimum; points beyond the first four may stack onto those or open new ones.</p>
+        <div class="wizard__budget" data-bind="skillEditBudget"></div>
+        <p class="note-line" data-bind="skillEditNote" hidden></p>
+        <!-- Narrows the list below it, so it sits with the list rather than
+             with the budget it reads under. Scrolls sideways for the same
+             reason the gear picker's chips do — see .wiz-pick__chips. -->
+        <div class="skill-filter" data-list="skillFilter"></div>
+        <div class="effect-picker" data-list="skillEditList"></div>
+        <div class="form-actions">
+          <button class="btn-ghost" data-modal="close">Cancel</button>
+          <button class="btn-save" data-skill-save>Save</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= DELETE NOTE CONFIRM ================= -->
+    <!-- A note is prose the player typed by hand and nothing else can rebuild
+         it, so this is the one delete in the app that stops to ask. -->
+    <div class="modal modal--note-del">
+      <div class="modal__scrim" data-modal="close"></div>
+      <div class="modal__card">
+        <div class="modal__head">
+          <div class="modal__title">Delete note?</div>
+          <button class="modal__close" data-modal="close" aria-label="Close"></button>
+        </div>
+        <p class="confirm__text">&ldquo;<span data-bind="noteDelTitle"></span>&rdquo; will be removed for good.</p>
+        <div class="form-actions">
+          <button class="btn-ghost" data-modal="close">Cancel</button>
+          <button class="btn-save btn-save--danger" data-note-del-confirm>Delete</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= DELETE CHARACTER CONFIRM ================= -->
+    <!-- The most destructive act in the app. A character is a sheet, a
+         portrait and a journal, none of which the app can rebuild, so the
+         wording names all three and says plainly that it is permanent — and
+         points at the export beside it, which is the only way back. -->
+    <div class="modal modal--char-del">
+      <div class="modal__scrim" data-modal="close"></div>
+      <div class="modal__card">
+        <div class="modal__head">
+          <div class="modal__title">Delete character?</div>
+          <button class="modal__close" data-modal="close" aria-label="Close"></button>
+        </div>
+        <p class="confirm__text"><strong data-bind="charDelName"></strong> will be deleted from this device
+          &mdash; the sheet, the portrait and every journal note.</p>
+        <p class="confirm__text confirm__text--warn">This is permanent and cannot be undone. If you may want
+          this character back, cancel and export them first.</p>
+        <div class="form-actions">
+          <button class="btn-ghost" data-modal="close">Cancel</button>
+          <button class="btn-save btn-save--danger" data-char-del-confirm>Delete Permanently</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= DOWNED ================= -->
+    <!-- Opened by the damage cascade, never by a button. Taking the last Wound
+         is the one state change the player does not choose and cannot miss the
+         consequences of, so the app says it out loud rather than leaving them
+         to notice a full pip row and an empty bar. Acknowledge-only: there is
+         nothing to confirm or undo, the damage is already applied. -->
+    <div class="modal modal--downed">
+      <div class="modal__scrim" data-modal="close"></div>
+      <div class="modal__card">
+        <div class="modal__head">
+          <div class="modal__title">You are downed!</div>
+          <button class="modal__close" data-modal="close" aria-label="Close"></button>
+        </div>
+        <p class="confirm__text confirm__text--warn">Your <strong data-bind="downedWounds"></strong> Wound is
+          taken and there is no Health left to come back on.</p>
+        <p class="confirm__text">While you are down, your Evasion and Fortitude fall back to their base and
+          your Armor and Speed are zero. Further damage cannot take you lower &mdash; clearing a Wound is
+          what gets you back up.</p>
+        <!-- Only when the Wound actually took some. Empty otherwise, and the
+             rule collapses it, so a character carrying no Boons sees no line
+             about Boons. -->
+        <p class="confirm__text confirm__text--warn" data-bind="downedBoons"></p>
+        <div class="form-actions">
+          <button class="btn-save btn-save--danger" data-modal="close">Understood</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= IMPORT RESULT ================= -->
+    <!-- Shown after a file is read, whether it worked or not. An import that
+         silently half-succeeded would be worse than one that failed loudly,
+         so this states what arrived AND what had to be restored from the file
+         rather than resolved against the local library. -->
+    <div class="modal modal--import">
+      <div class="modal__scrim" data-modal="close"></div>
+      <!-- `data-import-state` is "ok" or "error", written by showImportResult().
+           It is the ONLY thing that differs between the two outcomes: the mark,
+           its colour and which glyph is drawn in it are all decided by the
+           stylesheet from this one attribute, the same way data-resource tells
+           the heal/damage card which vital it is looking at.
+
+           No close X and no second button. This window reports a result and
+           offers one way out of it, and a dialog whose entire content is "here
+           is what happened" does not need two further controls that both mean
+           "I have read it" — the scrim closes it too, which is the gesture a
+           phone user reaches for anyway. The same reasoning the Rest popup is
+           built on. Retrying a bad file is the Import button on the Characters
+           page, where the player already is. -->
+      <div class="modal__card" data-import-state="ok">
+        <div class="import__mark" aria-hidden="true"></div>
+        <div class="import__title" data-bind="importTitle"></div>
+        <p class="confirm__text" data-bind="importText"></p>
+        <div class="import__notes" data-list="importNotes"></div>
+        <div class="form-actions">
+          <button class="btn-save" data-modal="close" data-bind="importDismiss"></button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= IMPORT: ADD OR OVERWRITE ? ================= -->
+    <!-- Shown AFTER the file has been read and validated, never before. The
+         choice between adding and overwriting is a choice about what is in the
+         file, so it is asked where the file's contents can be stated: how many
+         characters, what they are called, which compendium they were built
+         against. Pressing "Import" and being asked to commit to replacing
+         something sight unseen is the same decision with the useful half
+         removed.
+
+         No Cancel button. The scrim and the close cross both decline, which is
+         what every other window in the app already does and what a phone user
+         reaches for anyway — see the Rest popup. The buttons here are
+         therefore the ways of saying yes, and none of them is a default: the
+         destructive one carries the danger fill, the same as Delete
+         Permanently.
+
+         Everything in it — the title, the prose, the notes and the buttons
+         themselves — is written by askFile() from one descriptor, which is
+         what lets the same window put the two-way import question and the
+         one-way "restore the built-in compendium" question without either
+         needing a dialog of its own. -->
+    <div class="modal modal--file-ask">
+      <div class="modal__scrim" data-modal="close"></div>
+      <div class="modal__card">
+        <div class="modal__head">
+          <div class="modal__title" data-bind="fileAskTitle"></div>
+          <button class="modal__close" data-modal="close" aria-label="Close"></button>
+        </div>
+        <p class="confirm__text" data-bind="fileAskText"></p>
+        <!-- Shares .import__notes with the result window: the same list of
+             statements about the same file, so it scrolls and reads the same
+             way in both places. -->
+        <div class="import__notes" data-list="fileAskNotes"></div>
+        <div class="form-actions form-actions--stack" data-list="fileAskActions"></div>
+      </div>
+    </div>
+
+    <!-- ================= SHARE =================
+         Share is a single action, not a menu. The drawer entry opens this
+         straight away: the only thing this app has to hand anyone is a
+         character, so asking "which kind of thing?" first would be a question
+         with one real answer. Sharing a compendium is a separate feature and
+         gets its own door when it exists, rather than a second row here that
+         does nothing.
+
+         Deliberately small. The only thing a player has to decide is the
+         photo: it is nearly the whole weight of the file, and it is the one
+         reason a send bounces off an attachment limit. The filename, the
+         compendium it was built against and the entry count are all still in
+         the file and all still reported by the import screen at the far end —
+         restating them here would turn a share sheet into a form.
+
+         The button hands the file to the device's own share sheet, which is
+         where Messages, Mail and "Save to Files" already are. There is no
+         separate save button because that sheet IS the save affordance on
+         every device that has one; where a browser has none, renderShare()
+         relabels the button to say what it will actually do instead. -->
+    <div class="modal modal--share">
+      <div class="modal__scrim" data-modal="close"></div>
+      <div class="modal__card">
+        <div class="modal__head">
+          <div class="modal__title">Share Character</div>
+          <button class="modal__close" data-modal="close" aria-label="Close"></button>
+        </div>
+
+        <!-- Who is going, so the sheet that opens next is unambiguous. -->
+        <div class="share__name" data-bind="shareName"></div>
+
+        <!-- The one choice. Sizes ride on the chips because the size IS the
+             reason to pick one — a player deciding whether to text this to a
+             GM is deciding against a number, not against an adjective. The
+             whole control is hidden when there is no photo, since then the
+             two options are the same file. Radio set in the .tag-pick idiom,
+             since at most one of them applies. -->
+        <div class="tag-picks">
+          <div class="tag-picks__label">Include</div>
+          <div class="tag-picks__row" data-list="shareFormats"></div>
+        </div>
+
+        <div class="form-actions">
+          <button class="btn-save" data-share-send data-bind="shareAction"></button>
+        </div>
+      </div>
+    </div>
+
+
+    <!-- ================= REST =================
+         Two choices and nothing else. No close button and no Cancel: every
+         other modal in the app already closes on its scrim, and a window whose
+         entire content is "pick one of these two" does not need two further
+         controls whose only job is to not pick either. Tapping outside is the
+         decline, which is the gesture a phone user reaches for anyway.
+
+         Each choice states its own effect. A player should not have to hold
+         the rest rules in their head to tell the two buttons apart, and the
+         note is also the only place the half-Mana rule is written where the
+         person spending it will see it. -->
+    <div class="modal modal--rest">
+      <div class="modal__scrim" data-modal="close"></div>
+      <div class="modal__card">
+        <div class="modal__head">
+          <div class="modal__title">Rest</div>
+        </div>
+        <div class="menu-stack menu-stack--last">
+          <button class="menu-stack__btn" data-rest="short">
+            <span class="menu-stack__label">Short Rest</span>
+            <span class="menu-stack__note" data-bind="restShortNote"></span>
+          </button>
+          <button class="menu-stack__btn" data-rest="long">
+            <span class="menu-stack__label">Long Rest</span>
+            <span class="menu-stack__note">Health and Mana full, Wounds cleared, Patches restored</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= SPEND A PATCH =================
+         Reached by HOLDING a Patch box, never by tapping one — a tap is the
+         plain tally. Built like the Rest menu because it is the same kind of
+         decision: one irreversible thing, stated before you commit to it.
+
+         The note is assembled in openPatch() from what a Patch would ACTUALLY
+         do right now — there is no point offering "Reset HP to full" to
+         someone already at full — so the dialog never promises an effect it
+         will not deliver. -->
+    <div class="modal modal--patch">
+      <div class="modal__scrim" data-modal="close"></div>
+      <div class="modal__card">
+        <div class="modal__head">
+          <div class="modal__title">Spend a Patch</div>
+          <button class="modal__close" data-modal="close" aria-label="Close"></button>
+        </div>
+        <div class="menu-stack menu-stack--last">
+          <button class="menu-stack__btn" data-patch-confirm>
+            <span class="menu-stack__label">Spend Patch</span>
+            <span class="menu-stack__note" data-bind="patchGainNote"></span>
+          </button>
+        </div>
+        <!-- What it costs, then what you have left. The AP line is a RULE
+             the player applies, not a charge the app makes: the price is
+             conditional on being in combat and the app has no notion of that,
+             so it says so plainly and leaves the charge to the table.
+             See spendPatch() in main.js for the ruling in full. -->
+        <p class="patch-dialog__left" data-bind="patchCost"></p>
+        <p class="patch-dialog__left patch-dialog__left--tight" data-bind="patchRemaining"></p>
+      </div>
+    </div>
+
+    <!-- ================= BOONS LOST =================
+         A Wound clears every Boon, and doing that silently while the health
+         bar refills is the sheet changing under the player. Shown only when
+         the Wound actually took some, and only when it did not also down
+         them — the Downed notice carries the same sentence, and two windows
+         for one event is one too many. -->
+    <div class="modal modal--boonloss">
+      <div class="modal__scrim" data-modal="close"></div>
+      <div class="modal__card">
+        <div class="modal__head">
+          <div class="modal__title">Boons lost</div>
+          <button class="modal__close" data-modal="close" aria-label="Close"></button>
+        </div>
+        <p class="confirm__text confirm__text--warn" data-bind="boonLossText"></p>
+        <p class="confirm__text">Taking a Wound clears every Boon on you. Conditions are unaffected.</p>
+        <div class="form-actions">
+          <button class="btn-save" data-modal="close">Understood</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= EFFECT TICK =================
+         Reached from the button on an effect row — Regeneration's Heal, or
+         the damage a Bleed / Burn / Poison / Confusion stack deals. Built like
+         the Patch dialog because it is the same kind of decision: one thing
+         that moves a bar, stated before you commit to it.
+
+         The app does NOT decide when this happens. The rules text on the row
+         says "at the end of your turn"; the player knows when that is. All
+         the button does is the multiplication. -->
+    <div class="modal modal--tick">
+      <div class="modal__scrim" data-modal="close"></div>
+      <div class="modal__card">
+        <div class="modal__head">
+          <div class="modal__title" data-bind="tickTitle"></div>
+          <button class="modal__close" data-modal="close" aria-label="Close"></button>
+        </div>
+        <div class="menu-stack menu-stack--last">
+          <button class="menu-stack__btn" data-tick-confirm>
+            <span class="menu-stack__label" data-bind="tickAction"></span>
+            <span class="menu-stack__note" data-bind="tickNote"></span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= PORTRAIT MENU =================
+         What the picture does when tapped. The Edit Character page has no
+         buttons beside the frame any more, so the three things you can do to
+         a photo live here instead of crowding the form. Only reachable with a
+         photo already set: with none, the frame opens the file picker direct,
+         because two of these three choices would be dead. -->
+    <div class="modal modal--portrait">
+      <div class="modal__scrim" data-modal="close"></div>
+      <div class="modal__card">
+        <div class="modal__head">
+          <div class="modal__title">Portrait</div>
+          <button class="modal__close" data-modal="close" aria-label="Close"></button>
+        </div>
+        <div class="menu-stack">
+          <button class="menu-stack__btn" data-portrait-pick>Change Photo</button>
+          <button class="menu-stack__btn" data-portrait-crop>Reposition</button>
+          <button class="menu-stack__btn menu-stack__btn--danger" data-portrait-remove>Remove Photo</button>
+        </div>
+        <div class="form-actions">
+          <button class="btn-ghost" data-modal="close">Cancel</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= PORTRAIT REPOSITION ================= -->
+    <!-- Edits the FRAMING, never the pixels. The stored photo is untouched, so
+         this is reversible for as long as the photo exists and the same three
+         numbers re-frame it on the hero, the roster row and the edit page at
+         once. Cancel restores whatever was saved when the window opened. -->
+    <div class="modal modal--crop">
+      <div class="modal__scrim" data-modal="close"></div>
+      <div class="modal__card">
+        <div class="modal__head">
+          <div class="modal__title">Reposition</div>
+          <button class="modal__close" data-modal="close" aria-label="Close"></button>
+        </div>
+        <p class="modal__note">Drag the picture to move it. Pinch, or use the slider, to zoom. Arrow keys nudge.</p>
+        <div class="crop__frame" data-crop-frame tabindex="0" role="application"
+             aria-label="Portrait framing — drag or use arrow keys to reposition">
+          <img class="crop__img" data-crop-img alt="">
+          <div class="crop__grid" aria-hidden="true"></div>
+        </div>
+        <label class="field crop__zoom">
+          <span class="field__label">Zoom</span>
+          <input class="crop__slider" type="range" min="100" max="300" step="1" value="100"
+                 data-crop-zoom aria-label="Zoom">
+        </label>
+        <div class="form-actions">
+          <button class="btn-ghost" data-crop-reset>Reset</button>
+          <button class="btn-save" data-crop-save>Save</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= PORTRAIT FILE INPUT ================= -->
+    <!-- ONE input serves both entry points (the hero empty state and the
+         Edit Character page), so there is a single change handler and a
+         single path into the compressor.
+
+         `accept="image/*"` with NO `capture` attribute is deliberate: on iOS
+         this is what makes the native sheet offer Photo Library, Take Photo
+         and Browse together. Adding `capture` would force the camera and
+         throw the other two away. On desktop it is an ordinary file dialog. -->
+    <input class="visually-hidden" type="file" accept="image/*" data-portrait-input
+           tabindex="-1" aria-hidden="true">
+

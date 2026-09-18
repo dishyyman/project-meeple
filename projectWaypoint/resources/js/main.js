@@ -8101,5 +8101,11 @@
     app.setAttribute('data-tab', 'character');
   }
 
-  document.addEventListener('DOMContentLoaded', init);
+  /* Not DOMContentLoaded: the screens are fetched into .app by boot.js and
+     arrive well after that event fires. WAYPOINT_READY resolves once the
+     markup is in, so init() can keep assuming the DOM is complete — which
+     is why nothing else in this file had to change. If the fetches fail,
+     this rejects and init() never runs; boot.js has already put an
+     explanation on screen by then. */
+  window.WAYPOINT_READY.then(init);
 })();

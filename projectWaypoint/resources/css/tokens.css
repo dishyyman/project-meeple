@@ -1,0 +1,117 @@
+/* WAYPOINT · tokens.css
+   Design tokens (§1) — the single place to change the look.
+   Loaded first by style.css, so every other part can read these. Change a
+   value here and it cascades everywhere; that is the point of the file. */
+
+/* ----------------------------------------------------------------- */
+/* 1. DESIGN TOKENS — the single place to change the look             */
+/* ----------------------------------------------------------------- */
+:root {
+  /* Surfaces */
+  --bg-app:        #211d18;   /* space behind the phone */
+  --bg-page:       #f3e7cf;   /* parchment */
+  --bg-card:       #f7eed9;   /* raised card */
+  --bg-inset:      #f3e7cf;   /* wells / inputs recess */
+  --bg-parchment2: #efe0c2;   /* portrait / secondary fill */
+  --bg-input:      #f2e6cc;   /* text & number inputs — a tint of the page, not white on it */
+
+  /* Ink / text */
+  --ink:        #2f2416;   /* primary display text */
+  --ink-soft:   #3b2e21;   /* body + strong borders */
+  --ink-muted:  #7a6a54;   /* labels */
+  --ink-faint:  #9a8a6c;   /* captions, inactive */
+
+  /* Lines & rules */
+  --line:       #cbb890;
+  --line-gold:  #d9c187;
+  --line-soft:  #e0cfa8;
+  --line-warm:  #c3ab74;
+  --line-hair:  #d8c59b;
+
+  /* Accents */
+  --accent:      #b5623a;   /* rust — primary accent / health */
+  --accent-deep: #8a5233;
+  --heading:     #742230;   /* oxblood — screen titles */
+  --gold:        #8a6a1f;   /* section labels */
+  --gold-bright: #a9822f;   /* corner diamonds */
+
+  /* Health / Mana / Wounds */
+  --health:     #b5623a;
+  /* Wounds are the one mark on the sheet that is literally blood, and they had
+     been sharing the rust the health bar uses — which made a filled pip and a
+     full health cell read as the same event at a glance. Bright blood red
+     separates them and is the loudest thing on the vitals card, which a Wound
+     deserves to be. */
+  --wound:      #c1272d;
+  --health-off: #e3d2ad;
+  --mana:       #4a6a92;
+  --mana-deep:  #3f5a7a;
+  --mana-off:   #c9d2dd;
+  --mana-text:  #eaf0f7;   /* legible on a filled mana button */
+
+  /* Action colors */
+  --heal:         #4f6f3f;
+  --heal-border:  #3b5c2f;
+  --heal-text:    #f3ead2;
+  --damage:       #8a2e2e;
+  --damage-border:#6e2020;
+  --damage-text:  #f6e4d8;
+
+  /* Hero & the elastic pull.
+     --hero-h is the hero's resting height; --pull is how far past it the
+     gesture has currently stretched, written by JS (see main.js) and read
+     back here. Nothing else in the app should set --pull. */
+  --hero-h:       376px;
+  --pull:         0px;    /* live gesture distance — JS owns this */
+  --pull-max:     130px;  /* the stretch ceiling the resistance curve approaches */
+  --pull-settle:  520ms;  /* unhurried on purpose: a snappy return feels like a bounce */
+  --pull-ease:    cubic-bezier(0.25, 0.9, 0.30, 1);
+
+  /* Portrait framing. A reposition is stored as an offset in PERCENT OF THE
+     FRAME plus a zoom, never as cropped pixels — so one setting frames the
+     photo consistently on the hero, the roster row and the edit thumbnail,
+     at whatever size each of them happens to be. */
+  --pv-x:    50%;   /* centred left-to-right */
+  --pv-y:    0%;    /* anchored to the top — where faces are in a portrait */
+  --pv-zoom: 1;
+
+  /* Shadows */
+  --shadow-card:  3px 3px 0 rgba(59,46,33,0.12);
+  --shadow-soft:  2px 2px 0 rgba(59,46,33,0.10);
+  --shadow-modal: 6px 6px 0 rgba(59,46,33,0.22);
+
+  /* Layout */
+  /* How wide the app is allowed to grow when the phone frame is off.
+     Not a desktop layout — the stylesheet reasons in phone widths
+     throughout, so this caps the column at a readable measure instead
+     of stretching rows that were never designed to stretch. Raise it
+     only alongside real work on the layouts it releases. */
+  --frame-max: 520px;
+
+  /* Radii */
+  --r-lg: 14px;
+  /* The modal card's stance: left, right and bottom share this so the card
+     sits evenly in the frame. The TOP is deliberately larger and lives with
+     the .modal rule, because it is not a matter of taste — it has to clear
+     the 54px status bar. */
+  --modal-gutter: 26px;
+  /* Larger than --r-lg: a card this wide needs a softer corner to read as one
+     rounded shape rather than a rectangle with the corners clipped. The
+     card's inset gold rule follows the same curve, so both move together. */
+  --r-modal: 22px;
+  --r-md: 12px;
+  --r-sm: 10px;
+  --r-xs: 8px;
+
+  /* Type */
+  /* Readability experiment: display type was 'MedievalSharp', which is
+     characterful but hard to read at a glance — especially long character
+     names. Marcellus is the same face already used for combat readouts
+     (Evasion, Armor), so display and label type now agree. Swap this one
+     value back to 'MedievalSharp' to undo. */
+  --font-display: 'Marcellus', serif;      /* names, section flourishes */
+  --font-label:   'Marcellus', serif;       /* labels, numbers, uppercase */
+  --font-body:    'Spectral', serif;        /* descriptions, italics */
+  --font-mono:    'JetBrains Mono', monospace;
+}
+

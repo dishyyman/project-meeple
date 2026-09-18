@@ -1,0 +1,149 @@
+/* WAYPOINT · frame.css
+   Device frame + screen/tab visibility (§3, §4) — the CSS router.
+   Part of the stylesheet loaded by style.css. Appearance only — no layout
+   decisions that belong to structure, and no values that belong in tokens.css. */
+
+/* ----------------------------------------------------------------- */
+/* 3. DEVICE FRAME                                                    */
+/* ----------------------------------------------------------------- */
+.device {
+  position: relative;
+  width: 402px;
+  height: 874px;
+  background: var(--bg-page);
+  border-radius: 46px;
+  box-shadow:
+    0 0 0 12px #14110d,
+    0 0 0 14px #2b251d,
+    0 30px 60px rgba(0,0,0,0.5);
+  overflow: hidden;
+}
+.device__statusbar {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 54px;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 30px;
+  font-family: var(--font-label);
+  font-size: 15px;
+  color: var(--ink);
+  pointer-events: none;
+}
+.device__notch {
+  position: absolute;
+  top: 12px; left: 50%;
+  transform: translateX(-50%);
+  width: 120px; height: 30px;
+  background: #14110d;
+  border-radius: 16px;
+  z-index: 61;
+}
+.device__signal { display: flex; align-items: center; gap: 6px; }
+
+/* The app fills the phone; screens are swapped by [data-view]. */
+.app {
+  position: relative;
+  height: 100%;
+  overflow: hidden;
+}
+
+/* ----------------------------------------------------------------- */
+/* 4. SCREEN + TAB VISIBILITY (state-driven, no inline display)       */
+/* ----------------------------------------------------------------- */
+.screen { display: none; height: 100%; }
+.app[data-view="home"]       .screen--home       { display: block; }
+.app[data-view="characters"] .screen--characters { display: block; }
+.app[data-view="sheet"]      .screen--sheet       { display: flex; flex-direction: column; }
+.app[data-view="edit"]       .screen--edit        { display: flex; flex-direction: column; }
+.app[data-view="create"]     .screen--create      { display: flex; flex-direction: column; }
+.app[data-view="rules"]      .screen--rules       { display: flex; flex-direction: column; }
+.app[data-view="settings"]   .screen--settings    { display: flex; flex-direction: column; }
+
+.tabpage { display: none; }
+.app[data-tab="character"] .tabpage--character { display: block; }
+.app[data-tab="stats"]     .tabpage--stats     { display: block; }
+.app[data-tab="gear"]      .tabpage--gear      { display: block; }
+.app[data-tab="notes"]     .tabpage--notes     { display: block; }
+
+
+/* ----------------------------------------------------------------- */
+/* 3b. FRAME MODE — phone shell vs. full viewport                     */
+/*                                                                    */
+/* The app is built for a 402px phone and most players will meet it   */
+/* on one, so the framed view is the default and the honest one: it   */
+/* is what the layout is actually tuned for. Full mode exists to test */
+/* and to fill a browser window, NOT as a desktop redesign — the      */
+/* stylesheet still reasons in phone widths throughout, so full mode  */
+/* caps the column rather than pretending the layout reflows.         */
+/*                                                                    */
+/* Mode lives on <html data-frame>, above .device, because the frame  */
+/* itself is what changes. Screens never read this attribute; they    */
+/* keep using [data-view] and know nothing about how they are housed. */
+/* ----------------------------------------------------------------- */
+:root[data-frame="full"] .device {
+  width: 100%;
+  /* dvh, not vh: mobile browsers shrink the visual viewport when their
+     chrome slides in, and vh would leave the tab bar cropped under it. */
+  height: 100dvh;
+  max-width: var(--frame-max);
+  margin: 0 auto;
+  border-radius: 0;
+  box-shadow: none;
+}
+/* Notch and status bar are phone furniture — they are a lie in a browser
+   window, so they go rather than shrink. */
+:root[data-frame="full"] .device__notch,
+:root[data-frame="full"] .device__statusbar { display: none; }
+/* NOTE: screens clear the status bar with their own top padding (.home is
+   64px, top bars likewise) rather than any inset on .app, so hiding it
+   here leaves that padding in place. In a browser window it reads as an
+   ordinary page margin, so it is left alone deliberately — reclaiming it
+   would mean a full-mode override on every screen, which is the desktop
+   layout pass this mode is explicitly not trying to be. */
+
+/* ---- the toggle ----
+   Shell chrome, deliberately outside .app: main.js's delegated handler
+   owns everything inside the app, and this control is not part of the
+   character app's behavior. frame.js wires it directly. */
+.frame-toggle {
+  position: fixed;
+  right: 14px; bottom: 14px;
+  z-index: 200;
+  display: flex; align-items: center; gap: 7px;
+  padding: 8px 13px;
+  font-family: var(--font-label);
+  font-size: 12px; letter-spacing: 0.04em; text-transform: uppercase;
+  color: var(--bg-page);
+  background: rgba(20, 17, 13, 0.88);
+  border: 1px solid color-mix(in srgb, var(--accent) 50%, transparent);
+  border-radius: 999px;
+  cursor: pointer;
+  opacity: 0.45;
+  transition: opacity 120ms ease, border-color 120ms ease;
+}
+.frame-toggle:hover,
+.frame-toggle:focus-visible { opacity: 1; border-color: var(--accent); }
+.frame-toggle__icon { width: 11px; height: 16px; border: 1.5px solid currentColor; border-radius: 2.5px; }
+:root[data-frame="full"] .frame-toggle__icon { width: 18px; height: 13px; border-radius: 2px; }
+
+/* ---- boot failure ----
+   Shown by boot.js when the fragments cannot be fetched — nearly always
+   because the page was opened over file://. It has to style itself
+   without any of the screen CSS having matched, so it is plain on
+   purpose and does not lean on .screen's visibility rules. */
+.screen--boot-error { display: block; }
+.boot-error {
+  max-width: 34em; margin: 0 auto; padding: 44px 26px;
+  font-family: var(--font-body);
+  color: var(--ink); line-height: 1.6;
+}
+.boot-error h1 { font-family: var(--font-display); font-size: 21px; margin: 0 0 14px; }
+.boot-error p { margin: 0 0 11px; }
+.boot-error code {
+  font-family: var(--font-mono); font-size: 0.9em;
+  background: rgba(0, 0, 0, 0.07); padding: 1px 5px; border-radius: 3px;
+}
+.boot-error__detail { margin-top: 18px; font-size: 12px; opacity: 0.65; }

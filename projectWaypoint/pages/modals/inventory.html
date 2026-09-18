@@ -1,0 +1,153 @@
+    <!-- ================= BOON / CONDITION PICKER ================= -->
+    <div class="modal modal--effects">
+      <div class="modal__scrim" data-modal="close"></div>
+      <div class="modal__card">
+        <div class="modal__head">
+          <div class="modal__title">Boons &amp; Conditions</div>
+          <button class="modal__close" data-modal="close" aria-label="Close"></button>
+        </div>
+        <div class="effect-picker">
+          <div class="effect-picker__group">Boons</div>
+          <div class="stack stack--tight" data-list="boonPicker"></div>
+          <div class="effect-picker__group">Conditions</div>
+          <div class="stack stack--tight" data-list="conditionPicker"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= GEAR / ARMOR DETAIL ================= -->
+    <!-- What an equipped thing does, plus the only two actions that make sense
+         once you already have it. Reached by tapping the slot row. -->
+    <div class="modal modal--detail">
+      <div class="modal__scrim" data-modal="close"></div>
+      <div class="modal__card">
+        <div class="modal__head">
+          <div class="modal__title" data-bind="detailTitle"></div>
+          <button class="modal__close" data-modal="close" aria-label="Close"></button>
+        </div>
+        <div data-list="detailBody"></div>
+        <!-- A weapon may carry at most one of its category's tags. Rendered
+             here rather than in the body above because it is a control, not a
+             readout — the rest of the window states what the thing does. -->
+        <div data-list="detailTags"></div>
+        <p class="field__error" data-detail-warn hidden>Your class is not trained with this.</p>
+        <!-- The same round trash the Equipment rows carry, for the same
+             reason: taking a thing off is the one action this window has, and
+             it is spelled one way everywhere in the app.
+
+             Change went with it. It was a second route to the picker that the
+             slot's own "+ Add" button already offers once the slot is empty,
+             so removing then adding is the whole of what it did — and a window
+             with one action does not need to weigh two buttons against each
+             other. openDetail() writes the aria-label, so it names the item. -->
+        <div class="row-actions">
+          <button class="icon-act icon-act--delete" data-detail-remove></button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= GEAR / ARMOR PICKER ================= -->
+    <div class="modal modal--pick">
+      <div class="modal__scrim" data-modal="close"></div>
+      <div class="modal__card">
+        <div class="modal__head">
+          <div class="modal__title" data-bind="pickTitle"></div>
+          <button class="modal__close" data-modal="close" aria-label="Close"></button>
+        </div>
+        <div class="effect-picker">
+          <div class="stack stack--tight" data-list="picker"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= CREATION SLOT PICKER =================
+         What goes in one hand, or one adventuring-gear slot. Kept apart from
+         the sheet's own picker (modal--pick) because that one equips the live
+         character and this one fills a draft that may still be abandoned —
+         same gesture, different write target, and merging them would mean a
+         mode flag on every line of both. -->
+    <div class="modal modal--wiz-pick">
+      <div class="modal__scrim" data-modal="close"></div>
+      <div class="modal__card">
+        <div class="modal__head">
+          <div class="modal__title" data-bind="wizPickTitle"></div>
+          <button class="modal__close" data-modal="close" aria-label="Close"></button>
+        </div>
+        <!-- Search and category chips. Both are shown only for lists long
+             enough to need them — see renderWizPicker. -->
+        <label class="wiz-pick__search" data-wiz-pick-search hidden>
+          <span class="visually-hidden">Search gear</span>
+          <input class="field__input" type="search" data-wiz-pick-query placeholder="Search" autocomplete="off">
+        </label>
+        <!-- Scrolls sideways rather than wrapping: a chip row that grows to
+             two lines would push the list down and resize the modal, which is
+             the very jitter the fixed card height below is there to prevent. -->
+        <div class="wiz-pick__chips" data-list="wizPickChips" data-wiz-pick-chips hidden></div>
+        <div class="effect-picker">
+          <div class="stack stack--tight" data-list="wizPicker"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= INVENTORY ITEM (add / edit) ================= -->
+    <!-- One form serves both jobs: the title and the Save button change,
+         the fields do not. -->
+    <div class="modal modal--item">
+      <div class="modal__scrim" data-modal="close"></div>
+      <div class="modal__card">
+        <div class="modal__head">
+          <div class="modal__title" data-bind="itemHeading"></div>
+          <button class="modal__close" data-modal="close" aria-label="Close"></button>
+        </div>
+        <label class="field">
+          <span class="field__label">Name</span>
+          <input class="field__input" data-item-name type="text" maxlength="60" placeholder="Name your item…">
+        </label>
+        <label class="field">
+          <span class="field__label">Description <span class="field__optional">optional</span></span>
+          <textarea class="field__area" data-item-desc maxlength="400" placeholder="What is it? Where did it come from?"></textarea>
+        </label>
+
+        <!-- Modifiers. Rows are emitted by JS so an item can carry as many as
+             it needs; the attribute options are generated from the character's
+             own stat list, never hardcoded here. -->
+        <div class="field" role="group" aria-label="Modifiers">
+          <span class="field__label">Modifiers <span class="field__optional">optional</span></span>
+          <div class="mods" data-list="itemMods"></div>
+          <button class="btn-dashed btn-dashed--sm" data-mod-add>
+            <span class="plus"></span><span>Add Modifier</span>
+          </button>
+        </div>
+
+        <p class="field__error" data-item-error hidden>An item needs a name.</p>
+        <div class="form-actions">
+          <button class="btn-ghost" data-modal="close">Cancel</button>
+          <button class="btn-save" data-item-save>Save</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= BACKPACK ================= -->
+    <!-- One item at a time. The sheet's inventory list is already the index,
+         so this is a reading view you page through rather than a second list
+         to hunt in. -->
+    <div class="modal modal--backpack">
+      <div class="modal__scrim" data-modal="close"></div>
+      <div class="modal__card">
+        <div class="modal__head">
+          <div class="modal__title">Backpack</div>
+          <button class="modal__close" data-modal="close" aria-label="Close"></button>
+        </div>
+        <div class="bp-card" data-list="backpack"></div>
+        <div class="bp-nav">
+          <button class="bp-nav__btn" data-bp-step="-1" aria-label="Previous item">
+            <svg width="8" height="14" viewBox="0 0 8 14" fill="none" aria-hidden="true"><path d="M7 1 1 7l6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+          <span class="bp-nav__pos" data-bind="bpPos"></span>
+          <button class="bp-nav__btn" data-bp-step="1" aria-label="Next item">
+            <svg width="8" height="14" viewBox="0 0 8 14" fill="none" aria-hidden="true"><path d="M1 1l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+

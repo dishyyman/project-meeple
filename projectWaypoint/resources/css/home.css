@@ -1,0 +1,76 @@
+/* WAYPOINT · home.css
+   Home screen (§6).
+   Part of the stylesheet loaded by style.css. Appearance only — no layout
+   decisions that belong to structure, and no values that belong in tokens.css. */
+
+/* ----------------------------------------------------------------- */
+/* 6. HOME SCREEN                                                     */
+/* ----------------------------------------------------------------- */
+/* A flex COLUMN, which is what lets the nav grid below claim the whole of what
+   the title leaves. `min-height` rather than `height`, so the screen can still
+   grow if a label ever wraps to a third line instead of being clipped by a box
+   pinned to the frame. */
+.home {
+  min-height: 100%;
+  display: flex; flex-direction: column;
+  padding: 64px 22px 44px;
+}
+/* The title now carries the gap to the nav list itself — the subtitle that
+   used to supply that bottom margin is gone. */
+.home__title {
+  font-family: var(--font-display); font-size: 36px; color: var(--heading);
+  line-height: 1.02; margin-bottom: 28px;
+  flex-shrink: 0;
+}
+/* Four destinations, so a 2x2 grid of equal tiles: every card lands the same
+   size no matter how long its label is. `1fr 1fr` on both axes rather than
+   auto-fit — the count is fixed and the pairing is deliberate, not a function
+   of available space.
+
+   `flex: 1` is what fills the screen: the grid takes every pixel left under
+   the title and the two `1fr` rows split it, so the menu runs to the bottom
+   padding instead of stopping a third of the way down with the rest of the
+   phone empty. On the 402x874 frame that lands each tile at roughly 172x344.
+   Nothing here is a magic number — change the frame, the padding or the title
+   and the tiles re-divide whatever is left. */
+.navlist {
+  flex: 1;
+  /* Without this a grid whose content is taller than its share refuses to
+     shrink, and the last row would push past the bottom padding. */
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  gap: 14px;
+}
+.navcard {
+  /* Column stack, everything centred: icon on top, label beneath it. At this
+     height the pair sits in the middle of a tall panel, which is the point —
+     the tile is the target, and centring keeps all four reading identically
+     however long the label is. */
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 18px; width: 100%; height: 100%; text-align: center;
+  /* A floor, not the size. The grid row decides the height; this only matters
+     if the space ever collapses — better a short tile than a vanished one. */
+  min-height: 132px;
+  border: 1.5px solid var(--ink-soft); border-radius: var(--r-md);
+  background: var(--bg-card); padding: 24px 14px;
+  box-shadow: var(--shadow-card);
+}
+.navcard__icon {
+  /* Scaled with the tile. At panel height a 54px badge read as a stray mark in
+     a large empty card; the icon is the thing you aim at, and it has to carry
+     the space the label cannot. */
+  width: 80px; height: 80px; flex-shrink: 0;
+  border: 1.5px solid var(--line-gold); border-radius: var(--r-md);
+  display: flex; align-items: center; justify-content: center;
+  color: var(--accent);
+}
+/* The glyphs ship at 22px in the markup; scale them here so the sizing stays
+   a CSS decision and the SVGs stay untouched. */
+.navcard__icon svg { width: 38px; height: 38px; }
+/* 21px, not larger: "Compendium" and "Guide Tools" both have to clear a 172px
+   tile with its padding on one line, and a label that wraps for two of the
+   four breaks the symmetry the grid exists to hold. */
+.navcard__name { font-family: var(--font-display); font-size: 21px; color: var(--ink); line-height: 1.15; }
+

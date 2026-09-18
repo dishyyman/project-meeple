@@ -1,0 +1,223 @@
+/* WAYPOINT · primitives.css
+   Shared primitives (§5) — buttons, cards, value boxes, sr-only.
+   Part of the stylesheet loaded by style.css. Appearance only — no layout
+   decisions that belong to structure, and no values that belong in tokens.css. */
+
+/* ----------------------------------------------------------------- */
+/* 5. SHARED PRIMITIVES                                               */
+/* ----------------------------------------------------------------- */
+.scroll { overflow-y: auto; height: 100%; -webkit-overflow-scrolling: touch; }
+
+.divider { height: 1px; background: var(--line); margin: 0 18px; }
+
+/* round outline icon buttons in headers */
+.icon-btn {
+  width: 42px; height: 42px;
+  border: 1.5px solid var(--line);
+  border-radius: 50%;
+  background: var(--bg-card);
+  color: var(--ink-muted);
+  display: flex; align-items: center; justify-content: center;
+}
+.icon-btn--menu { flex-direction: column; gap: 4px; }
+.icon-btn--menu span { width: 18px; height: 2px; background: var(--ink-soft); border-radius: 2px; }
+
+/* translucent buttons floating over the hero image */
+.glass-btn {
+  width: 42px; height: 42px;
+  border-radius: 50%;
+  background: rgba(243,231,207,0.24);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  box-shadow: inset 0 0 0 1px rgba(247,236,216,0.5);
+  color: #f7ecd8;
+  display: flex; align-items: center; justify-content: center;
+}
+.glass-btn--menu { flex-direction: column; gap: 4px; }
+.glass-btn--menu span { width: 20px; height: 2px; background: #f7ecd8; border-radius: 2px; }
+.glass-btn--accent {
+  background: rgba(181,98,58,0.9);
+  box-shadow: inset 0 0 0 1px rgba(247,236,216,0.5), 0 2px 8px rgba(37,29,20,0.4);
+}
+
+/* screen title (oxblood, medieval) */
+.title { font-family: var(--font-display); font-size: 22px; letter-spacing: 0.02em; color: var(--heading); }
+
+/* ✦ Section ✦ divider */
+.rule {
+  position: relative;
+  display: flex; align-items: center; gap: 10px;
+  padding: 24px 2px 14px;
+}
+.rule::before, .rule::after {
+  content: ""; flex: 1; height: 1px; background: var(--line-warm);
+}
+.rule__label { font-family: var(--font-display); font-size: 15px; letter-spacing: 0.04em; color: var(--gold); white-space: nowrap; }
+
+/* A sub-heading BENEATH a ✦ rule — quieter, so it divides a section without
+   competing with the heading it sits under. Used by the wizard's steps and by
+   the Abilities section, which splits abilities from spells this way. */
+.rule--sub { padding-top: 18px; }
+.rule--sub .rule__label { font-size: 12px; color: var(--ink-muted); }
+
+/* Optional trailing furniture on a rule — a count, or an add button.
+
+   Taken OUT OF FLOW, which is the whole point. In flow it still consumed
+   width, so the two flex hairlines split what was left over and the ✦ label
+   sat off-centre by half the count — by a DIFFERENT amount on each rule, since
+   "2 / 2", "1 / 5" and a + button are all different widths. Stacked down a
+   page the labels visibly failed to line up with each other, which is what an
+   earlier `order: 1` was meant to fix and did not.
+
+   Positioned absolutely, the hairlines span the full width and the label is
+   centred in the row itself, so every rule on a screen agrees. The item then
+   sits ON the right-hand hairline and masks it with the page background, the
+   way a legend breaks a fieldset border. */
+.rule__count,
+.rule__add {
+  position: absolute; right: 2px;
+  /* Vertically: `top: 50%` measures the PADDING box, and this rule's padding
+     is lopsided on purpose — 24px above, 14px below, to set a section off from
+     what precedes it. The hairlines and the label are centred in the CONTENT
+     box, which is half that difference lower, so furniture centred on the
+     padding box floats above the very line it is meant to break. Written as
+     the derivation rather than "5px" so it stays true if the padding moves. */
+  top: calc(50% + (24px - 14px) / 2);
+  transform: translateY(-50%);
+}
+.rule__count {
+  /* Opaque, with a gap in front, so the hairline stops cleanly rather than
+     running under the text. The + button needs neither: it is already an
+     opaque bordered circle, and padding would stretch it out of round. */
+  background: var(--bg-page); padding-left: 9px;
+  font-family: var(--font-label); font-size: 12px; letter-spacing: 0.08em;
+  color: var(--ink-faint); white-space: nowrap;
+}
+/* Over the hand/equipment budget — the one state worth shouting about. */
+.rule__count--over { color: var(--accent); }
+
+/* small uppercase eyebrow label */
+.eyebrow {
+  font-family: var(--font-label);
+  font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase;
+}
+
+/* dashed "add" button */
+.btn-dashed {
+  display: flex; align-items: center; justify-content: center; gap: 9px;
+  width: 100%;
+  border: 1.5px dashed var(--line-warm);
+  border-radius: var(--r-md);
+  background: transparent;
+  padding: 16px;
+  font-family: var(--font-label);
+  font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--gold);
+  /* Every dashed "add" affordance trails a list, so the gap above it belongs
+     to the button itself — no caller ever has to space it by hand. */
+  margin-top: 12px;
+}
+.btn-dashed--sm { border-radius: var(--r-xs); padding: 12px 13px; color: var(--ink-faint); margin-top: 8px; }
+/* JS hides "Add Modifier" while a row is unanswered; display:flex above would
+   otherwise beat the browser's default rule for [hidden]. */
+.btn-dashed[hidden] { display: none; }
+/* the plus glyph is shared by every dashed "add" affordance */
+.btn-dashed .plus,
+.effect-add .plus {
+  position: relative; width: 16px; height: 16px; display: inline-block;
+}
+.btn-dashed .plus::before,
+.btn-dashed .plus::after,
+.effect-add .plus::before,
+.effect-add .plus::after {
+  content: ""; position: absolute; background: currentColor; border-radius: 2px;
+}
+.btn-dashed .plus::before,
+.effect-add .plus::before { top: 7px; left: 0; width: 16px; height: 2px; }
+.btn-dashed .plus::after,
+.effect-add .plus::after  { left: 7px; top: 0; width: 2px; height: 16px; }
+/* SVG glyphs in a dashed button sit on the same 16px bed as the .plus, so
+   the two buttons' labels line up with each other. */
+.btn-dashed__icon { width: 16px; height: 16px; flex-shrink: 0; }
+
+/* generic collapsible row (abilities / passives / skills / equipment) */
+.collapse {
+  border: 1.5px solid var(--ink-soft);
+  border-radius: var(--r-sm);
+  background: var(--bg-card);
+  box-shadow: var(--shadow-soft);
+  overflow: hidden;
+}
+.collapse--light { border: 1px solid var(--line-hair); box-shadow: none; }
+.collapse__head {
+  width: 100%;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 13px 14px;
+  text-align: left;
+}
+/* The name cell. A column, so a row that has a cost line stacks it under the
+   title; min-width:0 lets a long name shrink rather than shoving the value
+   boxes off the row. */
+.collapse__name { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.collapse__title { font-family: var(--font-display); font-size: 17px; color: var(--ink); }
+.collapse--light .collapse__title { font-size: 16px; }
+/* What an ability costs to use — "2 AP · 3 Mana". Set in the label face at
+   caption size so it reads as a property of the name above it rather than as
+   another number competing with the value boxes opposite. */
+.collapse__sub {
+  font-family: var(--font-label); font-size: 10px;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-muted);
+}
+.collapse__right { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+.collapse__caret {
+  width: 0; height: 0;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-top: 6px solid var(--ink-faint);
+  transition: transform 0.15s ease;
+}
+.collapse.is-open .collapse__caret { transform: rotate(180deg); }
+.collapse__body {
+  display: none;
+  padding: 11px 14px 13px;
+  border-top: 1px solid var(--line-soft);
+  font-family: var(--font-body);
+  font-size: 14px; line-height: 1.55; color: #5c4d3a;
+}
+.collapse.is-open .collapse__body { display: block; }
+
+/* little labelled value boxes (to-hit / damage / mod) */
+.mini { text-align: center; }
+.mini__label {
+  display: block;
+  font-family: var(--font-label);
+  font-size: 9px; letter-spacing: 0.06em; text-transform: uppercase;
+  color: var(--ink-muted);
+  margin-bottom: 4px;
+}
+.val-box {
+  min-width: 46px; height: 38px; padding: 0 10px;
+  border: 1.5px solid var(--line); border-radius: var(--r-xs);
+  background: var(--bg-inset);
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-label); font-size: 18px; color: var(--ink);
+}
+.val-box--sm { height: 34px; min-width: 46px; }
+.val-box--dice { font-family: var(--font-display); font-size: 16px; }
+
+.stack { display: flex; flex-direction: column; gap: 10px; }
+.stack--tight { gap: 8px; }
+
+
+/* ---- screen-reader-only ----
+   Content that must reach assistive tech but never paint: labels on icon-only
+   controls, live-region status text. Both `clip` and `clip-path` are present
+   on purpose — `clip` is deprecated but still the only thing some older
+   engines honour, and `clip-path` is what modern ones use. Dropping either
+   one leaves a gap, so they stay together.
+   Defined once here rather than per screen; it is a primitive, not furniture. */
+.visually-hidden {
+  position: absolute; width: 1px; height: 1px;
+  margin: -1px; padding: 0; border: 0;
+  clip: rect(0 0 0 0); clip-path: inset(50%); overflow: hidden; white-space: nowrap;
+}

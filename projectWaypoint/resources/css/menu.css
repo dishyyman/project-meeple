@@ -1,0 +1,66 @@
+/* WAYPOINT · menu.css
+   Menu drawer (§10).
+   Part of the stylesheet loaded by style.css. Appearance only — no layout
+   decisions that belong to structure, and no values that belong in tokens.css. */
+
+/* ----------------------------------------------------------------- */
+/* 10. MENU DRAWER                                                    */
+/* ----------------------------------------------------------------- */
+.drawer { position: absolute; inset: 0; z-index: 40; display: none; }
+.app[data-menu="open"] .drawer { display: block; }
+.drawer__scrim { position: absolute; inset: 0; background: rgba(37,29,20,0.5); }
+.drawer__panel {
+  position: absolute; top: 0; right: 0; bottom: 0; width: 82%;
+  background: var(--bg-page); box-shadow: -8px 0 30px rgba(37,29,20,0.35);
+  padding: 54px 0 40px; overflow: auto;
+}
+.drawer__head { display: flex; align-items: center; justify-content: space-between; padding: 6px 20px 12px; }
+.drawer__title { font-family: var(--font-display); font-size: 23px; letter-spacing: 0.02em; color: var(--heading); }
+.drawer__close { width: 32px; height: 32px; position: relative; }
+.drawer__close::before,
+.drawer__close::after {
+  content: ""; position: absolute; top: 15px; left: 5px; width: 22px; height: 2px; background: var(--ink-soft);
+}
+.drawer__close::before { transform: rotate(45deg); }
+.drawer__close::after  { transform: rotate(-45deg); }
+.drawer__body { padding: 0 20px; margin-top: 16px; }
+/* Only the divider inside the drawer body: it separates stacked blocks, so it
+   runs full width with vertical breathing room, unlike the inset .divider
+   used under screen headers. */
+.drawer__body .divider { margin: 18px 0 16px; }
+/* The drawer's one primary action, so it carries the rust accent and reads as
+   a filled button — the same treatment Heal and Damage get in the calculator.
+   Marcellus ships regular weight only, so emphasis comes from colour, caps and
+   letter-spacing rather than a font-weight the family can't supply (asking for
+   700 here made the browser synthesise a smeared faux-bold). */
+.levelup-btn {
+  display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%;
+  border: 1.5px solid var(--accent-deep); border-radius: 11px; background: var(--accent);
+  color: #f7ecd8; padding: 15px; box-shadow: 3px 3px 0 rgba(59,46,33,0.28);
+}
+.levelup-btn:active { transform: translateY(1px); box-shadow: 1px 1px 0 rgba(59,46,33,0.28); }
+.levelup-btn span {
+  font-family: var(--font-label); font-size: 15px;
+  letter-spacing: 0.14em; text-transform: uppercase;
+}
+/* Every other entry in the drawer. Outlined rather than filled: beside Level
+   Up they must read as places this menu goes, not as nine competing actions —
+   and one look for all of them means a new destination needs no new styling,
+   only a row.
+
+   The gap lives on the group, not on the button, so a section spaces itself
+   however many entries it holds. (This carried `margin-top: 10px` while it was
+   one button under Level Up; with eight, a margin would have had to be undone
+   at the top of every group.) */
+.drawer__group { display: flex; flex-direction: column; gap: 10px; }
+.drawer-btn {
+  display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%;
+  border: 1.5px solid var(--ink-soft); border-radius: 11px; background: var(--bg-card);
+  color: var(--ink); padding: 14px; box-shadow: var(--shadow-soft);
+}
+.drawer-btn span {
+  font-family: var(--font-label); font-size: 14px;
+  letter-spacing: 0.14em; text-transform: uppercase;
+}
+.drawer-btn:active { transform: translateY(1px); box-shadow: none; }
+

@@ -1,0 +1,38 @@
+    <!-- ================= CHARACTERS LIST ================= -->
+    <section class="screen screen--characters">
+      <div class="topbar topbar--between">
+        <button class="icon-btn icon-btn--back" data-nav="home" aria-label="Back">
+          <svg width="12" height="20" viewBox="0 0 12 20" fill="none"><path d="M10 2 2 10l8 8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <h2 class="title">Characters</h2>
+        <!-- The standard list-edit affordance: one text button that swaps
+             label with the mode it toggles. Its text is written by
+             renderRoster() so "Edit" and "Done" cannot drift out of step with
+             data-roster on .app. -->
+        <button class="text-btn" data-roster-edit data-bind="rosterEdit"></button>
+      </div>
+      <div class="divider"></div>
+      <div class="section-pad">
+        <!-- One row per character in the roster, painted by renderRoster().
+             Empty in the markup because the count is not known until the
+             saves are read. -->
+        <div data-list="roster"></div>
+        <button class="btn-dashed" data-action="create-character">
+          <span class="plus"></span><span>Create Character</span>
+        </button>
+        <!-- Import is a peer of Create, not an edit-mode action: you reach for
+             it when you have no character yet, which is exactly when edit mode
+             has nothing to edit. -->
+        <button class="btn-dashed" data-import-open>
+          <!-- The conventional import glyph: an arrow dropping into an
+               open-topped tray. Not the shared .plus span the sibling Create
+               button uses — that was the plus rotated 45 degrees, which reads
+               as "close/cancel", the opposite of what this button does. -->
+          <svg class="btn-dashed__icon" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M8 1.6V9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M4.9 5.9 8 9l3.1-3.1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M2.2 10.4v2a1.8 1.8 0 001.8 1.8h8a1.8 1.8 0 001.8-1.8v-2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg><span>Import Character</span>
+        </button>
+        <!-- The picker itself. Kept out of view rather than display:none, so
+             the click that opens it is a real user gesture in every browser. -->
+        <input class="visually-hidden" type="file" data-import-file
+               accept=".json,application/json" aria-label="Choose a Waypoint character file">
+      </div>
+    </section>

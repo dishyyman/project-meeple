@@ -1,0 +1,37 @@
+    <!-- ================= RULES =================
+         The Player's Guide, searchable. A SCREEN rather than a modal for two
+         reasons: the guide is longer than any dialog should be, and the search
+         field puts a keyboard on screen — a modal would end up fighting it for
+         the bottom half of a phone.
+
+         Everything below the search field is painted by renderRules() from
+         resources/js/rules.js, which is generated from the RTF in docs/. No
+         rules text lives in this file. -->
+    <section class="screen screen--rules">
+      <div class="topbar topbar--between">
+        <button class="icon-btn icon-btn--back" data-nav="sheet" aria-label="Back to sheet">
+          <svg width="12" height="20" viewBox="0 0 12 20" fill="none"><path d="M10 2 2 10l8 8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <h2 class="title">Rules</h2>
+        <button class="icon-btn icon-btn--menu" data-menu="open" aria-label="Menu"><span></span><span></span><span></span></button>
+      </div>
+      <div class="divider"></div>
+      <!-- Pinned above the scroll, not inside it: a search field that scrolls
+           away is one you have to hunt for again after every result. -->
+      <div class="rules__search">
+        <input class="field__input" type="search" data-rules-search
+               placeholder="Search the Player&rsquo;s Guide" aria-label="Search the rules">
+        <!-- The result count and the expand/collapse control share a line:
+             both describe the list below rather than the field above, and the
+             control is only ever wanted once you can see how much there is to
+             fold away. One button, not two — its label says which way it will
+             go, so there is never a dead half of a pair to press. -->
+        <div class="rules__meta">
+          <p class="rules__count" data-bind="rulesCount"></p>
+          <button class="rules__toggle" data-rules-toggle hidden></button>
+        </div>
+      </div>
+      <div class="rules__scroll">
+        <div class="sheet__pad" data-list="rules"></div>
+      </div>
+    </section>

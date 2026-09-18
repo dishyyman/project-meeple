@@ -1,0 +1,546 @@
+/* WAYPOINT · dice.css
+   Heal/damage (§11), dice roller (§12), quick roll (§13), motion (§16).
+   Part of the stylesheet loaded by style.css. Appearance only — no layout
+   decisions that belong to structure, and no values that belong in tokens.css. */
+
+/* ----------------------------------------------------------------- */
+/* 11. HEAL / DAMAGE MODAL                                            */
+/* ----------------------------------------------------------------- */
+/* Modals are named: data-modal on .app is
+   "closed" | "calc" | "dice" | "roll" | "effects" | "item" | "backpack"
+   | "downed" | ... — see the display rules just below for the full set. */
+/* The padding IS the modal's inset, and the top figure is load-bearing: the
+   status bar is 54px tall and sits at z-index 60, above every modal, so a card
+   allowed nearer the top than that slides underneath the clock and the notch.
+   68px clears it with room to breathe. The sides are tighter than the old 24px
+   so cards run wider — 402 − 32 rather than 402 − 48. */
+.modal { position: absolute; inset: 0; z-index: 50; display: none; align-items: center; justify-content: center; padding: 68px var(--modal-gutter) var(--modal-gutter); }
+.app[data-modal="calc"] .modal--calc { display: flex; }
+.app[data-modal="dice"] .modal--dice { display: flex; }
+.app[data-modal="roll"] .modal--roll { display: flex; }
+.app[data-modal="effects"] .modal--effects { display: flex; }
+.app[data-modal="detail"] .modal--detail { display: flex; }
+.app[data-modal="pick"] .modal--pick { display: flex; }
+.app[data-modal="item"] .modal--item { display: flex; }
+.app[data-modal="backpack"] .modal--backpack { display: flex; }
+.app[data-modal="note-del"] .modal--note-del { display: flex; }
+.app[data-modal="skill-edit"] .modal--skill-edit { display: flex; }
+.app[data-modal="rest"] .modal--rest { display: flex; }
+.app[data-modal="patch"] .modal--patch { display: flex; }
+.app[data-modal="tick"] .modal--tick { display: flex; }
+.app[data-modal="boonloss"] .modal--boonloss { display: flex; }
+.app[data-modal="adv"] .modal--adv { display: flex; }
+.app[data-modal="portrait"] .modal--portrait { display: flex; }
+.app[data-modal="crop"] .modal--crop { display: flex; }
+.app[data-modal="char-del"] .modal--char-del { display: flex; }
+.app[data-modal="import"] .modal--import { display: flex; }
+.app[data-modal="file-ask"] .modal--file-ask { display: flex; }
+.app[data-modal="share"] .modal--share { display: flex; }
+.app[data-modal="downed"] .modal--downed { display: flex; }
+.app[data-modal="wiz-pick"] .modal--wiz-pick { display: flex; }
+.modal__scrim { position: absolute; inset: 0; background: rgba(37,29,20,0.55); }
+/* No max-width. The .modal's own padding is the single place a card's inset is
+   decided — a second constraint here meant the padding could be tightened all
+   day and the card would stay 300px wide, stranding 50px of dead space either
+   side of a 402px screen. The dice sheet opts out separately (.modal--dice
+   zeroes the padding), which is what makes it a full-bleed bottom sheet. */
+.modal__card {
+  position: relative; width: 100%;
+  background: var(--bg-page); border: 1.5px solid var(--ink-soft); border-radius: var(--r-modal);
+  box-shadow: var(--shadow-modal), inset 0 0 0 4px var(--bg-page), inset 0 0 0 5px var(--line-gold);
+  padding: 20px;
+}
+.modal__head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+.modal__title { font-family: var(--font-display); font-size: 21px; color: var(--heading); }
+.modal__meta { font-family: var(--font-label); font-size: 13px; color: var(--ink-muted); }
+.modal__close { width: 28px; height: 28px; position: relative; flex-shrink: 0; }
+.modal__close::before,
+.modal__close::after {
+  content: ""; position: absolute; top: 13px; left: 5px;
+  width: 18px; height: 1.8px; background: var(--ink-muted);
+}
+.modal__close::before { transform: rotate(45deg); }
+.modal__close::after  { transform: rotate(-45deg); }
+.calc-row { display: flex; align-items: center; gap: 10px; margin-bottom: 18px; }
+.calc-step {
+  flex-shrink: 0; width: 38px; height: 44px; border-radius: 9px;
+  border: 1.5px solid var(--line); background: var(--bg-card); color: var(--accent-deep);
+  font-family: var(--font-label); font-size: 24px; line-height: 1;
+}
+.calc-input {
+  flex: 1; width: 100%; min-width: 0; text-align: center;
+  border: 1.5px solid var(--ink-soft); border-radius: 9px; background: var(--bg-input);
+  padding: 9px 6px; font-family: var(--font-display); font-size: 30px; color: var(--ink); outline: none;
+}
+/* strip number-spinner */
+.calc-input::-webkit-outer-spin-button,
+.calc-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.calc-input { -moz-appearance: textfield; }
+.calc-actions { display: flex; gap: 10px; }
+.btn-heal, .btn-damage {
+  flex: 1; border-radius: var(--r-sm); padding: 13px;
+  font-family: var(--font-label); font-size: 14px; letter-spacing: 0.08em; text-transform: uppercase;
+  box-shadow: 2px 2px 0 rgba(59,46,33,0.2);
+}
+.btn-heal   { border: 1.5px solid var(--heal-border);   background: var(--heal);   color: var(--heal-text); }
+.btn-damage { border: 1.5px solid var(--damage-border); background: var(--damage); color: var(--damage-text); }
+/* Restoring Mana is the same gesture as healing, so it keeps the heal button's
+   shape and position and changes only its colour — to the blue the mana bar
+   already uses, so the button and the bar it fills are plainly the same thing.
+   Spend keeps the damage red: it is still the bar going down. */
+.modal--calc .modal__card[data-resource="mana"] .btn-heal {
+  border-color: var(--mana-deep); background: var(--mana); color: var(--mana-text);
+}
+
+/* ----------------------------------------------------------------- */
+/* 12. DICE ROLLER — bottom sheet + keypad                            */
+/* ----------------------------------------------------------------- */
+.modal--dice { align-items: flex-end; padding: 0; }
+
+.dice-sheet {
+  position: relative;
+  width: 100%;
+  max-height: 82%;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-page);
+  border-top: 1.5px solid var(--ink-soft);
+  border-radius: 20px 20px 0 0;
+  box-shadow: 0 -10px 34px rgba(37,29,20,0.4);
+  padding: 10px 12px calc(12px + env(safe-area-inset-bottom, 0px));
+  animation: sheet-rise 0.22s ease-out;
+}
+@keyframes sheet-rise { from { transform: translateY(14%); opacity: 0; } to { transform: none; opacity: 1; } }
+
+.dice-sheet__grab {
+  width: 42px; height: 4px; border-radius: 2px;
+  background: var(--line); margin: 2px auto 8px;
+}
+
+.dice-sheet__head {
+  display: flex; align-items: center; justify-content: flex-end;
+  padding: 0 4px 8px;
+}
+.dice-sheet__close {
+  width: 30px; height: 30px;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--ink-muted);
+  position: relative;
+}
+.dice-sheet__close::before,
+.dice-sheet__close::after {
+  content: ""; position: absolute; top: 14px; left: 7px;
+  width: 17px; height: 1.8px; background: var(--ink-muted);
+}
+.dice-sheet__close::before { transform: rotate(45deg); }
+.dice-sheet__close::after  { transform: rotate(-45deg); }
+
+/* expression + result readout */
+.dice-sheet__display {
+  border: 1.5px solid var(--ink-soft); border-radius: var(--r-sm);
+  background: var(--bg-card);
+  box-shadow: inset 0 0 0 3px var(--bg-card), inset 0 0 0 4px var(--line-gold);
+  padding: 10px 14px 12px;
+  margin-bottom: 10px;
+  min-height: 92px;
+  display: flex; flex-direction: column; justify-content: space-between;
+}
+.dice-sheet__expr {
+  font-family: var(--font-label); font-size: 17px; letter-spacing: 0.02em;
+  color: var(--ink-muted); min-height: 22px; text-align: right;
+  word-break: break-all;
+}
+.dice-sheet__expr:empty::before { content: "Tap dice to build a roll"; color: var(--ink-faint); font-style: italic; font-family: var(--font-body); font-size: 14px; }
+.dice-sheet__out { display: flex; align-items: flex-end; justify-content: space-between; gap: 10px; margin-top: 6px; }
+.dice-sheet__breakdown {
+  flex: 1; min-width: 0;
+  font-family: var(--font-body); font-size: 16px; line-height: 1.4; color: var(--ink-muted);
+}
+.dice-sheet__result {
+  font-family: var(--font-display); font-size: 38px; line-height: 1; color: var(--heading);
+  flex-shrink: 0;
+}
+.dice-sheet__result.is-error { font-size: 15px; font-family: var(--font-body); font-style: italic; color: var(--damage); }
+
+/* individual die results inside the breakdown */
+.roll { color: var(--ink); font-weight: 500; }
+.roll--max { color: var(--accent); font-weight: 600; }
+.roll--min { color: var(--damage); font-weight: 600; }
+
+/* ---- keypad ---- */
+.keypad { display: grid; grid-template-columns: 3fr 1fr; gap: 7px; }
+.keypad__main { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; }
+.keypad__side { display: grid; grid-template-rows: repeat(7, 1fr); gap: 7px; }
+
+.key {
+  display: flex; align-items: center; justify-content: center;
+  min-height: 46px;
+  border: 1.5px solid var(--line); border-radius: var(--r-sm);
+  background: var(--bg-card); color: var(--ink);
+  font-family: var(--font-label); font-size: 20px;
+  box-shadow: var(--shadow-soft);
+  transition: transform 0.06s ease, filter 0.12s ease;
+}
+.key:active { transform: translate(1px, 1px); box-shadow: none; filter: brightness(0.97); }
+
+/* dice keys — parchment, display face */
+.key--die {
+  background: var(--bg-parchment2);
+  font-family: var(--font-display);
+  font-size: 18px;
+  color: var(--ink);
+}
+/* parentheses — grouped visually with the dice keys */
+.key--paren { background: var(--bg-parchment2); color: var(--ink-muted); font-size: 21px; }
+
+/* operator rail — gilt */
+.key--op {
+  background: var(--gold-bright);
+  border-color: var(--gold);
+  color: #f7ecd8;
+  font-size: 22px;
+}
+/* backspace — oxblood */
+.key--back {
+  background: var(--damage);
+  border-color: var(--damage-border);
+  color: var(--damage-text);
+}
+/* roll — rust, spans the last two rows */
+.key--roll {
+  grid-row: span 2;
+  background: var(--accent);
+  border-color: var(--accent-deep);
+  color: #f7ecd8;
+  flex-direction: column; gap: 3px;
+}
+.key--roll span {
+  font-family: var(--font-label); font-size: 9.5px;
+  letter-spacing: 0.1em; text-transform: uppercase;
+}
+
+/* ----------------------------------------------------------------- */
+/* 13. QUICK ROLL — tappable value boxes + result card                */
+/* ----------------------------------------------------------------- */
+
+/* affordance: a rollable value box gets a gilt underline + press state */
+.val-box--roll {
+  cursor: pointer;
+  border-color: var(--line-gold);
+  box-shadow: inset 0 -2.5px 0 var(--line-gold);
+  transition: transform 0.06s ease, background 0.12s ease;
+}
+.val-box--roll:active {
+  transform: translateY(1px);
+  background: var(--bg-parchment2);
+  box-shadow: inset 0 -1px 0 var(--line-gold);
+}
+
+/* result card — shares .modal / .modal__card with the heal-damage dialog */
+/* Inherits its width from .modal__card like every other card — it used to
+   restate the 300px cap and would otherwise have been the one dialog that
+   stayed narrow. */
+.roll-card { text-align: center; }
+.roll-card__source {
+  font-family: var(--font-label);
+  font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--gold);
+}
+.roll-card__kind {
+  font-family: var(--font-display); font-size: 21px; color: var(--heading);
+  margin-top: 2px;
+}
+/* The total and its two flanks on one baseline. Centred as a group, so a
+   to-hit roll — which hides both flanks — still puts its total in the middle
+   of the card rather than shifting left. */
+.roll-card__readout {
+  display: flex; align-items: center; justify-content: center;
+  gap: 18px; margin: 10px 0 12px;
+}
+.roll-card__total {
+  font-family: var(--font-display);
+  font-size: 68px; line-height: 1; color: var(--ink);
+}
+/* HALF and DOUBLE. Quiet on purpose: they are alternatives being OFFERED, not
+   the answer — the rolled total is the answer, and it stays the only thing on
+   this row at full size. Value over label, because the number is what you are
+   reading and the word only says which number it is. */
+.roll-card__flank {
+  display: flex; flex-direction: column; align-items: center; gap: 1px;
+  min-width: 34px;
+}
+.roll-card__flank[hidden] { display: none; }
+.roll-card__flank-val {
+  font-family: var(--font-display); font-size: 24px; line-height: 1;
+  color: var(--ink-soft);
+}
+.roll-card__flank-label {
+  font-family: var(--font-label); font-size: 9px;
+  letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+/* The roll as an expression: "(2 + 8) + 2". The boxed chips are gone — a box
+   says "token", where parentheses say where the number came from, in the same
+   notation the table already speaks. */
+.roll-card__dice {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: center;
+  /* No gap: ALL spacing comes from .die-op's padding instead, so the "+"
+     between two faces inside one group is spaced exactly like the "+" before
+     the modifier outside it. A flex gap would only separate the groups —
+     the faces sit inside a span and would read "(3+6) + 2", with the inner
+     operator visibly tighter than the outer one. */
+  gap: 0;
+  font-family: var(--font-label); font-size: 21px; color: var(--ink);
+}
+/* Parentheses belong to the group, so they inherit its colour and never pick
+   up a face's highlight. */
+.die-group { color: var(--ink-soft); }
+.die { color: var(--ink); }
+/* Marked by COLOUR rather than a filled tile, which is what lets a highlight
+   live inside a run of ordinary text. Weight carries it at this size. */
+.die--max { color: var(--accent); font-weight: 700; }
+.die--min { color: var(--damage); font-weight: 700; }
+/* The operators between faces and before the modifier — deliberately lighter
+   than the numbers they join, so the eye lands on the values first. */
+.die-op { color: var(--ink-faint); padding: 0 5px; }
+/* ---- critical strike ----
+   The one mark in the app that announces a RULE rather than a number, so it is
+   built like a stamp pressed onto the card: oxblood on a tint of itself, letter
+   -spaced small caps, a hairline box. Oxblood is the palette's "this matters"
+   accent and is otherwise reserved for screen titles — rust is health, gold is
+   the turn's points, ink is Patches, so this is the colour left that carries
+   weight without being mistaken for any of them. */
+.roll-card__crit {
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  margin: 2px 0 10px;
+  padding: 7px 14px;
+  border: 1.5px solid var(--heading); border-radius: var(--r-xs);
+  background: rgba(116, 34, 48, 0.07);
+}
+/* A display: value beats the browser's default [hidden] rule, so a class that
+   sets one has to say this itself — same as .patches and .btn-dashed. */
+.roll-card__crit[hidden] { display: none; }
+.roll-card__crit-label {
+  font-family: var(--font-label); font-size: 13px;
+  letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--heading);
+}
+/* The window, when Lethality has widened it. Quiet — it explains the banner
+   above it rather than competing with it, and is empty at Lethality 0. */
+.roll-card__crit-window {
+  font-family: var(--font-body); font-style: italic; font-size: 11px;
+  color: var(--ink-faint);
+}
+.roll-card__crit-window:empty { display: none; }
+
+/* The die that did it. Deliberately NOT .die--max: that one means "showed its
+   highest face", which is a different claim — a d20 showing 19 can be a crit
+   and a d8 showing 8 never is. Oxblood and heavy, matching the banner above so
+   the face reads as its cause at a glance. */
+.die--crit { color: var(--heading); font-weight: 700; }
+
+/* The flat bonus, outside the parentheses because that is where it sits in the
+   notation. Muted against the faces: it is the part that did not get rolled. */
+.die-mod { color: var(--ink-muted); }
+/* Poison's bite on a heal, in the condition palette rather than the muted ink
+   the Fortune modifier uses — the two terms on that line come from opposite
+   directions and should not read as one sum. */
+.die-mod--poison { color: var(--damage); }
+
+/* ---- effect row controls ----
+   The tick button and the stepper share a row, button first: the stepper is
+   bookkeeping you reach for occasionally, the tick is the thing you press
+   every round, so it sits where the thumb already is. */
+.effect-row__controls { display: flex; align-items: center; gap: 9px; flex-shrink: 0; }
+
+/* The button on an effect that happens repeatedly — Regeneration's heal, the
+   damage a Bleed or Burn stack deals. It carries the TOTAL for the stacks on
+   the sheet, because the multiplication is the only thing it is really for.
+
+   Damage-coloured by default and heal-coloured for Regeneration, so the two
+   read apart at a glance on a row you are pressing mid-fight. */
+.effect-tick {
+  flex-shrink: 0; padding: 5px 10px;
+  border: 1.5px solid var(--damage-border); border-radius: var(--r-xs);
+  background: var(--damage); color: var(--damage-text);
+  font-family: var(--font-label); font-size: 12px; white-space: nowrap;
+}
+.effect-tick--heal { border-color: var(--heal-border); background: var(--heal); color: var(--heal-text); }
+
+/* Clear-all, sitting in the Boons & Conditions heading rule. Quiet: it is the
+   least-used control on the sheet and the most destructive, so it does not
+   compete with the rows it would empty. */
+.rule__action {
+  /* Anchored to the rule's CONTENT box rather than to 50% of its height: the
+     rule's padding is asymmetric (24 over, 14 under), so a translateY(-50%)
+     would sit the button five pixels below the label it belongs to. */
+  position: absolute; right: 0; top: 24px; bottom: 14px;
+  display: flex; align-items: center;
+  /* Knocks the heading's rule line out behind itself — the line is a flex
+     ::after that runs the full width, and text sitting on top of it reads as
+     struck through. Same trick .rule__label uses against the same line. */
+  padding: 0 6px; background: var(--bg-page);
+  font-family: var(--font-label); font-size: 10px;
+  letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--ink-faint);
+}
+.rule__action[hidden] { display: none; }
+
+
+/* ---- the advantage chooser ----
+   Rooted on the To-Hit box that was held, not centred like the other modals:
+   there can be several To-Hit boxes on one screen, and a centred sheet would
+   lose track of which one you pressed.
+
+   Position comes from --adv-x / --adv-y and data-adv-dir, all written by
+   openAdv() — the same arrangement --pull and --pv-* use. Absolute, inside
+   .app, so it is placed against the phone frame and cannot be clipped by a
+   collapsible row's overflow the way a nested absolute child would be. */
+.adv-menu {
+  --adv-w: 216px;
+  position: absolute;
+  width: var(--adv-w);
+  /* Centred on the box, then clamped so neither edge can leave the frame.
+     The clamp is why the width is a token: both ends of it need the number. */
+  left: clamp(calc(var(--adv-w) / 2 + 12px), var(--adv-x, 50%),
+              calc(100% - var(--adv-w) / 2 - 12px));
+  top: var(--adv-y, 50%);
+  z-index: 51;
+  border: 1.5px solid var(--ink-soft); border-radius: var(--r-sm);
+  background: var(--bg-card); box-shadow: var(--shadow-card);
+  overflow: hidden;
+}
+/* Below the box by default, above it when openAdv finds no room beneath —
+   the translate does the flip, so the anchor point stays the box's edge. */
+.adv-menu[data-adv-dir="down"] { transform: translate(-50%, 8px); }
+.adv-menu[data-adv-dir="up"]   { transform: translate(-50%, calc(-100% - 8px)); }
+
+.adv-menu__row {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 10px;
+  width: 100%; padding: 11px 14px;
+  background: none; text-align: left;
+}
+.adv-menu__row + .adv-menu__row { border-top: 1px solid var(--line-soft); }
+.adv-menu__label {
+  font-family: var(--font-label); font-size: 14px; color: var(--ink);
+}
+/* The pool, and nothing else. What "Advantage" DOES is not written here —
+   the option's own name says which way it goes, and the result card shows the
+   discarded die struck through. */
+.adv-menu__dice {
+  font-family: var(--font-body); font-style: italic; font-size: 12px;
+  color: var(--ink-faint);
+}
+
+/* The mode's name on the result card, under the kind. Empty on a straight
+   roll, and :empty collapses it so the card keeps its old spacing exactly. */
+.roll-card__adv {
+  font-family: var(--font-label); font-size: 11px;
+  letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--accent-deep); margin-top: 3px;
+}
+.roll-card__adv:empty { display: none; }
+
+/* A die the pool threw away. Struck and faded: still legible, because seeing
+   what you did not take is most of the point of rolling two, but plainly not
+   part of the result. */
+.die--dropped {
+  color: var(--ink-faint); opacity: 0.6;
+  text-decoration: line-through; text-decoration-thickness: 1.5px;
+}
+/* Faces in an attack pool are alternatives, not addends, so they are parted
+   by a gap rather than a "+" — see faceGroupHtml(). */
+.die-sep { display: inline-block; width: 11px; }
+
+
+/* ---- the Poison control ----
+   One component, two homes: the healing roll card and the heal calculator.
+   Built as a checkbox rather than a switch because it states a FACT about this
+   heal ("my Poison applies to this one") rather than turning a mode on. */
+.poison-toggle {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  margin: 10px auto 0; padding: 7px 12px;
+  border: 1.5px solid var(--line); border-radius: var(--r-xs);
+  background: var(--bg-inset);
+  font-family: var(--font-label); font-size: 12px; color: var(--ink-muted);
+}
+/* A display: value beats the browser's default [hidden] rule — same as
+   .patches, .roll-card__flank and .btn-dashed. */
+.poison-toggle[hidden] { display: none; }
+.poison-toggle__box {
+  width: 15px; height: 15px; flex-shrink: 0;
+  border: 1.5px solid var(--line-warm); border-radius: 4px;
+  background: var(--bg-card);
+}
+/* ON: the box fills and the label inks up, so the pressed state is legible
+   from the fill alone rather than from a tick nobody reads at 15px. */
+.poison-toggle[aria-pressed="true"] { border-color: var(--damage); color: var(--damage); }
+.poison-toggle[aria-pressed="true"] .poison-toggle__box {
+  border-color: var(--damage); background: var(--damage);
+}
+
+.roll-card__notation {
+  font-family: var(--font-body); font-style: italic; font-size: 13px;
+  color: var(--ink-faint); margin-top: 10px;
+}
+/* Reroll is the card's only button now — the scrim and Escape do the
+   dismissing, so there is no Done to sit beside it. It still stretches the
+   full width rather than shrinking to its text: the card is a tap target
+   somebody is hitting repeatedly mid-fight, and a wide one is easier to hit
+   without looking. */
+.roll-card__actions { display: flex; margin-top: 16px; }
+.roll-card__again {
+  flex: 1; border-radius: var(--r-sm); padding: 12px;
+  font-family: var(--font-label); font-size: 13px;
+  letter-spacing: 0.08em; text-transform: uppercase;
+  box-shadow: 2px 2px 0 rgba(59,46,33,0.2);
+  border: 1.5px solid var(--accent-deep); background: var(--accent); color: #f7ecd8;
+  /* Icon and word on ONE line, where the calculator's Roll key stacks them in
+     two — that key is a tall grid cell spanning two rows and this is a wide
+     bar. Same glyph, same rust, laid out for the space each one has. */
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+}
+/* The d20 keeps its own proportions while the label sets the line height. */
+.roll-card__again svg { flex-shrink: 0; }
+
+/* ----------------------------------------------------------------- */
+/* 16. DICE MOTION — the tumble before a roll settles                 */
+/* ----------------------------------------------------------------- */
+/* Kept together rather than split across the roller and the result card,
+   because both surfaces share one animation. JS paints throwaway faces
+   frame by frame and flags which dice have come to rest; every rule below
+   is only how that reads on screen — no rule here changes a number. */
+
+/* a die still in the air: dimmed, so the eye is drawn to the ones that have
+   already landed. No scale any more — a number that shrinks inside a line of
+   text drags its neighbours around with it, which a box could absorb and a
+   run of type cannot. */
+.die--tumbling { opacity: 0.5; color: var(--ink-muted); }
+.die { transition: opacity 0.12s ease, color 0.12s ease; }
+
+/* the same idea in the calculator's text breakdown */
+.roll--tumbling { color: var(--ink-faint); font-weight: 400; }
+
+/* the running total reads provisional until the last die locks... */
+.roll-card__total.is-tumbling,
+.dice-sheet__result.is-tumbling { color: var(--ink-faint); }
+
+/* ...then arrives with a single weighty pop */
+.roll-card__total.is-settled,
+.dice-sheet__result.is-settled { animation: roll-settle 0.34s cubic-bezier(0.2, 1.5, 0.4, 1); }
+@keyframes roll-settle {
+  from { transform: scale(1.3); }
+  to   { transform: scale(1); }
+}
+
+/* The tumble is decoration — the result is identical without it — so it goes
+   away entirely for anyone who has asked the OS to reduce motion. JS skips
+   the frames; this drops the trimmings that would otherwise still fire. */
+@media (prefers-reduced-motion: reduce) {
+  .die { transition: none; }
+  .roll-card__total.is-settled,
+  .dice-sheet__result.is-settled { animation: none; }
+}
+
+

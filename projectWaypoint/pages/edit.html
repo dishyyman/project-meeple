@@ -1,0 +1,110 @@
+    <!-- ================= EDIT CHARACTER ================= -->
+    <!-- A screen, not a modal: this is a workbench you sit at, and the
+         sections below will outgrow a dialog as soon as attributes and
+         subclass levels land. Portrait and Identity are live; the rest are
+         stubbed with their real headings so the shape can be judged before
+         the forms are written. -->
+    <section class="screen screen--edit">
+      <div class="topbar topbar--between">
+        <button class="icon-btn icon-btn--back" data-nav="sheet" aria-label="Back to sheet">
+          <svg width="12" height="20" viewBox="0 0 12 20" fill="none"><path d="M10 2 2 10l8 8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <h2 class="title">Edit Character</h2>
+        <button class="icon-btn icon-btn--menu" data-menu="open" aria-label="Menu"><span></span><span></span><span></span></button>
+      </div>
+      <div class="divider"></div>
+      <div class="edit__scroll">
+        <div class="sheet__pad">
+
+          <!-- BIO — who this person is, in one section.
+               The face and the name make one identifying pair, so they sit
+               side by side at the head of it; the descriptive fields, all
+               optional, follow. One Save at the foot commits the lot, so
+               there is never a half-saved bio. -->
+          <div class="rule"><span class="rule__label">&#10022; Bio &#10022;</span></div>
+          <div class="bio__head">
+            <!-- The picture IS the control: there are no buttons beside it.
+                 Tapping it opens the portrait menu (change / reposition /
+                 remove); with no photo yet there is nothing to reposition or
+                 remove, so the same tap goes straight to the file picker —
+                 see openPortraitMenu() for that fork. -->
+            <button class="portrait-edit__frame" data-portrait-menu
+                    aria-label="Change portrait">
+              <img data-portrait-img alt="">
+              <span class="portrait-edit__hint">Change</span>
+            </button>
+            <label class="field bio__name">
+              <span class="field__label">Name</span>
+              <input class="field__input" data-id-name type="text" maxlength="60" placeholder="Who are you?">
+            </label>
+          </div>
+          <p class="field__error" data-id-error hidden>A character needs a name.</p>
+          <p class="field__error" data-bind="portraitError" data-portrait-error role="alert" hidden></p>
+
+          <!-- The descriptive fields. Free text, not numbers: a height is
+               written 5'11" as readily as 180 cm, and a game that never reads
+               these values back has no reason to insist on a format. -->
+          <div class="bio__grid">
+            <label class="field">
+              <span class="field__label">Age <span class="field__optional">optional</span></span>
+              <input class="field__input" data-id-age type="text" maxlength="24" placeholder="—">
+            </label>
+            <label class="field">
+              <span class="field__label">Height <span class="field__optional">optional</span></span>
+              <input class="field__input" data-id-height type="text" maxlength="24" placeholder="—">
+            </label>
+            <label class="field">
+              <span class="field__label">Weight <span class="field__optional">optional</span></span>
+              <input class="field__input" data-id-weight type="text" maxlength="24" placeholder="—">
+            </label>
+            <label class="field">
+              <span class="field__label">Eyes <span class="field__optional">optional</span></span>
+              <input class="field__input" data-id-eyes type="text" maxlength="24" placeholder="—">
+            </label>
+            <label class="field">
+              <span class="field__label">Hair <span class="field__optional">optional</span></span>
+              <input class="field__input" data-id-hair type="text" maxlength="24" placeholder="—">
+            </label>
+          </div>
+
+          <!-- Disabled until something actually differs from what is stored,
+               and disabled again the moment it is saved. The button's own
+               state IS the answer to "did that save?" — which is why Save no
+               longer leaves the screen to prove it. -->
+          <div class="form-actions">
+            <button class="btn-save" data-id-save disabled>Save</button>
+          </div>
+
+          <!-- SECTIONS STILL TO COME -->
+          <div class="rule"><span class="rule__label">&#10022; Attributes &#10022;</span></div>
+          <div class="empty-note">Steppers for the six attributes, budgeted 4 at creation +1 per level &mdash; reported, not gated, the way skill points already are.</div>
+
+          <!-- SKILLS -->
+          <!-- The list is a read-only index; the pen opens the editor. Ranks
+               are assigned here and nowhere else, because only a screen that
+               sees the whole spread at once can hold it to the four-skill
+               rule. -->
+          <div class="rule rule--action">
+            <span class="rule__label">&#10022; Skills &#10022;</span>
+            <button class="rule__add rule__add--pen" data-skill-edit aria-label="Edit skills">
+              <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M11.2 1.9 14.1 4.8 5.6 13.3 2 14l.7-3.6z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M9.6 3.5 12.5 6.4" stroke="currentColor" stroke-width="1.7"/></svg>
+            </button>
+          </div>
+          <p class="note-line" data-bind="skillNote" hidden></p>
+          <div data-list="editSkills"></div>
+          <button class="btn-dashed" data-skill-edit data-skill-room hidden>
+            <span class="plus"></span><span>Add Skill</span>
+          </button>
+
+          <div class="rule"><span class="rule__label">&#10022; Subclass &amp; Levels &#10022;</span></div>
+          <div class="empty-note">Pick the origin subclass and one row per level taken. The length of that list <em>is</em> the character&rsquo;s level, so adding a row is a level-up.</div>
+
+          <div class="rule"><span class="rule__label">&#10022; Abilities &amp; Passives &#10022;</span></div>
+          <div class="empty-note">Free-form name, damage and description fields, kept as overrides once abilities reach the library.</div>
+
+          <div class="rule"><span class="rule__label">&#10022; Gear &amp; Items &#10022;</span></div>
+          <div class="empty-note">Gear, armor, equipment and inventory, edited here as forms.</div>
+
+        </div>
+      </div>
+    </section>

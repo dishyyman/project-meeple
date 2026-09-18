@@ -1,0 +1,87 @@
+    <!-- ================= MENU DRAWER ================= -->
+    <div class="drawer">
+      <div class="drawer__scrim" data-menu="close"></div>
+      <div class="drawer__panel">
+        <div class="drawer__head">
+          <div class="drawer__title">Index</div>
+          <button class="drawer__close" data-menu="close" aria-label="Close"></button>
+        </div>
+        <div class="divider"></div>
+        <!-- Four groups, ruled apart, in the order a player reaches for them:
+             who the character IS, what you do at the table, what you look up,
+             and what you do to the app. Every entry is the same card button —
+             one look for "a place this menu goes" — except Level Up, which
+             stays filled as the drawer's one primary action.
+
+             Six of these have nothing behind them yet. They are inert rather
+             than disabled, which is what Rulebook and Compendium already were:
+             a menu greyed out six ways reads as broken, and the destinations
+             are real, only unbuilt. `data-action` names match the home
+             screen's, so both routes land in one place once they exist. -->
+        <div class="drawer__body">
+          <div class="drawer__group">
+            <button class="levelup-btn" data-action="level-up">
+              <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true"><path d="M9 15V3M9 3l-4 4M9 3l4 4" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              <span>Level Up</span>
+            </button>
+            <!-- Directly beneath Level Up: both change who the character IS,
+                 as opposed to the groups below, which change what you read. -->
+            <button class="drawer-btn" data-nav="edit">
+              <svg width="18" height="18" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M11.2 1.9 14.1 4.8 5.6 13.3 2 14l.7-3.6z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><path d="M9.6 3.5 12.5 6.4" stroke="currentColor" stroke-width="1.4"/></svg>
+              <span>Edit Character</span>
+            </button>
+          </div>
+
+          <div class="divider"></div>
+          <div class="drawer__group">
+            <!-- Crescent moon: a rest is a night passing, not a button press. -->
+            <button class="drawer-btn" data-action="rest">
+              <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true"><path d="M14.4 11.3A5.9 5.9 0 0 1 6.7 3.6 6.2 6.2 0 1 0 14.4 11.3Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
+              <span>Rest</span>
+            </button>
+            <button class="drawer-btn" data-tab="notes">
+              <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true"><path d="M4 2.8h6.4L14 6.4v8.8H4z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M10.2 2.8v3.6H14" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M6.4 9.4h5.2M6.4 12h3.4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+              <span>Notes</span>
+            </button>
+            <!-- The import glyph mirrored — arrow out of the tray against
+                 arrow into it — because they are the same door both ways. -->
+            <button class="drawer-btn" data-action="share">
+              <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true"><path d="M9 11.2V2.4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M5.6 5.5 9 2.1l3.4 3.4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M2.9 11.4v2.3a2 2 0 0 0 2 2h8.2a2 2 0 0 0 2-2v-2.3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+              <span>Share</span>
+            </button>
+          </div>
+
+          <div class="divider"></div>
+          <div class="drawer__group">
+            <!-- The home screen's open book, so one destination has one face. -->
+            <button class="drawer-btn" data-action="compendium">
+              <svg width="18" height="18" viewBox="0 0 22 22" fill="none" aria-hidden="true"><path d="M4 4.5h6a2 2 0 012 2V18a2 2 0 00-2-2H4z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M18 4.5h-6a2 2 0 00-2 2V18a2 2 0 012-2h6z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
+              <span>Compendium</span>
+            </button>
+            <!-- A scroll, not a second book: the Compendium is the open one,
+                 and two books side by side would be one icon twice. -->
+            <button class="drawer-btn" data-nav="rules">
+              <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true"><rect x="3.2" y="2" width="11.6" height="2.6" rx="1.3" stroke="currentColor" stroke-width="1.4"/><rect x="3.2" y="13.4" width="11.6" height="2.6" rx="1.3" stroke="currentColor" stroke-width="1.4"/><path d="M4.6 4.6h8.8v8.8H4.6z" stroke="currentColor" stroke-width="1.4"/><path d="M6.8 7.4h4.4M6.8 10.2h3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+              <span>Rules</span>
+            </button>
+          </div>
+
+          <div class="divider"></div>
+          <div class="drawer__group">
+            <!-- The home screen's gear, for the same reason as the book.
+                 data-nav rather than data-action, so the navigation branch
+                 closes the drawer on the way out — the same path the Rules
+                 entry above takes. -->
+            <button class="drawer-btn" data-nav="settings">
+              <svg width="18" height="18" viewBox="0 0 22 22" fill="none" aria-hidden="true"><path d="M9.4 4.9L9.2 2L12.8 2L12.6 4.9L14.2 5.5L16.1 3.4L18.6 5.9L16.5 7.9L17.1 9.4L20 9.2L20 12.8L17.1 12.6L16.5 14.1L18.6 16.1L16.1 18.6L14.2 16.5L12.6 17.1L12.8 20L9.2 20L9.4 17.1L7.9 16.5L5.9 18.6L3.4 16.1L5.5 14.1L4.9 12.6L2 12.8L2 9.2L4.9 9.4L5.5 7.8L3.4 5.9L5.9 3.4L7.8 5.5Z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><circle cx="11" cy="11" r="2.9" stroke="currentColor" stroke-width="1.4"/></svg>
+              <span>Settings</span>
+            </button>
+            <button class="drawer-btn" data-action="help">
+              <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true"><circle cx="9" cy="9" r="7.2" stroke="currentColor" stroke-width="1.5"/><path d="M6.6 6.7A2.5 2.5 0 0 1 11.5 7.2c0 1.7-2.5 1.9-2.5 3.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M9 13.3h.01" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+              <span>Help</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
