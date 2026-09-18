@@ -443,6 +443,58 @@ emitting `""`.
 
 ---
 
+## 9a. Getting a library into the app
+
+Settings → Compendium imports and exports this file.
+
+**Export** writes the compendium *as this device currently has it* — the
+generated `library.js`, or whatever has been installed over it, plus any
+entries restored from an imported character. It is built from the live
+`LIBRARY`, so what comes out is what the app is actually resolving against,
+minus the internal `imported` marker, which is a note this app makes and not
+content. The name is `<title-slug>-<version>.library.json`: a compendium is a
+published thing with a version, and two exports of the same version are the
+same file.
+
+**Import** validates the envelope (§1), refuses a `schemaVersion` higher than
+the app understands, refuses a character file with a message naming it as one,
+and then asks:
+
+| Mode | What happens | Takes effect |
+|---|---|---|
+| **Add** | entries this device does not have are folded in; every id it already has is **left alone** | immediately |
+| **Replace** | the whole file is stored under `waypoint.library` and becomes this device's content | on the next load — the app reloads |
+
+Add exists for the common case of filling gaps, and the local-wins rule is the
+same one a character file's `entries` snapshot follows (`docs/character-file.md`
+§4): an entry already here is the one this device's own spreadsheet describes.
+It follows that **Add can never update an existing entry** — a rebalance has to
+come in as a Replace.
+
+Replace reloads the page, and that is deliberate rather than a shortcut.
+`LIBRARY` and every catalog and index built from it are read **once** at load,
+and the open character resolved its ids against them; rebuilding all of that in
+place would leave a dozen places for a stale reference to survive. Everything
+the app holds is already in localStorage, so a reload costs nothing.
+
+Two storage keys, doing different jobs:
+
+| Key | Holds | Read |
+|---|---|---|
+| `waypoint.library` | a compendium installed **in place of** the generated one — this whole file | at load, ahead of `window.WAYPOINT_LIBRARY` |
+| `waypoint.imported-entries` | individual entries that filled gaps, from an Add or from an imported character | at boot, merged in over the top |
+
+Replacing does not clear the second: those entries fill gaps in whatever
+compendium is installed, and they are what keeps an imported character's gear
+resolving. **Restore the Built-in Compendium** drops `waypoint.library` only,
+and characters are untouched by either — they are stored apart from content.
+
+A character referencing an id the new compendium does not carry loses it, the
+same way `applySave()` drops any id it cannot resolve. The import warns about
+this before it is pressed.
+
+---
+
 ## 10. Next steps
 
 - [ ] Rename or delete every 🎲 field to match Waypoint's real rules

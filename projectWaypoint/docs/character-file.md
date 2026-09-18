@@ -217,6 +217,37 @@ share sheet.
 
 ---
 
+## 4b. Backups — the whole roster in one file
+
+Settings → Backup → **Export All Characters** writes every character on the
+device into one file of this same schema, with `characters` holding all of
+them and `entries` the union of everything they reference. Gear two characters
+share is snapshotted once.
+
+There is no separate backup format, and that was the point of making
+`characters` an array in v1. One exporter (`characterFile()`, which takes a
+list of ids and is given one id by the Personae list's Export and the whole
+roster by Settings) and one importer serve both. A backup opens in anything
+that could already open a single character card.
+
+Two differences from a single-character export, neither of them schema:
+
+- **The name.** `waypoint-backup-YYYY-MM-DD.waypoint.json`, from the
+  envelope's own `exported` date, so a folder of them sorts and reads. A
+  backup of a one-character roster is still named this way — the name follows
+  from why the file was written, not from how many are in it, which is why
+  `exportBackup()` passes the name explicitly rather than letting the count
+  decide it.
+- **Portraits are not optional.** The share window's choice (§4a) exists to get
+  one character through an attachment limit. A backup that quietly dropped
+  every photo would not be a backup.
+
+The Settings row reports what the file will hold and what it will weigh, both
+measured by building and serialising the real file — the same rule §4a sets
+for the share chips.
+
+---
+
 ## 5. What the importer refuses
 
 An import either produces a complete character or produces an explanation. It
@@ -245,6 +276,46 @@ inside it rather than pushing the dismiss button off the screen.
 Imported data goes through `applySave()` — the same clamping, id-resolution and
 migration path as a save read from localStorage. A hand-edited or hostile file
 therefore cannot introduce a state that a corrupt localStorage could not.
+
+Validation is split from importing (`parseCharacterFile()` returns the file or
+an explanation and writes nothing), because §5a has to be able to read a file
+in order to ask a question about it.
+
+---
+
+## 5a. Add, or overwrite
+
+A file arriving from Settings → Backup → **Import Characters** is read and
+validated first, then the player is asked what to do with it. The question can
+only be put usefully once the file has been read — "this holds four characters,
+three of which you already have" is what makes the answer an informed one — so
+the choice is offered *after* the picker, never as two buttons before it.
+
+| Mode | The id each character gets | Effect |
+|---|---|---|
+| **Add** | a fresh one, always | every character in the file lands as a new entry; nothing already on the device is touched |
+| **Overwrite** | the one it came in with | a character already under that id is **replaced in place**, keeping its position in the list; one the device has never seen is added under that id |
+
+**Overwrite replaces what the file names and nothing else.** Characters the
+file says nothing about are left alone, so restoring a three-month-old backup
+cannot delete work that postdates it. This is deliberately *not* "make the
+device match the file": that would be a delete, and a restore should not be
+able to destroy a character the player never asked about.
+
+Keeping the original ids is also what makes a later backup match up again —
+restore twice and the second restore updates the same characters rather than
+producing a second copy of each.
+
+The **Characters screen's** own Import button does not ask: it always adds. You
+reach for it when you have no character yet, an import there is an addition to
+the list, and restoring over what you already have is a backup operation that
+belongs in Settings. It does now import *every* character in the file it is
+given, rather than only the first.
+
+Fresh ids are minted by `freshCharacterId()`, which checks the roster and
+storage and retries. A backup of six characters mints six ids inside one
+millisecond, and the old `c${Date.now().toString(36)}` alone would have handed
+them all the same storage key.
 
 ---
 
@@ -276,9 +347,9 @@ therefore cannot introduce a state that a corrupt localStorage could not.
 
 ## 7. Still to come
 
-- [ ] Export the whole roster at once — the file shape already allows it
-      (`characters` is an array); only a button and a loop are missing
-- [ ] Let the import screen offer "replace" as well as "add a copy", for the
-      backup-restore case where a fresh id is not what the player wants
+- [x] Export the whole roster at once — Settings → Backup, §4b. No schema
+      change was needed: `characters` was an array from v1 for this
+- [x] Let the import offer "overwrite" as well as "add a copy", for the
+      backup-restore case where a fresh id is not what the player wants — §5a
 - [ ] Decide whether abilities and spells, once they are library content,
       should be snapshot into `entries` like everything else (they should)

@@ -58,7 +58,7 @@
             </span>
             <span class="navcard__body"><span class="navcard__name">Guide Tools</span></span>
           </button>
-          <button class="navcard" data-action="settings">
+          <button class="navcard" data-nav="settings">
             <span class="navcard__icon">
               <!-- Gear: one notched outline, eight trapezoidal teeth, plus the hub
                    bore. The earlier version drew the teeth as radial spokes, which
@@ -599,6 +599,177 @@
       </div>
     </section>
 
+    <!-- ================= SETTINGS =================
+         A SCREEN, not a modal, for the reason Rules is one: it is longer than
+         a dialog should be, and it is a place you go rather than a question you
+         answer. Both doors into it — the Home tile and the drawer — are plain
+         data-nav, so the existing navigation branch carries them and closes the
+         drawer on the way, and neither needs a handler of its own.
+
+         Back always goes Home. The drawer can reach this from the sheet too,
+         but a back button whose destination depends on how you arrived is a
+         button that means two things; Rules settled that the same way.
+
+         Four sections under the app's own ✦ rules. The two that do something —
+         Backup and Compendium — are built on the export/import engine that
+         already carries a single character, so there is one file format and one
+         importer rather than three. Appearance is FRAME ONLY: the controls are
+         here and they show a selection, but nothing reads them yet (see
+         renderAppearance() in main.js). -->
+    <section class="screen screen--settings">
+      <div class="topbar topbar--between">
+        <button class="icon-btn icon-btn--back" data-nav="home" aria-label="Back to home">
+          <svg width="12" height="20" viewBox="0 0 12 20" fill="none"><path d="M10 2 2 10l8 8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <h2 class="title">Settings</h2>
+        <button class="icon-btn icon-btn--menu" data-menu="open" aria-label="Menu"><span></span><span></span><span></span></button>
+      </div>
+      <div class="divider"></div>
+
+      <div class="settings__scroll">
+        <div class="section-pad">
+
+          <!-- ---------- BACKUP ---------- -->
+          <div class="rule"><span class="rule__label">&#10022; Backup &#10022;</span></div>
+          <p class="settings__lede">Every character on this device in one file &mdash; sheets, portraits and
+            journals. The app keeps them in this browser&rsquo;s storage and nowhere else, so a cleared
+            browser is a lost roster unless you have one of these.</p>
+          <div class="stack stack--tight">
+            <!-- Arrow out of an open-topped tray, the drawer's Share glyph. -->
+            <button class="set-row" data-backup-export>
+              <span class="set-row__icon">
+                <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true"><path d="M9 11.2V2.4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M5.6 5.5 9 2.1l3.4 3.4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M2.9 11.4v2.3a2 2 0 0 0 2 2h8.2a2 2 0 0 0 2-2v-2.3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+              </span>
+              <span class="set-row__body">
+                <span class="set-row__name">Export All Characters</span>
+                <!-- Written by renderSettings(): how many, and what the file
+                     will weigh. The count is the honest answer to "did it get
+                     everything?", and the weight is the only useful thing to
+                     know before sending one anywhere. -->
+                <span class="set-row__note" data-bind="backupNote"></span>
+              </span>
+            </button>
+            <!-- The same glyph mirrored — arrow into the tray — because import
+                 and export are the same door both ways. -->
+            <button class="set-row" data-file-open="characters">
+              <span class="set-row__icon">
+                <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true"><path d="M9 2.4v8.8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M5.6 7.8 9 11.2l3.4-3.4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M2.9 11.4v2.3a2 2 0 0 0 2 2h8.2a2 2 0 0 0 2-2v-2.3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+              </span>
+              <span class="set-row__body">
+                <span class="set-row__name">Import Characters</span>
+                <span class="set-row__note">Add them alongside your own, or overwrite the ones you already have.</span>
+              </span>
+            </button>
+          </div>
+
+          <!-- ---------- COMPENDIUM ---------- -->
+          <div class="rule"><span class="rule__label">&#10022; Compendium &#10022;</span></div>
+          <p class="settings__lede">The game&rsquo;s content &mdash; classes, subclasses, traits, skills and gear.
+            Characters store ids and read every number out of here, so replacing this re-points every
+            sheet at once.</p>
+          <!-- Which compendium is installed, written by renderSettings(). Sits
+               above the buttons because it is what both of them act on. -->
+          <div class="set-meta">
+            <span class="set-meta__title" data-bind="libTitle"></span>
+            <span class="set-meta__ver" data-bind="libVersion"></span>
+          </div>
+          <div class="stack stack--tight">
+            <button class="set-row" data-compendium-export>
+              <span class="set-row__icon">
+                <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true"><path d="M9 11.2V2.4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M5.6 5.5 9 2.1l3.4 3.4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M2.9 11.4v2.3a2 2 0 0 0 2 2h8.2a2 2 0 0 0 2-2v-2.3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+              </span>
+              <span class="set-row__body">
+                <span class="set-row__name">Export Compendium</span>
+                <span class="set-row__note" data-bind="compendiumNote"></span>
+              </span>
+            </button>
+            <button class="set-row" data-file-open="compendium">
+              <span class="set-row__icon">
+                <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true"><path d="M9 2.4v8.8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M5.6 7.8 9 11.2l3.4-3.4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M2.9 11.4v2.3a2 2 0 0 0 2 2h8.2a2 2 0 0 0 2-2v-2.3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+              </span>
+              <span class="set-row__body">
+                <span class="set-row__name">Import Compendium</span>
+                <span class="set-row__note">Add entries this device is missing, or replace the compendium outright.</span>
+              </span>
+            </button>
+            <!-- Only in the markup once there is something to undo:
+                 renderSettings() unhides it when a compendium has been
+                 installed over the built-in one. A permanent "reset" for a
+                 state most players will never be in is a button that only ever
+                 raises the question of what it would have done. -->
+            <button class="set-row set-row--quiet" data-compendium-reset hidden>
+              <span class="set-row__icon">
+                <svg width="18" height="18" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M16.2 10a6.2 6.2 0 1 1-1.9-4.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M16.6 2.4v3.7h-3.7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </span>
+              <span class="set-row__body">
+                <span class="set-row__name">Restore the Built-in Compendium</span>
+                <span class="set-row__note">Drop the imported compendium and go back to the one this app ships with.</span>
+              </span>
+            </button>
+          </div>
+
+          <!-- ---------- APPEARANCE ---------- -->
+          <!-- FRAME ONLY, deliberately. The chips below track a choice and draw
+               it, and nothing else in the app reads that choice — the design
+               tokens these would drive are expected to move before any of this
+               is wired up, and a half-applied theme is harder to finish than an
+               unstarted one. The note says so on the screen rather than only in
+               this comment, because a control that visibly does nothing and
+               does not admit it reads as a bug. -->
+          <div class="rule"><span class="rule__label">&#10022; Appearance &#10022;</span></div>
+          <p class="settings__lede settings__lede--soon">Not wired up yet. These remember what you pick, but
+            the app keeps its parchment either way until the theme work lands.</p>
+          <div class="tag-picks tag-picks--flush">
+            <div class="tag-picks__label">Mode</div>
+            <div class="tag-picks__row" data-list="apMode"></div>
+          </div>
+          <div class="tag-picks">
+            <div class="tag-picks__label">Colour Theme</div>
+            <div class="tag-picks__row" data-list="apTheme"></div>
+          </div>
+
+          <!-- ---------- FEEDBACK ---------- -->
+          <!-- Buttons only for now: neither destination exists yet, and a
+               mailto: pointing at nothing or an invite link that has expired is
+               worse than a button that says "soon". Both fall through to the
+               not-yet-implemented stub in wire(). -->
+          <div class="rule"><span class="rule__label">&#10022; Feedback &#10022;</span></div>
+          <p class="settings__lede">Found a bug, or a rule that reads wrong? Waypoint is in progress and this
+            is how it gets better.</p>
+          <div class="stack stack--tight">
+            <button class="set-row" data-action="feedback-email">
+              <span class="set-row__icon">
+                <svg width="18" height="18" viewBox="0 0 20 20" fill="none" aria-hidden="true"><rect x="2.4" y="4.2" width="15.2" height="11.6" rx="1.8" stroke="currentColor" stroke-width="1.5"/><path d="M3.2 5.4 10 10.6l6.8-5.2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </span>
+              <span class="set-row__body">
+                <span class="set-row__name">Send an E-mail</span>
+                <span class="set-row__note">Coming soon.</span>
+              </span>
+            </button>
+            <!-- A speech bubble rather than the Discord mark: a brand logo
+                 hand-drawn at 18px is a brand logo drawn wrong, and every other
+                 glyph in this app is a line drawing of the thing it means. -->
+            <button class="set-row" data-action="feedback-discord">
+              <span class="set-row__icon">
+                <svg width="18" height="18" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M4.4 3.8h11.2a1.8 1.8 0 0 1 1.8 1.8v5.6a1.8 1.8 0 0 1-1.8 1.8H8.8l-3.4 3v-3h-1a1.8 1.8 0 0 1-1.8-1.8V5.6a1.8 1.8 0 0 1 1.8-1.8Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
+              </span>
+              <span class="set-row__body">
+                <span class="set-row__name">Join the Discord</span>
+                <span class="set-row__note">Coming soon.</span>
+              </span>
+            </button>
+          </div>
+
+          <!-- One picker for both imports; which one asked is state, not a
+               second input. Kept out of view rather than display:none, so the
+               click that opens it is a real user gesture in every browser —
+               same reason the Characters screen's picker is. -->
+          <input class="visually-hidden" type="file" data-settings-file
+                 accept=".json,application/json" aria-label="Choose a Waypoint file">
+        </div>
+      </div>
+    </section>
+
     <!-- ================= CREATE CHARACTER =================
          The six steps of character creation (player's guide, ch.2), one
          panel per step. Which panel shows is decided by data-create-step
@@ -775,8 +946,11 @@
 
           <div class="divider"></div>
           <div class="drawer__group">
-            <!-- The home screen's gear, for the same reason as the book. -->
-            <button class="drawer-btn" data-action="settings">
+            <!-- The home screen's gear, for the same reason as the book.
+                 data-nav rather than data-action, so the navigation branch
+                 closes the drawer on the way out — the same path the Rules
+                 entry above takes. -->
+            <button class="drawer-btn" data-nav="settings">
               <svg width="18" height="18" viewBox="0 0 22 22" fill="none" aria-hidden="true"><path d="M9.4 4.9L9.2 2L12.8 2L12.6 4.9L14.2 5.5L16.1 3.4L18.6 5.9L16.5 7.9L17.1 9.4L20 9.2L20 12.8L17.1 12.6L16.5 14.1L18.6 16.1L16.1 18.6L14.2 16.5L12.6 17.1L12.8 20L9.2 20L9.4 17.1L7.9 16.5L5.9 18.6L3.4 16.1L5.5 14.1L4.9 12.6L2 12.8L2 9.2L4.9 9.4L5.5 7.8L3.4 5.9L5.9 3.4L7.8 5.5Z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><circle cx="11" cy="11" r="2.9" stroke="currentColor" stroke-width="1.4"/></svg>
               <span>Settings</span>
             </button>
@@ -1256,6 +1430,43 @@
         <div class="form-actions">
           <button class="btn-save" data-modal="close" data-bind="importDismiss"></button>
         </div>
+      </div>
+    </div>
+
+    <!-- ================= IMPORT: ADD OR OVERWRITE ? ================= -->
+    <!-- Shown AFTER the file has been read and validated, never before. The
+         choice between adding and overwriting is a choice about what is in the
+         file, so it is asked where the file's contents can be stated: how many
+         characters, what they are called, which compendium they were built
+         against. Pressing "Import" and being asked to commit to replacing
+         something sight unseen is the same decision with the useful half
+         removed.
+
+         No Cancel button. The scrim and the close cross both decline, which is
+         what every other window in the app already does and what a phone user
+         reaches for anyway — see the Rest popup. The buttons here are
+         therefore the ways of saying yes, and none of them is a default: the
+         destructive one carries the danger fill, the same as Delete
+         Permanently.
+
+         Everything in it — the title, the prose, the notes and the buttons
+         themselves — is written by askFile() from one descriptor, which is
+         what lets the same window put the two-way import question and the
+         one-way "restore the built-in compendium" question without either
+         needing a dialog of its own. -->
+    <div class="modal modal--file-ask">
+      <div class="modal__scrim" data-modal="close"></div>
+      <div class="modal__card">
+        <div class="modal__head">
+          <div class="modal__title" data-bind="fileAskTitle"></div>
+          <button class="modal__close" data-modal="close" aria-label="Close"></button>
+        </div>
+        <p class="confirm__text" data-bind="fileAskText"></p>
+        <!-- Shares .import__notes with the result window: the same list of
+             statements about the same file, so it scrolls and reads the same
+             way in both places. -->
+        <div class="import__notes" data-list="fileAskNotes"></div>
+        <div class="form-actions form-actions--stack" data-list="fileAskActions"></div>
       </div>
     </div>
 

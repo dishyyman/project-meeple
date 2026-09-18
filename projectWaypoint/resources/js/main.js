@@ -271,7 +271,34 @@
   /* because the app is opened straight off the filesystem, where the     */
   /* browser blocks fetch() and module imports alike.                     */
   /* ------------------------------------------------------------------ */
-  const LIBRARY = window.WAYPOINT_LIBRARY || { classes: [], subclasses: [] };
+  /* An imported compendium, if one has been installed over the built-in file.
+
+     Settings can replace the whole library outright, and this is where that
+     replacement takes effect: read at LOAD, ahead of the generated global, so
+     every catalog, index and open character below is built against one
+     compendium and cannot disagree with another. Nothing re-reads it later —
+     installing a compendium reloads the page, which is what makes that
+     guarantee hold rather than merely be intended. See installCompendium().
+
+     The shape is the library file documented in docs/library-schema.md, so
+     what is stored here is exactly what was imported and exactly what would be
+     exported back out. */
+  const LIBRARY_KEY = 'waypoint.library';
+  const LIBRARY_FILE_VERSION = 1;
+
+  function storedLibrary() {
+    let bag = null;
+    try { bag = JSON.parse(localStorage.getItem(LIBRARY_KEY) || 'null'); } catch (_) { /* corrupt */ }
+    // Checked, not trusted — a hand-edited or half-written key must not take
+    // the app down on launch, and falling back to the shipped library is a
+    // recoverable state where a thrown error at load is not.
+    if (!bag || typeof bag !== 'object' || Array.isArray(bag)) return null;
+    if (!bag.waypoint || typeof bag.waypoint !== 'object') return null;
+    if (Number(bag.waypoint.schemaVersion) > LIBRARY_FILE_VERSION) return null;
+    return bag;
+  }
+
+  const LIBRARY = storedLibrary() || window.WAYPOINT_LIBRARY || { classes: [], subclasses: [] };
   if (!LIBRARY.subclasses || !LIBRARY.subclasses.length) {
     // Worth being loud about: without it every derived stat reads zero, which
     // looks like a rules bug rather than a missing file.
@@ -437,6 +464,25 @@
     // list, not part of the draft — filtering nothing and choosing nothing are
     // different acts, and closing the modal must not save a filter.
     skillFilter: 'all',
+    /* Settings' pending question — a file that has been read and validated but
+       not yet imported, together with what the player may choose to do with
+       it. null when the window is closed, which is also what makes dismissing
+       it the decline: nothing has been written at the point it is asked. See
+       askFile(). */
+    ask: null,
+    // Which import the file picker was opened for — 'characters' or
+    // 'compendium'. One input serves both, so this is how the reader knows
+    // what it is holding.
+    filePick: null,
+    // Set when the open result window is reporting something that only takes
+    // effect on the next load — a compendium install. closeModal() reloads.
+    reloadOnClose: false,
+    /* Appearance, chosen and remembered and READ BY NOTHING. The controls are
+       built and the CSS behind them is not, so this is deliberately not
+       persisted either: a preference that survives a reload and still changes
+       nothing is a stronger claim than the app can currently make good on.
+       See renderAppearance(). */
+    appearance: { mode: 'system', theme: 'journal' },
   };
 
   /* ------------------------------------------------------------------ */
@@ -763,9 +809,15 @@
        Armor   — its own slot, costs no hands
        Weapon  — costs hands, attacks
        Shield  — costs hands like a weapon, defends like armour */
-  const ARMOR     = LIBRARY.armor     || [];
-  const WEAPONS   = LIBRARY.weapons   || [];
-  const EQUIPMENT = LIBRARY.equipment || [];
+  /* `||=` rather than `||`, so a library file that omits a collection gets the
+     empty array written BACK onto it and these three names stay LIBRARY's own
+     arrays rather than detached copies. mergeEntries() pushes restored gear
+     into them, and exporting the compendium reads LIBRARY — with `||` a device
+     whose library shipped no `equipment` key would merge imported gear into an
+     array nothing else could see, and export a compendium missing it. */
+  const ARMOR     = (LIBRARY.armor     ||= []);
+  const WEAPONS   = (LIBRARY.weapons   ||= []);
+  const EQUIPMENT = (LIBRARY.equipment ||= []);
 
   // One index across every collection, because ids are globally unique
   // (schema §2) and a character stores nothing but ids.
@@ -4286,6 +4338,21 @@
     // touched the character, and keeping it would make the next open resume an
     // edit the player walked away from.
     state.skillEdit = null;
+    // Dismissing the add/overwrite question IS declining the import — nothing
+    // has been written at the point it is asked, so there is nothing to undo
+    // and nothing that should survive to arm the next press.
+    state.ask = null;
+    /* A compendium was installed and the window reporting it has just been
+       dismissed. The reload is deferred to here rather than run at the install
+       so the player gets to read what happened first; see showImportResult().
+       Everything is already in localStorage, so this loses nothing.
+
+       Last, and it returns: nothing below it would be observed anyway. */
+    if (state.reloadOnClose) {
+      state.reloadOnClose = false;
+      location.reload();
+      return;
+    }
     // Editing reached from the backpack goes back to the backpack — cancelling
     // or saving shouldn't dump the player out to the sheet.
     if (state.itemReturn === 'backpack') {
@@ -5113,12 +5180,17 @@
 
   const CHARACTER_FILE_VERSION = 1;
 
-  /* Library entries that arrived with an imported character and that this
-     device's own library does not have. Kept apart from LIBRARY so the
-     generated file stays the single source of truth for content this device
-     actually ships, and merged in at boot — without persisting them, an
-     import against an older library would look right once and then lose the
-     same gear on the next launch. */
+  /* Library entries that arrived from OUTSIDE this device's own compendium and
+     that it does not otherwise have — with an imported character, or from a
+     compendium imported in Settings with Add rather than Replace. Kept apart
+     from LIBRARY so the generated file stays the single source of truth for
+     content this device actually ships, and merged in at boot: without
+     persisting them, an import against an older library would look right once
+     and then lose the same gear on the next launch.
+
+     Distinct from waypoint.library, which is a compendium installed IN PLACE
+     OF the generated one. These are additions that fill gaps; that is a
+     replacement. */
   const IMPORTED_KEY = 'waypoint.imported-entries';
 
   function loadImportedEntries() {
@@ -5186,17 +5258,33 @@
      photo is capped at 400 KB and is very nearly the whole file, so leaving it
      behind is the difference between a few KB that any chat app will carry and
      half a megabyte that several of them refuse. */
-  function characterFile(id, { portrait = true } = {}) {
-    const stored = readSave(id);
-    if (!stored) return null;
-    const c = { ...stored, id, portrait: portrait ? readPortrait(id) : null };
+  /* `ids` is a LIST, and the one-character case is a list of one. The envelope
+     already declares `characters` an array for exactly this reason, so a whole
+     roster is the same file and the same importer rather than a second format
+     — Settings' Export All Characters and the Personae list's Export are one
+     code path, and a backup can be opened by anything that could already open
+     a single card. `entries` is the union across everyone in the file, so gear
+     two characters share is snapshotted once. */
+  function characterFile(ids, { portrait = true } = {}) {
+    const list = [];
+    for (const id of ids) {
+      const stored = readSave(id);
+      // Silently skipped rather than failing the whole export: a roster row
+      // whose save has been cleared is already a row the app drops at boot,
+      // and losing eleven characters because the twelfth is a ghost would be
+      // the worse answer by far.
+      if (stored) list.push({ ...stored, id, portrait: portrait ? readPortrait(id) : null });
+    }
+    if (!list.length) return null;
 
     const entries = {};
-    for (const ref of referencedIds(c)) {
-      const e = byLibraryId(ref);
-      // `imported` is a marker this app adds, not content — it must not travel
-      // on to the next device as though the spreadsheet had said it.
-      if (e) { const { imported, ...clean } = e; entries[ref] = clean; }
+    for (const c of list) {
+      for (const ref of referencedIds(c)) {
+        const e = byLibraryId(ref);
+        // `imported` is a marker this app adds, not content — it must not travel
+        // on to the next device as though the spreadsheet had said it.
+        if (e) { const { imported, ...clean } = e; entries[ref] = clean; }
+      }
     }
 
     return {
@@ -5209,7 +5297,7 @@
           schemaVersion: LIBRARY.waypoint?.schemaVersion ?? null,
         },
       },
-      characters: [c],
+      characters: list,
       entries,
     };
   }
@@ -5218,12 +5306,28 @@
   const fileSlug = (name) => (String(name || '').toLowerCase()
     .replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'character');
 
-  // The file's name on disk. Kept next to the slug rather than inlined at each
-  // call site: the Personae list, the share screen's own footnote and the
-  // download itself all have to agree on it, and the footnote is only useful
-  // because it is the same string the file actually lands under.
+  /* The file's name on disk. Kept next to the slug rather than inlined at each
+     call site: the Personae list, the share screen's own footnote and the
+     download itself all have to agree on it, and the footnote is only useful
+     because it is the same string the file actually lands under.
+
+     A file carrying more than one character cannot be named after any of them,
+     so it is named for its date instead. Read off the envelope rather than
+     taken again from the clock, so the name can never disagree with the
+     `exported` field inside. */
   const characterFilename = (file) =>
-    `${fileSlug(file.characters[0].name)}.waypoint.json`;
+    (file.characters.length === 1
+      ? `${fileSlug(file.characters[0].name)}.waypoint.json`
+      : backupFilename(file));
+
+  /* A backup is named for WHEN IT WAS TAKEN, whoever is in it. That is what
+     the file is for: a folder of them wants to sort by date and be told apart
+     at a glance, and a one-character roster backed up every week would
+     otherwise write `elara.waypoint.json` over and over. Which is why
+     exportBackup() names its file explicitly rather than letting the count
+     decide — a backup of one character is still a backup. */
+  const backupFilename = (file) =>
+    `waypoint-backup-${file.waypointCharacter.exported}.waypoint.json`;
 
   /* Pretty-printed for the same reason library.js is: this file is meant to be
      openable and legible, not just machine-readable. Serialising is split out
@@ -5240,9 +5344,13 @@
      AirDrop, Files, a chat app). They are different verbs, not a fallback
      pair — but 'send' does fall back to 'save' if the sheet fails for any
      reason other than the player closing it, because the file was already
-     built and silently dropping it would be the worst of the three outcomes. */
-  function deliverCharacterFile(file, { via = 'save' } = {}) {
-    const name = characterFilename(file);
+     built and silently dropping it would be the worst of the three outcomes.
+
+     `name` overrides what the file would otherwise be called. Only Settings'
+     backup passes it, because that is the one door where the NAME is not a
+     function of the contents — see backupFilename(). */
+  function deliverCharacterFile(file, { via = 'save', name: named } = {}) {
+    const name = named || characterFilename(file);
     const blob = new Blob([characterJson(file)], { type: 'application/json' });
 
     if (via === 'send' && canShareFiles()) {
@@ -5287,7 +5395,7 @@
     // The open character's unsaved edits have to reach storage before it is
     // read back out of it.
     if (character.id === id) save();
-    const file = characterFile(id);
+    const file = characterFile([id]);
     if (!file) return;
     deliverCharacterFile(file, { via: 'save' });
   }
@@ -5317,9 +5425,9 @@
      a chip is to weigh the file the chip would write. Cheap enough to redo on
      every repaint — this runs on open and on a chip press, not in a loop. */
   function shareVariants(id) {
-    const full = characterFile(id, { portrait: true });
+    const full = characterFile([id], { portrait: true });
     if (!full) return null;
-    const bare = characterFile(id, { portrait: false });
+    const bare = characterFile([id], { portrait: false });
     return {
       full: { file: full, size: byteSize(characterJson(full)) },
       bare: { file: bare, size: byteSize(characterJson(bare)) },
@@ -5379,7 +5487,7 @@
   function shareCharacter() {
     const s = state.share;
     if (!s) return;
-    const file = characterFile(s.id, { portrait: s.portrait });
+    const file = characterFile([s.id], { portrait: s.portrait });
     if (!file) return;
     deliverCharacterFile(file, { via: 'send' });
   }
@@ -5405,86 +5513,187 @@
     reader.readAsText(file);
   }
 
-  function importCharacterFile(text, filename) {
+  /* Read a file and say whether it is one of ours, WITHOUT changing anything.
+
+     Split out from the import itself because the two have different jobs now:
+     Settings asks the player to choose between adding and overwriting, and
+     that question can only be put once the file has been read — "this holds 4
+     characters, built against Core 0.1.0" is the whole reason the answer is
+     informed. So parsing has to be able to happen without committing.
+
+     Returns `{ file }` or `{ error: { title, text } }`. */
+  function parseCharacterFile(text, filename) {
     let file;
     try { file = JSON.parse(text); }
     catch (_) {
-      showImportResult({ ok: false, title: 'Not a character file',
-        text: `${filename} is not readable as JSON. Waypoint character files end in .waypoint.json — check you picked the right one.` });
-      return;
+      return { error: { title: 'Not a character file',
+        text: `${filename} is not readable as JSON. Waypoint character files end in .waypoint.json — check you picked the right one.` } };
     }
 
     const head = file && file.waypointCharacter;
     if (!head || !Array.isArray(file.characters)) {
-      showImportResult({ ok: false, title: 'Not a character file',
-        text: `${filename} is valid JSON, but it is not a Waypoint character file. It may be a library file, which is imported from the Compendium instead.` });
-      return;
+      return { error: { title: 'Not a character file',
+        text: `${filename} is valid JSON, but it is not a Waypoint character file. It may be a compendium file, which is imported from Settings instead.` } };
     }
     // A file from a FUTURE version may describe things this app has no idea
     // how to store, and importing it half-understood would produce a character
     // that is quietly wrong. Refusing is the honest answer.
     if (head.schemaVersion > CHARACTER_FILE_VERSION) {
-      showImportResult({ ok: false, title: 'Made by a newer Waypoint',
-        text: `This file is version ${head.schemaVersion}; this app understands version ${CHARACTER_FILE_VERSION}. Update the app, then import it again.` });
-      return;
+      return { error: { title: 'Made by a newer Waypoint',
+        text: `This file is version ${head.schemaVersion}; this app understands version ${CHARACTER_FILE_VERSION}. Update the app, then import it again.` } };
     }
-
-    const source = file.characters[0];
-    if (!source || typeof source !== 'object') {
-      showImportResult({ ok: false, title: 'Nothing to import', text: 'That file holds no characters.' });
-      return;
+    // Everything the file calls a character that actually is an object. A file
+    // whose array holds nothing usable is empty as far as this app is
+    // concerned, and says so now rather than after the player has chosen how
+    // to import it.
+    const sources = file.characters.filter((c) => c && typeof c === 'object');
+    if (!sources.length) {
+      return { error: { title: 'Nothing to import', text: 'That file holds no characters.' } };
     }
+    return { file: { ...file, characters: sources } };
+  }
 
-    // Entries the local library is missing are taken from the file. Anything
-    // it already has is left alone — the local copy is what this device's own
-    // spreadsheet describes, and it wins.
+  function importCharacterFile(text, filename) {
+    const read = parseCharacterFile(text, filename);
+    if (read.error) { showImportResult({ ok: false, ...read.error }); return; }
+    // The Characters screen's own Import button ADDS, and never asks. Its
+    // comment in index.html says why: you reach for it when you have nothing
+    // yet, and an import there is an addition to the list. Restoring over
+    // what you already have is a backup operation, and it lives in Settings
+    // where the question can be put properly.
+    importCharacters(read.file, 'add');
+  }
+
+  /* A character id nothing on this device is using.
+
+     Date-stamped like the single id the old importer minted, but checked and
+     retried — a backup of six characters mints six of these inside the same
+     millisecond, and `Date.now()` alone would hand them all the same storage
+     key and quietly store five characters on top of each other. */
+  function freshCharacterId() {
+    let id = `c${Date.now().toString(36)}`;
+    let n = 1;
+    while (readSave(id) || roster.some((r) => r.id === id)) {
+      id = `c${Date.now().toString(36)}${(n++).toString(36)}`;
+    }
+    return id;
+  }
+
+  /* Turn one character out of a file into a stored character under `id`.
+
+     applySave() is the ONE way a stored character becomes a live one, so an
+     imported file goes through exactly the same clamping, id-resolution and
+     migration path as a local save. A hostile or hand-edited file therefore
+     cannot introduce a state that a corrupt localStorage could not — which is
+     why this rebinds the global `character` rather than building a save object
+     by hand and writing it straight to storage. */
+  function adoptCharacter(source, id) {
+    // Mirrors openCharacter(): the seed id starts from the seed, so a file
+    // that does not carry a field keeps the value that id has always had.
+    character = id === SEED_CHARACTER.id
+      ? JSON.parse(JSON.stringify(SEED_CHARACTER))
+      : newCharacter(id);
+    applySave(source);
+    // Assigned either way, not just when there is one. Overwriting a character
+    // who HAD a photo with a file that has none has to clear it, and
+    // savePortrait() only removes the stored key when this is null.
+    character.portrait = (typeof source.portrait === 'string'
+      && /^data:image\/[a-z+]+;base64,/.test(source.portrait)) ? source.portrait : null;
+    if (!character.name) character.name = 'Unnamed';
+
+    // The Personae row goes in BEFORE the save, because save() refuses to
+    // write a character the roster does not list — see the guard there.
+    const row = {
+      id, name: character.name, build: character.build,
+      portrait: character.portrait, portraitView: character.portraitView,
+    };
+    const at = roster.findIndex((r) => r.id === id);
+    if (at === -1) roster.push(row); else roster[at] = row;
+
+    savePortrait();
+    save();
+  }
+
+  /* Import every character in a parsed file.
+
+     `mode` is 'add' or 'overwrite', and the difference is ONE question: does
+     the character keep the id it came in with?
+
+       add        — a new id, always. Importing your own export back must never
+                    overwrite the character already sitting in the roster: the
+                    file is a copy, not a claim on the slot it came from.
+       overwrite  — the file's own id is honoured. A character already under
+                    that id is replaced in place, keeping its position in the
+                    list; one this device has never seen is added under it.
+                    Characters the file says nothing about are left alone, so
+                    restoring a backup cannot delete work that postdates it. */
+  function importCharacters(file, mode) {
+    const head = file.waypointCharacter;
+
+    /* Entries first, so the characters below resolve against them. Those the
+       local library is missing are taken from the file; anything it already
+       has is left alone — the local copy is what this device's own spreadsheet
+       describes, and it wins. */
     const wanted = {};
     for (const [id, e] of Object.entries(file.entries || {})) if (!byLibraryId(id)) wanted[id] = e;
     const restored = mergeEntries(wanted, { markImported: true });
-    if (restored.length) {
-      try {
-        const bag = JSON.parse(localStorage.getItem(IMPORTED_KEY) || '{}');
-        for (const id of restored) bag[id] = wanted[id];
-        localStorage.setItem(IMPORTED_KEY, JSON.stringify(bag));
-      } catch (_) { /* the entries still work this session */ }
+    rememberImportedEntries(restored, wanted);
+
+    save();                          // the character being left
+    const wasOpen = character.id;
+
+    const added = [];
+    const replaced = [];
+    const lost = [];
+    /* "Knight 3", for a file holding exactly one character. Captured INSIDE
+       the loop because buildLabel() reads the open character, and by the time
+       the result is written the loop has moved on and the sheet has been
+       handed back to whoever was there before. Only worth saying for one: in a
+       list of six names, six class-and-level labels are noise. */
+    let soleLabel = null;
+    for (const source of file.characters) {
+      const claimed = typeof source.id === 'string' ? source.id.trim() : '';
+      const keepId  = mode === 'overwrite' && claimed;
+      const existed = keepId && roster.some((r) => r.id === claimed);
+      adoptCharacter(source, keepId ? claimed : freshCharacterId());
+      if (file.characters.length === 1) soleLabel = buildLabel();
+      (existed ? replaced : added).push(character.name);
+      /* What did not survive: ids that were neither in the library nor in the
+         file's own snapshot. Measured against the source rather than guessed,
+         because a silent partial import is the failure this window exists to
+         prevent. Named, because in a twelve-character backup "a skill could
+         not be restored" without saying whose is not a usable report. */
+      for (const l of referencedLoss(source)) lost.push(`${character.name}: ${l}`);
     }
 
-    // A NEW id, always. Importing your own export back must never overwrite the
-    // character already sitting in the roster — the file is a copy, not a claim
-    // on the slot it came from.
-    const id = `c${Date.now().toString(36)}`;
-    save();                       // the character being left
-    const previous = character;
-    character = newCharacter(id);
-    // applySave() is the ONE way a stored character becomes a live one, so an
-    // imported file goes through exactly the same clamping, id-resolution and
-    // migration path as a local save. A hostile or hand-edited file therefore
-    // cannot introduce a state that a corrupt localStorage could not.
-    applySave(source);
-    if (typeof source.portrait === 'string' && /^data:image\/[a-z+]+;base64,/.test(source.portrait)) {
-      character.portrait = source.portrait;
-    }
-    if (!character.name) character.name = 'Unnamed';
-
-    // What did not survive: ids that were neither in the library nor in the
-    // file's own snapshot. Measured against the source rather than guessed,
-    // because a silent partial import is the failure this whole screen exists
-    // to prevent.
-    const lost = referencedLoss(source);
-
-    roster.push({
-      id, name: character.name,
-      build: character.build, portrait: character.portrait, portraitView: character.portraitView,
-    });
-    savePortrait();
-    save();
+    /* Back to whoever was open. An import is an addition to the list, and
+       yanking someone off the sheet they were reading is not what they asked
+       for — the loop above has left `character` bound to the last one it
+       wrote, so this is not optional. Where that character is gone (an empty
+       roster restored from a backup) the first row is opened instead, because
+       something has to be. */
+    const backTo = roster.some((r) => r.id === wasOpen) ? wasOpen : (roster[0] && roster[0].id);
+    if (backTo) openCharacter(backTo);
     saveRoster();
     renderAll();
+    renderSettings();                // the backup line now describes more characters
+
+    const sentences = [];
+    if (added.length) {
+      sentences.push(soleLabel
+        ? `${added[0]} — ${soleLabel} — was added to your Personae.`
+        : `${nameList(added)} ${added.length === 1 ? 'was' : 'were'} added to your Personae.`);
+    }
+    if (replaced.length) {
+      sentences.push(soleLabel
+        ? `${replaced[0]} — ${soleLabel} — was overwritten with the version in the file.`
+        : `${nameList(replaced)} ${replaced.length === 1 ? 'was' : 'were'} overwritten with the version in the file.`);
+    }
 
     showImportResult({
       ok: true,
-      title: 'Character imported',
-      text: `${character.name} — ${buildLabel()} — was added to your Personae.`,
+      title: file.characters.length === 1 ? 'Character imported' : 'Characters imported',
+      text: sentences.join(' '),
       notes: [
         restored.length
           ? { text: `${restored.length} library ${restored.length === 1 ? 'entry was' : 'entries were'} restored from the file, because this device's compendium does not have ${restored.length === 1 ? 'it' : 'them'}.` }
@@ -5495,10 +5704,482 @@
         ...lost.map((l) => ({ warn: true, text: `${l} could not be restored and was left off the sheet.` })),
       ].filter(Boolean),
     });
-    // Deliberately does NOT switch to the new character: an import is an
-    // addition to the list, and yanking someone off the sheet they were on is
-    // not what they asked for. `previous` is only read to make that explicit.
-    void previous;
+  }
+
+  /* Library entries restored from a file, kept for next launch. Without this
+     an import against an older compendium would look right once and then lose
+     the same gear on the next reload — see IMPORTED_KEY. */
+  function rememberImportedEntries(ids, bag) {
+    if (!ids.length) return;
+    try {
+      const stored = JSON.parse(localStorage.getItem(IMPORTED_KEY) || '{}');
+      for (const id of ids) stored[id] = bag[id];
+      localStorage.setItem(IMPORTED_KEY, JSON.stringify(stored));
+    } catch (_) { /* the entries still work this session */ }
+  }
+
+  /* "Elara", "Elara and Grimm", "Elara, Grimm and Vex", then "Elara, Grimm,
+     Vex and 9 others". Capped because this goes in a sentence in a dialog, and
+     a twelve-name list there is a paragraph nobody reads. */
+  function nameList(names, cap = 3) {
+    if (names.length <= cap) {
+      return names.length < 2 ? (names[0] || '')
+        : `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
+    }
+    const rest = names.length - cap;
+    return `${names.slice(0, cap).join(', ')} and ${rest} other${rest === 1 ? '' : 's'}`;
+  }
+
+  /* ================================================================== */
+  /* SETTINGS                                                           */
+  /* ------------------------------------------------------------------ */
+  /* Four sections, and only two of them do anything yet.               */
+  /*                                                                     */
+  /*   Backup      every character in one file, and back again. Built    */
+  /*               on characterFile()/importCharacters() — the SAME      */
+  /*               format and the SAME importer the Personae list's      */
+  /*               Export already uses, because `characters` was an      */
+  /*               array from the first version for exactly this.        */
+  /*   Compendium  the game's content in and out, per                    */
+  /*               docs/library-schema.md.                               */
+  /*   Appearance  FRAME ONLY. Controls, no effect — see below.          */
+  /*   Feedback    buttons only; neither destination exists yet, so      */
+  /*               both fall through to the not-yet-implemented stub.    */
+  /*                                                                     */
+  /* Both imports go through one door: pick a file, read and validate    */
+  /* it, then ASK what to do with it. The question can only be put well  */
+  /* once the file has been read — "this holds four characters" is the   */
+  /* whole reason the answer is an informed one — which is why parsing   */
+  /* is split from importing rather than being one call.                 */
+  /* ================================================================== */
+
+  function renderSettings() {
+    // Cheap to call and called from several places (entering the screen, after
+    // an import, after a compendium reset), so it is written to be safe on a
+    // screen nobody is looking at.
+    renderBackupNote();
+    renderCompendiumNote();
+    renderAppearance();
+  }
+
+  /* ---- backup --------------------------------------------------------- */
+
+  /* How many characters the file would hold and what it would weigh. The
+     weight is the point: it is the difference between a file any chat app will
+     carry and one several of them refuse, and the only honest way to put a
+     number on it is to build the file and weigh it — the same call the share
+     window makes, for the same reason. Cheap enough: this runs when the screen
+     is opened, not in a loop. */
+  function renderBackupNote() {
+    if (!roster.length) {
+      setText('backupNote', 'No characters yet — nothing to export.');
+      return;
+    }
+    const file = characterFile(roster.map((r) => r.id));
+    const count = file ? file.characters.length : 0;
+    setText('backupNote', count
+      ? `${count} character${count === 1 ? '' : 's'} · about ${fileSize(byteSize(characterJson(file)))}`
+      : 'No characters yet — nothing to export.');
+  }
+
+  /* The whole roster, in roster order, portraits and all. Photos are NOT
+     optional here the way they are on the share window: that window is about
+     getting a character through an attachment limit, and this one is a backup
+     — a backup that quietly drops every portrait is not a backup. */
+  function exportBackup() {
+    if (!roster.length) return;
+    save();                          // unsaved edits belong in the backup
+    const file = characterFile(roster.map((r) => r.id));
+    if (!file) return;
+    // Named as a backup whatever the count — see backupFilename().
+    deliverCharacterFile(file, { via: 'save', name: backupFilename(file) });
+  }
+
+  /* ---- compendium ----------------------------------------------------- */
+
+  /* Every top-level array in a library file is a collection (schema §1), so
+     the collections are DISCOVERED rather than listed here. A compendium that
+     grows a new one — spells, say — then exports and re-imports without a
+     line of this file changing. */
+  const collectionsOf = (bag) => Object.entries(bag || {})
+    .filter(([key, val]) => key !== 'waypoint' && Array.isArray(val));
+
+  // Flattened to the { id: entry } bag mergeEntries() takes, which is also the
+  // shape a character file's `entries` arrives in — so one merge path serves
+  // a compendium import and a character's snapshot alike.
+  function entriesOf(bag) {
+    const out = {};
+    for (const [, list] of collectionsOf(bag)) {
+      for (const e of list) if (e && typeof e === 'object' && typeof e.id === 'string') out[e.id] = e;
+    }
+    return out;
+  }
+
+  /* The compendium as this device currently has it — the generated library, or
+     the one installed over it, plus anything restored from an imported
+     character. Reads LIBRARY rather than the stored key, so what comes out is
+     what the app is actually resolving against. */
+  function compendiumFile() {
+    const meta = LIBRARY.waypoint || {};
+    const out = {
+      waypoint: {
+        schemaVersion: meta.schemaVersion ?? LIBRARY_FILE_VERSION,
+        title: meta.title || 'Waypoint Compendium',
+        version: meta.version || '0',
+        updated: new Date().toISOString().slice(0, 10),
+        author: meta.author || '',
+      },
+    };
+    for (const [key, list] of collectionsOf(LIBRARY)) {
+      // `imported` is a marker this app adds to entries restored from a
+      // character file, not content — it must not travel on to the next
+      // device as though the spreadsheet had said it. Same rule as the
+      // character exporter's snapshot.
+      out[key] = list.map(({ imported, ...clean }) => clean);
+    }
+    return out;
+  }
+
+  // Named for the CONTENT, not the day: a compendium is a published thing with
+  // a version, and two exports of the same version are the same file.
+  const compendiumFilename = (bag) =>
+    `${fileSlug(bag.waypoint.title || 'compendium')}-${bag.waypoint.version || '0'}.library.json`;
+
+  function renderCompendiumNote() {
+    const meta = LIBRARY.waypoint || {};
+    const count = Object.keys(entriesOf(LIBRARY)).length;
+    setText('libTitle', meta.title || 'Unknown compendium');
+    setText('libVersion', meta.version ? `v${meta.version}` : '');
+    setText('compendiumNote', `${count} ${count === 1 ? 'entry' : 'entries'}, as this device has them.`);
+    // The undo only exists once there is something to undo.
+    const reset = $('[data-compendium-reset]');
+    if (reset) reset.hidden = !hasStoredLibrary();
+  }
+
+  /* Whether a compendium has been installed over the built-in one. Asks
+     whether the KEY is there rather than whether storedLibrary() could use it:
+     a key holding something corrupt is exactly when the player most needs the
+     button that clears it, and storedLibrary() answers null for both "nothing
+     installed" and "installed but unreadable". */
+  const hasStoredLibrary = () => {
+    try { return localStorage.getItem(LIBRARY_KEY) !== null; }
+    catch (_) { return false; }      // storage unavailable — nothing is installed
+  };
+
+  function exportCompendium() {
+    const bag = compendiumFile();
+    const blob = new Blob([JSON.stringify(bag, null, 2)], { type: 'application/json' });
+    saveBlob(blob, compendiumFilename(bag));
+  }
+
+  /* Read a compendium file without committing to it. Mirrors
+     parseCharacterFile(): `{ file }` or `{ error: { title, text } }`. */
+  function parseCompendiumFile(text, filename) {
+    let bag;
+    try { bag = JSON.parse(text); }
+    catch (_) {
+      return { error: { title: 'Not a compendium file',
+        text: `${filename} is not readable as JSON. Compendium files are the library JSON described in the schema — check you picked the right one.` } };
+    }
+    // The other Waypoint file, named specifically. These two are the only
+    // files the app writes and they are easy to mix up in a folder, so saying
+    // which one this is beats "that is not a compendium".
+    if (bag && bag.waypointCharacter) {
+      return { error: { title: 'That is a character file',
+        text: `${filename} holds characters, not content. Import it under Backup instead.` } };
+    }
+    if (!bag || typeof bag !== 'object' || Array.isArray(bag) || !bag.waypoint || typeof bag.waypoint !== 'object') {
+      return { error: { title: 'Not a compendium file',
+        text: `${filename} is valid JSON, but it has no \`waypoint\` block, so nothing in it can be identified.` } };
+    }
+    if (Number(bag.waypoint.schemaVersion) > LIBRARY_FILE_VERSION) {
+      return { error: { title: 'Made for a newer Waypoint',
+        text: `This compendium is schema version ${bag.waypoint.schemaVersion}; this app understands version ${LIBRARY_FILE_VERSION}. Update the app, then import it again.` } };
+    }
+    if (!Object.keys(entriesOf(bag)).length) {
+      return { error: { title: 'Nothing to import',
+        text: 'That compendium holds no entries with ids.' } };
+    }
+    return { file: bag };
+  }
+
+  /* Add: fold in what this device is missing and leave everything else alone.
+
+     A local entry always wins, because it is the one the player's own
+     spreadsheet describes — so this can restore gear a character needs without
+     silently re-tuning armour that already exists here. It takes effect
+     immediately: mergeEntries() writes the live catalogs and indexes, which is
+     the same path a character import and the boot-time restore both take. */
+  function addCompendium(bag) {
+    const all = entriesOf(bag);
+    const wanted = {};
+    for (const [id, e] of Object.entries(all)) if (!byLibraryId(id)) wanted[id] = e;
+    const added = mergeEntries(wanted, { markImported: true });
+    rememberImportedEntries(added, wanted);
+    const skipped = Object.keys(all).length - added.length;
+    const title = bag.waypoint.title || 'that compendium';
+
+    /* Reopened so the OPEN character resolves its ids against the enlarged
+       library — an entry that has just arrived is no use to a sheet that
+       already decided it could not find it. Guarded because the roster can be
+       empty, in which case `character` is the blank placeholder that has no
+       save to reopen. */
+    if (roster.some((r) => r.id === character.id)) openCharacter(character.id);
+    renderAll();
+    renderSettings();
+    showImportResult({
+      ok: true,
+      title: added.length ? 'Compendium entries added' : 'Nothing was missing',
+      text: added.length
+        ? `${added.length} ${added.length === 1 ? 'entry' : 'entries'} from ${title} ${added.length === 1 ? 'was' : 'were'} added.`
+        : `Every entry in ${title} is already on this device.`,
+      // Not a failure, and worth saying plainly: an entry this device already
+      // has is the one its own spreadsheet describes, and it wins.
+      notes: skipped
+        ? [{ text: `${skipped} ${skipped === 1 ? 'entry was' : 'entries were'} already here and ${skipped === 1 ? 'was' : 'were'} left alone.` }]
+        : [],
+    });
+  }
+
+  /* Overwrite: install this compendium in place of the built-in one.
+
+     Stored whole, then the page reloads. The reload is the point, not a
+     shortcut: LIBRARY and every catalog and index built from it are read ONCE
+     at load, and the open character resolved its ids against them. Rebuilding
+     all of that in place would leave a dozen places for a stale reference to
+     survive, and the one that survived would show up as a character's gear
+     quietly reading the old numbers. Everything the app holds is already in
+     localStorage, so a reload costs nothing but the moment.
+
+     Which is also why the result window says so before it happens, and the
+     reload waits for the player to dismiss it — see closeModal(). */
+  function installCompendium(bag) {
+    try {
+      localStorage.setItem(LIBRARY_KEY, JSON.stringify(bag));
+    } catch (_) {
+      showImportResult({ ok: false, title: 'No room for it',
+        text: 'This browser\'s storage is full, so the compendium could not be saved. Deleting a character portrait or two is usually enough to make room.' });
+      return;
+    }
+    const count = Object.keys(entriesOf(bag)).length;
+    // A version is optional in the schema, so it is joined in only when there
+    // is one rather than leaving a gap where it would have been.
+    const label = [bag.waypoint.title || 'The compendium', bag.waypoint.version].filter(Boolean).join(' ');
+    showImportResult({
+      ok: true,
+      title: 'Compendium installed',
+      text: `${label} is now this device's content — ${count} ${count === 1 ? 'entry' : 'entries'}.`,
+      notes: [
+        { text: 'Waypoint will reload to apply it.' },
+        { warn: true, text: 'Anything your characters use that this compendium does not carry will drop off their sheets. Their saves are untouched, so restoring the built-in compendium puts it back.' },
+      ],
+      reload: true,
+    });
+  }
+
+  /* Drop the installed compendium and go back to the generated one.
+
+     Asked first, through the same window the imports use — with one action,
+     because there is only one thing this can do. It is worth asking at all
+     because the compendium being discarded may have come from somewhere the
+     player cannot easily get it back from; it is not worth the language of the
+     character delete, because nothing a player MADE is lost. Characters are
+     stored apart from content and are not touched. */
+  function askCompendiumReset() {
+    askFile({
+      title: 'Restore the built-in compendium?',
+      text: `${LIBRARY.waypoint?.title || 'The imported compendium'} will be removed and Waypoint will go back to the content it ships with.`,
+      notes: [
+        { text: 'Your characters are stored apart from the compendium and are not touched.' },
+        { warn: true, text: 'The imported compendium itself is discarded. If you cannot get that file again, export it first.' },
+      ],
+      actions: [{ mode: 'reset', danger: true, label: 'Restore Built-in Compendium' }],
+      run: () => resetCompendium(),
+    });
+  }
+
+  function resetCompendium() {
+    try { localStorage.removeItem(LIBRARY_KEY); }
+    catch (_) { /* nothing else to try; the reload below will show the truth */ }
+    showImportResult({
+      ok: true,
+      title: 'Built-in compendium restored',
+      text: 'The imported compendium has been removed. Waypoint will reload with the content it ships with.',
+      reload: true,
+    });
+  }
+
+  /* ---- one door for both imports -------------------------------------- */
+
+  /* `kind` is 'characters' or 'compendium'. One picker serves both, because
+     what a file turns out to be is decided by reading it, not by which button
+     opened it — and two hidden inputs would be two places for the "clear it
+     first" fix below to be applied to one and missed on the other. */
+  function openSettingsFile(kind) {
+    const input = $('[data-settings-file]');
+    if (!input) return;
+    state.filePick = kind;
+    // Cleared first, so choosing the same file twice in a row still fires
+    // change — otherwise a failed import cannot be retried after a fix.
+    input.value = '';
+    input.click();
+  }
+
+  function readSettingsFile(input) {
+    const kind = state.filePick;
+    const file = input.files && input.files[0];
+    if (!file || !kind) return;
+    const reader = new FileReader();
+    reader.onerror = () => showImportResult({ ok: false, title: 'Could not read that file',
+      text: 'The file could not be opened. It may have been moved, or the browser was denied access to it.' });
+    reader.onload = () => offerImport(kind, reader.result, file.name);
+    reader.readAsText(file);
+  }
+
+  /* Validated, then put as a question. Nothing has been written at this point
+     and nothing will be until a button in the window is pressed, which is what
+     makes dismissing it a real decline rather than a cancel that came too
+     late. */
+  function offerImport(kind, text, filename) {
+    if (kind === 'compendium') {
+      const read = parseCompendiumFile(text, filename);
+      if (read.error) { showImportResult({ ok: false, ...read.error }); return; }
+      askCompendiumImport(read.file);
+      return;
+    }
+    const read = parseCharacterFile(text, filename);
+    if (read.error) { showImportResult({ ok: false, ...read.error }); return; }
+    askCharacterImport(read.file, filename);
+  }
+
+  function askCharacterImport(file, filename) {
+    const names = file.characters.map((c) => (
+      typeof c.name === 'string' && c.name.trim() ? c.name.trim() : 'Unnamed'
+    ));
+    const n = names.length;
+    // Characters in the file that this device already has under the same id —
+    // the only ones Overwrite would touch. Counted rather than described in
+    // the abstract, because "matching" means nothing until you know whether it
+    // matches anything.
+    const matching = file.characters.filter((c) => (
+      typeof c.id === 'string' && roster.some((r) => r.id === c.id.trim())
+    )).length;
+    const head = file.waypointCharacter || {};
+
+    askFile({
+      title: n === 1 ? 'Import this character?' : `Import ${n} characters?`,
+      text: `${filename} holds ${nameList(names)}.`,
+      notes: [
+        head.exported ? { text: `Exported ${head.exported}.` } : null,
+        head.library && head.library.version !== (LIBRARY.waypoint?.version)
+          ? { text: `Built against ${head.library.title} ${head.library.version}; you are running ${LIBRARY.waypoint?.version || 'an unknown version'}.` }
+          : null,
+        matching
+          ? { warn: true, text: `${matching} of ${n === 1 ? 'them' : 'these'} ${matching === 1 ? 'is' : 'are'} already on this device. Overwriting replaces ${matching === 1 ? 'that sheet' : 'those sheets'} with the version in the file; adding keeps both copies.` }
+          : { text: `Nothing in this file is on this device yet, so nothing can be overwritten. Restoring in place keeps the ids ${n === 1 ? 'it came' : 'they came'} in with, which is what lets a later backup match ${n === 1 ? 'it' : 'them'} up again.` },
+        // Said in both cases, because it is the reassurance that makes
+        // Overwrite pressable: a restore replaces what the file names and
+        // touches nothing else.
+        { text: 'Characters this file says nothing about are left alone either way.' },
+      ].filter(Boolean),
+      actions: [
+        { mode: 'add', label: n === 1 ? 'Add as New' : 'Add All as New' },
+        { mode: 'overwrite', danger: !!matching, label: matching ? 'Overwrite Matching' : 'Restore in Place' },
+      ],
+      run: (mode) => importCharacters(file, mode),
+    });
+  }
+
+  function askCompendiumImport(bag) {
+    const all = entriesOf(bag);
+    const count = Object.keys(all).length;
+    const missing = Object.keys(all).filter((id) => !byLibraryId(id)).length;
+    const meta = bag.waypoint;
+
+    askFile({
+      title: 'Import this compendium?',
+      text: `${meta.title || 'Untitled compendium'}${meta.version ? ` ${meta.version}` : ''} — ${count} ${count === 1 ? 'entry' : 'entries'}.`,
+      notes: [
+        meta.updated ? { text: `Updated ${meta.updated}${meta.author ? `, by ${meta.author}` : ''}.` } : null,
+        missing
+          ? { text: `${missing} of them ${missing === 1 ? 'is' : 'are'} not on this device yet. Adding brings ${missing === 1 ? 'that one' : 'those'} in and leaves everything else as it is.` }
+          : { text: 'Every entry in it is already on this device, so adding would change nothing.' },
+        { warn: true, text: 'Replacing re-points every character at this content. Anything they use that it does not carry drops off their sheets until the old compendium is back.' },
+      ].filter(Boolean),
+      actions: [
+        { mode: 'add', label: missing ? `Add the ${missing} Missing` : 'Add Missing Entries' },
+        { mode: 'overwrite', danger: true, label: 'Replace the Compendium' },
+      ],
+      run: (mode) => (mode === 'overwrite' ? installCompendium(bag) : addCompendium(bag)),
+    });
+  }
+
+  /* The generic ask window. Everything it shows — title, prose, notes and the
+     buttons themselves — comes from the descriptor, and the descriptor carries
+     the `run` that acts on the answer. So a new question is a call to this
+     rather than another dialog in index.html with its own bindings to keep in
+     step, which is what lets the two-way import question and the one-way
+     compendium reset share a window. */
+  function askFile(ask) {
+    state.ask = ask;
+    setText('fileAskTitle', ask.title);
+    setText('fileAskText', ask.text);
+    fillList('fileAskNotes', (ask.notes || [])
+      .map((n) => `<p class="import__note${n.warn ? ' import__note--warn' : ''}">${esc(n.text)}</p>`).join(''));
+    fillList('fileAskActions', ask.actions
+      .map((a) => `<button class="btn-save${a.danger ? ' btn-save--danger' : ''}"`
+        + ` data-file-apply="${esc(a.mode)}">${esc(a.label)}</button>`).join(''));
+    app.setAttribute('data-modal', 'file-ask');
+  }
+
+  function applyAsk(mode) {
+    const ask = state.ask;
+    state.ask = null;
+    if (!ask) return;
+    // Closed BEFORE the work, for the reason the calculator closes before the
+    // downed notice: whatever this runs ends in a result window of its own,
+    // and closing afterwards would immediately dismiss it.
+    closeModal();
+    ask.run(mode);
+  }
+
+  /* ---- appearance — the frame, and nothing behind it ------------------
+     Every control here draws its selection and changes nothing else. The
+     design tokens these would drive live in :root in style.css and are
+     expected to move before any of this is wired up, so what is built is the
+     shape of the choice rather than a half-applied theme that would be harder
+     to finish than an unstarted one.
+
+     The lists are data so that adding a theme later is one line here and one
+     token block there. */
+  const APPEARANCE_MODES = [
+    { id: 'light',  label: 'Light' },
+    { id: 'dark',   label: 'Dark' },
+    { id: 'system', label: 'Match System' },
+  ];
+
+  const APPEARANCE_THEMES = [
+    // The one the app actually wears today, named for the design direction the
+    // stylesheet is built on — so the default chip is not a promise of
+    // anything new.
+    { id: 'journal', label: 'Field Journal' },
+    { id: 'ink',     label: 'Ink & Iron' },
+    { id: 'ember',   label: 'Ember' },
+    { id: 'moss',    label: 'Moss' },
+    { id: 'dusk',    label: 'Dusk' },
+  ];
+
+  function renderAppearance() {
+    // aria-pressed, matching the share window's format chips and the weapon
+    // tags: the same control doing the same job of reporting which one of a
+    // set is chosen.
+    const chips = (list, chosen, attr) => list.map((o) => {
+      const on = o.id === chosen;
+      return `<button class="tag-pick${on ? ' is-on' : ''}" ${attr}="${esc(o.id)}"`
+        + ` aria-pressed="${on}">${esc(o.label)}</button>`;
+    }).join('');
+    fillList('apMode',  chips(APPEARANCE_MODES,  state.appearance.mode,  'data-ap-mode'));
+    fillList('apTheme', chips(APPEARANCE_THEMES, state.appearance.theme, 'data-ap-theme'));
   }
 
   /* Ids the imported character named that nothing can resolve — not the local
@@ -5521,9 +6202,15 @@
      Writing two modals for "it worked" and "it did not" would mean two places
      to keep the wording and the dismiss behaviour in step, for one glyph's
      worth of difference. */
-  function showImportResult({ ok, title, text, notes }) {
+  function showImportResult({ ok, title, text, notes, reload }) {
     const card = $('.modal--import .modal__card');
     if (card) card.setAttribute('data-import-state', ok ? 'ok' : 'error');
+    /* A compendium install takes effect on the next load, so the window that
+       reports it is also the thing holding the reload back until it has been
+       read. Set here rather than reloading on the spot: a page that vanishes
+       the instant you press a button never gets to say what it did. Cleared by
+       closeModal(), which is the only way out of this window. */
+    state.reloadOnClose = !!reload;
     setText('importTitle', title);
     setText('importText', text);
     // "Done" closes something that finished; "Close" closes something that did
@@ -6618,7 +7305,7 @@
       // processed below never has its own element pulled out from under it.
       if (state.openStat && !e.target.closest('.stat-card')) showStatPop(null);
 
-      const t = e.target.closest('[data-nav],[data-tab],[data-toggle],[data-step],[data-calc],[data-menu],[data-wound],[data-wound-reset],[data-calc-step],[data-calc-apply],[data-action],[data-key],[data-dice-back],[data-dice-roll],[data-roll],[data-roll-again],[data-inv-add],[data-inv-open],[data-item-save],[data-bp-step],[data-bp-edit],[data-bp-delete],[data-mod-add],[data-mod-remove],[data-stat-toggle],[data-effect-open],[data-effect-add],[data-effect-step],[data-effect-tick],[data-effects-clear],[data-tick-confirm],[data-skill-edit],[data-skill-draft],[data-skill-filter],[data-skill-save],[data-detail],[data-gear-add],[data-armor-add],[data-detail-remove],[data-pick],[data-tag],[data-note-add],[data-note-save],[data-note-cancel],[data-note-edit],[data-note-delete],[data-note-del-confirm],[data-portrait-pick],[data-portrait-remove],[data-portrait-menu],[data-rest],[data-patch],[data-patch-confirm],[data-poison-toggle],[data-adv],[data-rules-toggle],[data-id-save],[data-portrait-crop],[data-crop-save],[data-crop-reset],[data-open-character],[data-wiz],[data-wiz-step],[data-wiz-expand],[data-wiz-pick],[data-wiz-attr],[data-wiz-skill],[data-wiz-sec],[data-wiz-slot],[data-wiz-clear],[data-wiz-pick-group],[data-equip-drop],[data-roster-edit],[data-char-del],[data-char-del-confirm],[data-char-export],[data-import-open],[data-share-format],[data-share-send]');
+      const t = e.target.closest('[data-nav],[data-tab],[data-toggle],[data-step],[data-calc],[data-menu],[data-wound],[data-wound-reset],[data-calc-step],[data-calc-apply],[data-action],[data-key],[data-dice-back],[data-dice-roll],[data-roll],[data-roll-again],[data-inv-add],[data-inv-open],[data-item-save],[data-bp-step],[data-bp-edit],[data-bp-delete],[data-mod-add],[data-mod-remove],[data-stat-toggle],[data-effect-open],[data-effect-add],[data-effect-step],[data-effect-tick],[data-effects-clear],[data-tick-confirm],[data-skill-edit],[data-skill-draft],[data-skill-filter],[data-skill-save],[data-detail],[data-gear-add],[data-armor-add],[data-detail-remove],[data-pick],[data-tag],[data-note-add],[data-note-save],[data-note-cancel],[data-note-edit],[data-note-delete],[data-note-del-confirm],[data-portrait-pick],[data-portrait-remove],[data-portrait-menu],[data-rest],[data-patch],[data-patch-confirm],[data-poison-toggle],[data-adv],[data-rules-toggle],[data-id-save],[data-portrait-crop],[data-crop-save],[data-crop-reset],[data-open-character],[data-wiz],[data-wiz-step],[data-wiz-expand],[data-wiz-pick],[data-wiz-attr],[data-wiz-skill],[data-wiz-sec],[data-wiz-slot],[data-wiz-clear],[data-wiz-pick-group],[data-equip-drop],[data-roster-edit],[data-char-del],[data-char-del-confirm],[data-char-export],[data-import-open],[data-share-format],[data-share-send],[data-backup-export],[data-compendium-export],[data-compendium-reset],[data-file-open],[data-file-apply],[data-ap-mode],[data-ap-theme]');
       if (!t) return;
       /* The app root is STATE, never a control. It carries data-view, data-tab,
          data-menu and data-modal so the stylesheet can switch on them, and two
@@ -6754,6 +7441,20 @@
       if (t.dataset.shareFormat !== undefined) { setShareFormat(t.dataset.shareFormat === '1'); return; }
       if (t.hasAttribute('data-share-send'))   { shareCharacter(); return; }
 
+      // --- settings ---
+      // Both imports open the same picker; which one asked is state, and the
+      // answer to what should be DONE with the file is asked after it has been
+      // read, by the window data-file-apply belongs to.
+      if (t.dataset.fileOpen)                     { openSettingsFile(t.dataset.fileOpen); return; }
+      if (t.dataset.fileApply)                    { applyAsk(t.dataset.fileApply); return; }
+      if (t.hasAttribute('data-backup-export'))     { exportBackup(); return; }
+      if (t.hasAttribute('data-compendium-export')) { exportCompendium(); return; }
+      if (t.hasAttribute('data-compendium-reset'))  { askCompendiumReset(); return; }
+      // Appearance is frame only: these record a choice, repaint the chips to
+      // show it, and are read by nothing. See renderAppearance().
+      if (t.dataset.apMode)  { state.appearance.mode  = t.dataset.apMode;  renderAppearance(); return; }
+      if (t.dataset.apTheme) { state.appearance.theme = t.dataset.apTheme; renderAppearance(); return; }
+
       // --- character creation ---
       // Every branch repaints through renderWizard(), which is also what keeps
       // the footer's Continue button and its hint in step with the draft: no
@@ -6805,6 +7506,10 @@
         // thing the app renders, and a player who never opens it should
         // never pay for it.
         if (t.dataset.nav === 'rules') renderRules();
+        // Painted on entry for the same reason Rules is, and for one more: the
+        // backup line has to weigh a file built out of every character, which
+        // is work nobody should pay for until they are looking at it.
+        if (t.dataset.nav === 'settings') renderSettings();
         app.setAttribute('data-view', t.dataset.nav);
         releasePull();
         // Edit Character is reached FROM the drawer, so navigation has to
@@ -7091,6 +7796,9 @@
     app.addEventListener('change', (e) => {
       const picker = e.target.closest('[data-import-file]');
       if (picker) { readImportFile(picker); return; }
+      // Settings' picker, serving both the backup and the compendium imports.
+      const settingsPicker = e.target.closest('[data-settings-file]');
+      if (settingsPicker) { readSettingsFile(settingsPicker); return; }
       const sel = e.target.closest('[data-mod-stat]');
       if (!sel) return;
       const row = state.itemMods[Number(sel.dataset.modStat)];
