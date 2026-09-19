@@ -1355,12 +1355,16 @@
 
   /* Build the roster at boot, and seed or migrate as needed.
 
-     Three states an install can be in, and what each becomes:
+     Four states an install can be in, and what each becomes:
 
-       a roster index exists      — use it. Ids naming a save that has since
+       a roster index with ids    — use it. Ids naming a save that has since
                                     been cleared are dropped, so a half-erased
                                     localStorage yields a shorter roster
                                     rather than rows that render as "Unnamed".
+       a roster index, but empty  — a player who deleted their last character.
+                                    It stays empty. See below: this is the
+                                    case that must NOT be confused with a
+                                    first run.
        no index, but the legacy
        `waypoint.character.aurelia`
        save exists                — an install from before the roster. It
@@ -1374,27 +1378,57 @@
     let index = null;
     try { index = JSON.parse(localStorage.getItem(ROSTER_KEY) || 'null'); } catch (_) { /* corrupt */ }
 
-    let ids = Array.isArray(index?.ids) ? index.ids.filter((id) => typeof id === 'string') : [];
+    // Has this install ever written a roster? That is a different question from
+    // whether it holds any characters right now, and the difference is the
+    // whole reason this variable exists: an index listing nothing is a player
+    // who deleted their last character, while no index at all is a genuine
+    // first run. Only the latter earns the seed. Reading "no characters" as
+    // "first run" meant the seed came back on the next reload and quietly
+    // undid the delete — and surviving a reload is the one thing a delete has
+    // to do. Note it is read BEFORE ids is narrowed to saves that still
+    // exist, because that filter cannot tell the two cases apart either.
+    const hasIndex = Array.isArray(index?.ids);
+
+    let ids = hasIndex ? index.ids.filter((id) => typeof id === 'string') : [];
     ids = ids.filter((id) => readSave(id));
 
     if (!ids.length) {
       if (readSave(SEED_CHARACTER.id)) {
         ids = [SEED_CHARACTER.id];              // pre-roster install, adopted as-is
-      } else {
+      } else if (!hasIndex) {
         // First run. The seed is written out immediately rather than kept only
         // in memory, so that the roster it goes into describes something real
         // and the very next save is an update rather than a creation.
         character = SEED_CHARACTER;
+        // The roster entry has to exist BEFORE the write: save() persists only
+        // a character the roster knows about — the guard that stops the blank
+        // left by deleting the last row from being stored — and `roster` is
+        // still [] this early in boot, so without this the seed's save was
+        // silently skipped and the Personae row read "Unnamed" until the first
+        // edit put it right.
+        refreshRosterEntry();
         save();
         ids = [SEED_CHARACTER.id];
       }
+      // else: deliberately empty. Falls through to the blank below.
     }
 
     roster = ids.map(summarise);
-    const wanted = ids.includes(index?.activeId) ? index.activeId : ids[0];
-    openCharacter(wanted);
+    if (ids.length) {
+      const wanted = ids.includes(index?.activeId) ? index.activeId : ids[0];
+      openCharacter(wanted);
+    } else {
+      // The same blank deleteCharacter() leaves behind when the last row goes,
+      // so an empty roster reached by reloading and one reached by deleting are
+      // the identical state: every render downstream still has a
+      // character-shaped object to read, and save()'s blank-id guard keeps it
+      // out of storage until the player actually makes someone.
+      character = newCharacter('');
+    }
     // Written now rather than at the next edit, so a migrated install is
-    // indexed even if the player only ever reads the sheet.
+    // indexed even if the player only ever reads the sheet — and so an install
+    // emptied by a delete has an index on disk saying so, which is exactly what
+    // hasIndex reads on the next boot.
     saveRoster();
   }
 
@@ -2592,6 +2626,13 @@
     const toggle = $('[data-roster-edit]');
     if (toggle) toggle.disabled = !roster.length;
 
+    // An empty roster is a different screen, not a list with nothing in it:
+    // the lead line explains it and Create takes the accent. Both are the
+    // stylesheet's business, so this only states the fact.
+    if (roster.length) app.removeAttribute('data-roster-empty');
+    else app.setAttribute('data-roster-empty', '');
+    showBlock('rosterLead', !roster.length);
+
     fillList('roster', roster.length ? roster.map((r) => `
       <div class="persona-card" data-row="${esc(r.id)}"${r.id === character.id ? ' data-current' : ''}>
         <div class="persona-card__main">
@@ -2613,7 +2654,10 @@
         </div>
         <button class="persona-card__export" data-char-export="${esc(r.id)}"${editing ? '' : ' tabindex="-1"'}>Export</button>
       </div>`).join('')
-      : `<div class="roster-empty">No characters yet. Create one, or import a character file you exported from another device.</div>`);
+      // Nothing at all when the roster is empty — .roster-lead above says it in
+      // prose, and the Create and Import buttons below are the answer. A
+      // placeholder here would only be a third dashed box between them.
+      : '');
 
     // src is set here rather than in the markup above: a data URL runs to tens
     // of thousands of characters, and threading it through an HTML string
@@ -8217,8 +8261,13 @@
     loadAccount();
     renderAll();
     wire();
-    // Start on the character sheet (matches the prototype's default view).
-    app.setAttribute('data-view', 'sheet');
+    // Start on Home. It used to be the sheet, from the prototype where the sheet
+    // was the only screen worth showing — but Home is the screen every other one
+    // is reached from, and it is the only one that reads nothing from the roster,
+    // so it is also the only safe landing for an install with no characters in
+    // it. data-tab is still set: it is the sheet's OWN default, waiting for
+    // whenever a character is opened.
+    app.setAttribute('data-view', 'home');
     app.setAttribute('data-tab', 'character');
   }
 

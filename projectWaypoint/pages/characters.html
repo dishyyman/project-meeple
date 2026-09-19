@@ -13,11 +13,24 @@
       </div>
       <div class="divider"></div>
       <div class="section-pad">
+        <!-- Shown only while the roster is empty — renderRoster() hides the
+             block once there is a character to list, because by then the list
+             itself says everything this line was standing in for. Static copy:
+             it only ever has one thing to say, so it lives here rather than
+             being written by JS. -->
+        <p class="roster-lead" data-block="rosterLead">
+          Your party is empty. Click below to create a new character or import one from a file.
+        </p>
         <!-- One row per character in the roster, painted by renderRoster().
              Empty in the markup because the count is not known until the
              saves are read. -->
         <div data-list="roster"></div>
-        <button class="btn-dashed" data-action="create-character">
+        <!-- btn-dashed--lead takes the accent, but ONLY while the roster is
+             empty (see characters.css) — trailing a list of characters this is
+             an afterthought, and with nothing above it it is the whole point of
+             the screen. One button either way: the action does not change, so
+             neither does the markup. -->
+        <button class="btn-dashed btn-dashed--lead" data-action="create-character">
           <span class="plus"></span><span>Create Character</span>
         </button>
         <!-- Import is a peer of Create, not an edit-mode action: you reach for

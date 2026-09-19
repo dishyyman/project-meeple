@@ -51,7 +51,11 @@
        Screens are injected here by boot.js, in the order listed in
        its PAGES array.
        ============================================================ -->
-  <div class="app" data-view="sheet" data-tab="character" data-menu="closed" data-modal="closed" data-account="out"></div>
+  <!-- data-view starts at "home" to match what init() sets once the screens are
+       in. The two have to agree: this attribute is what paints during the moment
+       between boot.js injecting the markup and main.js running, so a different
+       value here shows that screen and snaps away. -->
+  <div class="app" data-view="home" data-tab="character" data-menu="closed" data-modal="closed" data-account="out"></div>
 
 </div><!-- /.device -->
 

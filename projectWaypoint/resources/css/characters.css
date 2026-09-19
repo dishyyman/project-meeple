@@ -137,12 +137,36 @@
 .app[data-dragging-roster] { -webkit-user-select: none; user-select: none; }
 
 /* A roster with nothing in it. Reachable now that the last character can be
-   deleted, so it says what to do rather than showing a bare gap. */
-.roster-empty {
-  border: 1.5px dashed var(--line-warm); border-radius: var(--r-md);
-  padding: 18px 16px; margin-bottom: 10px; text-align: center;
-  font-family: var(--font-body); font-style: italic; font-size: 13px;
-  color: var(--ink-faint); line-height: 1.5;
+   deleted, so it says what to do rather than showing a bare gap.
+
+   This used to be a dashed box, which put three dashed rectangles in a column
+   — placeholder, Create, Import — and the one that was only text looked as
+   pressable as the two that were buttons. Now it is plainly a line of prose
+   introducing them: no border, aligned with the body text it is, and carrying
+   no affordance of its own. */
+.roster-lead {
+  margin: 2px 0 16px;
+  font-family: var(--font-body); font-style: italic; font-size: 14px;
+  color: var(--ink-muted); line-height: 1.55;
+}
+/* The block is hidden with [hidden] by renderRoster(), and .roster-lead sets
+   no display, so the browser default carries it — nothing to override. */
+
+/* ---- the empty screen's primary action ----
+   With no roster above them the two dashed buttons are the only marks on the
+   screen, and dashed-equal gives a new player no idea which one is the normal
+   path. Filled accent is the same "this is the action" signal .btn-save uses,
+   so Create leads and Import stays quiet beside it without either changing
+   size or place.
+
+   Keyed to the app, not the button: the same button trailing a real roster is
+   a minor add and must stay dashed, or every list screen would end in a slab
+   of rust competing with the characters. */
+.app[data-roster-empty] .btn-dashed--lead {
+  border: 1.5px solid var(--accent-deep);
+  background: var(--accent);
+  color: #f7ecd8;
+  box-shadow: 2px 2px 0 rgba(59,46,33,0.2);
 }
 
 /* ---- confirm + import modals ---- */

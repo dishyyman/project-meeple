@@ -50,6 +50,21 @@
   overflow: hidden;
 }
 
+/* ---- scrollbars ----
+   Every screen inside the frame is modelled on a touch device, where the
+   scrollbar is a transient overlay rather than furniture. A desktop bar
+   parked down the right edge takes a permanent bite out of each screen's
+   gutter and reads as part of the phone. Hidden here once for the whole
+   device instead of per scroll container — the content still scrolls by
+   wheel, trackpad, touch and keyboard; only the indicator goes.
+
+   Scoped to .device deliberately: the browser window outside the frame
+   keeps its own scrollbar, which is the one a player expects to see. */
+.device,
+.device * { scrollbar-width: none; }
+.device::-webkit-scrollbar,
+.device *::-webkit-scrollbar { display: none; }
+
 /* ----------------------------------------------------------------- */
 /* 4. SCREEN + TAB VISIBILITY (state-driven, no inline display)       */
 /* ----------------------------------------------------------------- */
