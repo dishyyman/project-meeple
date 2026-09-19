@@ -2,36 +2,36 @@ id,name,tier,grantedBy,desc
 trait.barbarian-t0,Barbarian Tier 0,0,class.barbarian,Placeholder — the Tier 0 Trait every Barbarian receives on choosing the class has not been written yet.
 trait.fighter-t0,Fighter Tier 0,0,class.fighter,Placeholder — the Tier 0 Trait every Fighter receives on choosing the class has not been written yet.
 trait.knight-t0,Knight Tier 0,0,class.knight,Placeholder — the Tier 0 Trait every Knight receives on choosing the class has not been written yet.
-trait.assassin-t0,Assassin Tier 0,0,class.assassin,Placeholder — the Tier 0 Trait every Assassin receives on choosing the class has not been written yet.
+trait.rogue-t0,Rogue Tier 0,0,class.rogue,Placeholder — the Tier 0 Trait every Rogue receives on choosing the class has not been written yet.
 trait.monk-t0,Monk Tier 0,0,class.monk,Placeholder — the Tier 0 Trait every Monk receives on choosing the class has not been written yet.
 trait.ranger-t0,Ranger Tier 0,0,class.ranger,Placeholder — the Tier 0 Trait every Ranger receives on choosing the class has not been written yet.
 trait.elementalist-t0,Elementalist Tier 0,0,class.elementalist,Placeholder — the Tier 0 Trait every Elementalist receives on choosing the class has not been written yet.
 trait.magician-t0,Magician Tier 0,0,class.magician,Placeholder — the Tier 0 Trait every Magician receives on choosing the class has not been written yet.
 trait.occultist-t0,Occultist Tier 0,0,class.occultist,Placeholder — the Tier 0 Trait every Occultist receives on choosing the class has not been written yet.
 trait.the-beast-t0,The Beast Tier 0,0,subclass.the-beast,Placeholder — the Tier 0 Trait a Barbarian receives on choosing The Beast has not been written yet.
-trait.primal-t0,Primal Tier 0,0,subclass.primal,Placeholder — the Tier 0 Trait a Barbarian receives on choosing Primal has not been written yet.
+trait.oakheart-t0,Oakheart Tier 0,0,subclass.oakheart,Placeholder — the Tier 0 Trait a Barbarian receives on choosing Oakheart has not been written yet.
 trait.berserker-t0,Berserker Tier 0,0,subclass.berserker,Placeholder — the Tier 0 Trait a Barbarian receives on choosing Berserker has not been written yet.
-trait.strategist-t0,Strategist Tier 0,0,subclass.strategist,Placeholder — the Tier 0 Trait a Fighter receives on choosing Strategist has not been written yet.
+trait.rook-t0,Rook Tier 0,0,subclass.rook,Placeholder — the Tier 0 Trait a Fighter receives on choosing Rook has not been written yet.
 trait.the-jugg-t0,The Jugg Tier 0,0,subclass.the-jugg,Placeholder — the Tier 0 Trait a Fighter receives on choosing The Jugg has not been written yet.
-trait.spellsword-t0,Spellsword Tier 0,0,subclass.spellsword,Placeholder — the Tier 0 Trait a Fighter receives on choosing Spellsword has not been written yet.
+trait.spellblade-t0,Spellblade Tier 0,0,subclass.spellblade,Placeholder — the Tier 0 Trait a Fighter receives on choosing Spellblade has not been written yet.
 trait.paladin-t0,Paladin Tier 0,0,subclass.paladin,Placeholder — the Tier 0 Trait a Knight receives on choosing Paladin has not been written yet.
 trait.crusader-t0,Crusader Tier 0,0,subclass.crusader,Placeholder — the Tier 0 Trait a Knight receives on choosing Crusader has not been written yet.
-trait.death-t0,Death Tier 0,0,subclass.death,Placeholder — the Tier 0 Trait a Knight receives on choosing Death has not been written yet.
-trait.deadly-t0,Deadly Tier 0,0,subclass.deadly,Placeholder — the Tier 0 Trait an Assassin receives on choosing Deadly has not been written yet.
-trait.venomous-t0,Venomous Tier 0,0,subclass.venomous,Placeholder — the Tier 0 Trait an Assassin receives on choosing Venomous has not been written yet.
-trait.scoundrel-t0,Scoundrel Tier 0,0,subclass.scoundrel,Placeholder — the Tier 0 Trait an Assassin receives on choosing Scoundrel has not been written yet.
+trait.revenant-t0,Revenant Tier 0,0,subclass.revenant,Placeholder — the Tier 0 Trait a Knight receives on choosing Revenant has not been written yet.
+trait.assassin-t0,Assassin Tier 0,0,subclass.assassin,Placeholder — the Tier 0 Trait a Rogue receives on choosing Assassin has not been written yet.
+trait.viper-t0,Viper Tier 0,0,subclass.viper,Placeholder — the Tier 0 Trait a Rogue receives on choosing Viper has not been written yet.
+trait.scoundrel-t0,Scoundrel Tier 0,0,subclass.scoundrel,Placeholder — the Tier 0 Trait a Rogue receives on choosing Scoundrel has not been written yet.
 trait.the-master-t0,The Master Tier 0,0,subclass.the-master,Placeholder — the Tier 0 Trait a Monk receives on choosing The Master has not been written yet.
 trait.ninja-t0,Ninja Tier 0,0,subclass.ninja,Placeholder — the Tier 0 Trait a Monk receives on choosing Ninja has not been written yet.
 trait.acolyte-t0,Acolyte Tier 0,0,subclass.acolyte,Placeholder — the Tier 0 Trait a Monk receives on choosing Acolyte has not been written yet.
-trait.marksman-t0,Marksman Tier 0,0,subclass.marksman,Placeholder — the Tier 0 Trait a Ranger receives on choosing Marksman has not been written yet.
-trait.druid-t0,Druid Tier 0,0,subclass.druid,Placeholder — the Tier 0 Trait a Ranger receives on choosing Druid has not been written yet.
 trait.hunter-t0,Hunter Tier 0,0,subclass.hunter,Placeholder — the Tier 0 Trait a Ranger receives on choosing Hunter has not been written yet.
-trait.fire-t0,Fire Tier 0,0,subclass.fire,Placeholder — the Tier 0 Trait an Elementalist receives on choosing Fire has not been written yet.
-trait.ice-t0,Ice Tier 0,0,subclass.ice,Placeholder — the Tier 0 Trait an Elementalist receives on choosing Ice has not been written yet.
+trait.druid-t0,Druid Tier 0,0,subclass.druid,Placeholder — the Tier 0 Trait a Ranger receives on choosing Druid has not been written yet.
+trait.kindred-t0,Kindred Tier 0,0,subclass.kindred,Placeholder — the Tier 0 Trait a Ranger receives on choosing Kindred has not been written yet.
+trait.pyromancer-t0,Pyromancer Tier 0,0,subclass.pyromancer,Placeholder — the Tier 0 Trait an Elementalist receives on choosing Pyromancer has not been written yet.
+trait.frostcaller-t0,Frostcaller Tier 0,0,subclass.frostcaller,Placeholder — the Tier 0 Trait an Elementalist receives on choosing Frostcaller has not been written yet.
 trait.lightning-t0,Lightning Tier 0,0,subclass.lightning,Placeholder — the Tier 0 Trait an Elementalist receives on choosing Lightning has not been written yet.
-trait.chronomancy-t0,Chronomancy Tier 0,0,subclass.chronomancy,Placeholder — the Tier 0 Trait a Magician receives on choosing Chronomancy has not been written yet.
-trait.duplicity-t0,Duplicity Tier 0,0,subclass.duplicity,Placeholder — the Tier 0 Trait a Magician receives on choosing Duplicity has not been written yet.
+trait.chronomancer-t0,Chronomancer Tier 0,0,subclass.chronomancer,Placeholder — the Tier 0 Trait a Magician receives on choosing Chronomancer has not been written yet.
+trait.mirrormage-t0,Mirrormage Tier 0,0,subclass.mirrormage,Placeholder — the Tier 0 Trait a Magician receives on choosing Mirrormage has not been written yet.
 trait.psychic-t0,Psychic Tier 0,0,subclass.psychic,Placeholder — the Tier 0 Trait a Magician receives on choosing Psychic has not been written yet.
 trait.reaper-t0,Reaper Tier 0,0,subclass.reaper,Placeholder — the Tier 0 Trait an Occultist receives on choosing Reaper has not been written yet.
-trait.chaos-t0,Chaos Tier 0,0,subclass.chaos,Placeholder — the Tier 0 Trait an Occultist receives on choosing Chaos has not been written yet.
-trait.curses-t0,Curses Tier 0,0,subclass.curses,Placeholder — the Tier 0 Trait an Occultist receives on choosing Curses has not been written yet.
+trait.unmaker-t0,Unmaker Tier 0,0,subclass.unmaker,Placeholder — the Tier 0 Trait an Occultist receives on choosing Unmaker has not been written yet.
+trait.hexmage-t0,Hexmage Tier 0,0,subclass.hexmage,Placeholder — the Tier 0 Trait an Occultist receives on choosing Hexmage has not been written yet.
