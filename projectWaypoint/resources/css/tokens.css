@@ -78,6 +78,10 @@
   /* Shadows */
   --shadow-card:  3px 3px 0 rgba(59,46,33,0.12);
   --shadow-soft:  2px 2px 0 rgba(59,46,33,0.10);
+  /* Lighter again than --shadow-soft, to pair with a --line-hair outline:
+     at a 1px border a 2px offset reads as a second, blurrier edge rather
+     than as lift. Used by the character tab cards. */
+  --shadow-hair:  1px 1px 0 rgba(59,46,33,0.07);
   --shadow-modal: 6px 6px 0 rgba(59,46,33,0.22);
 
   /* Layout */

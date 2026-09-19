@@ -174,11 +174,16 @@
 .dice span:nth-child(5) { bottom: 2px; right: 2px; }
 
 /* ---- vitals card ---- */
+/* Outline matches the Gear tab .slot-row — 1px of --line-hair. The heavier
+   1.5px --ink-soft edge made every card on this tab read as a hard-ruled box,
+   which fought the parchment; the hairline lets the gold inset ring below be
+   the card's definition instead. The inset rings are untouched: they are the
+   vitals card's identity, along with the corner diamonds. */
 .vitals {
   position: relative;
-  border: 1.5px solid var(--ink-soft); border-radius: var(--r-md);
+  border: 1px solid var(--line-hair); border-radius: var(--r-md);
   background: var(--bg-card); padding: 15px 16px;
-  box-shadow: var(--shadow-card), inset 0 0 0 4px var(--bg-card), inset 0 0 0 5px var(--line-gold);
+  box-shadow: var(--shadow-hair), inset 0 0 0 4px var(--bg-card), inset 0 0 0 5px var(--line-gold);
 }
 .vitals__corner { position: absolute; width: 8px; height: 8px; background: var(--gold-bright); transform: rotate(45deg); }
 .vitals__corner--tl { top: -5px; left: -5px; }
@@ -334,10 +339,13 @@
 
 /* ---- combat quad ---- */
 .combat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 14px; }
+/* Same hairline as .vitals and the Gear tab rows. Four of these sit side by
+   side, so the heavier edge was multiplied by four and did the most damage
+   here — the quad read as a grid of buttons rather than four readouts. */
 .combat-cell {
-  border: 1.5px solid var(--ink-soft); border-radius: var(--r-sm);
+  border: 1px solid var(--line-hair); border-radius: var(--r-sm);
   background: var(--bg-card); padding: 11px 4px 9px; text-align: center;
-  box-shadow: var(--shadow-soft);
+  box-shadow: var(--shadow-hair);
 }
 .combat-cell__value { font-family: var(--font-label); font-size: 26px; line-height: 1; color: var(--ink); }
 .combat-cell__label {
@@ -346,10 +354,13 @@
 }
 
 /* ---- gear summary rows ---- */
+/* The character tab summary of what is equipped. These now carry the same
+   hairline as the Gear tab .slot-row they summarise, which is the pairing
+   the two screens always implied. */
 .gear-row {
   display: flex; align-items: center; justify-content: space-between; gap: 12px;
-  border: 1.5px solid var(--ink-soft); border-radius: var(--r-sm);
-  background: var(--bg-card); padding: 12px 14px; box-shadow: var(--shadow-soft);
+  border: 1px solid var(--line-hair); border-radius: var(--r-sm);
+  background: var(--bg-card); padding: 12px 14px; box-shadow: var(--shadow-hair);
 }
 .gear-row__name { font-family: var(--font-label); font-size: 17px; color: var(--ink); }
 .gear-row__type { font-family: var(--font-body); font-style: italic; font-size: 12px; color: var(--ink-faint); margin-top: 2px; }
@@ -357,10 +368,13 @@
 
 /* ---- stats grid (Stats tab) ---- */
 .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 11px; }
+/* Attribute cards. Same hairline as everything else on the sheet — twelve of
+   these in a grid made the heavier edge read as a table rule, and the number
+   inside is what the card is for. */
 .stat-card {
   position: relative;   /* the source popover anchors to this */
-  border: 1.5px solid var(--ink-soft); border-radius: var(--r-sm);
-  background: var(--bg-card); box-shadow: var(--shadow-soft);
+  border: 1px solid var(--line-hair); border-radius: var(--r-sm);
+  background: var(--bg-card); box-shadow: var(--shadow-hair);
 }
 /* lift the pressed card so its panel clears the cards after it in the grid */
 .stat-card.is-open { z-index: 5; }
@@ -385,7 +399,7 @@
   display: none;
   position: absolute; top: calc(100% + 7px); z-index: 6;
   min-width: 100%; width: max-content; max-width: 190px;
-  border: 1.5px solid var(--ink-soft); border-radius: var(--r-sm);
+  border: 1px solid var(--line-hair); border-radius: var(--r-sm);
   background: var(--bg-card); box-shadow: var(--shadow-card);
   padding: 9px 13px 10px;
 }
@@ -402,7 +416,10 @@
   content: ""; position: absolute; top: -5px;
   width: 8px; height: 8px; transform: rotate(45deg);
   background: var(--bg-card);
-  border-left: 1.5px solid var(--ink-soft); border-top: 1.5px solid var(--ink-soft);
+  /* Must track .stat-card__sources above: this is the same edge drawn as a
+     rotated square, so a heavier weight here shows up as a thicker notch on
+     one corner of the panel it points out of. */
+  border-left: 1px solid var(--line-hair); border-top: 1px solid var(--line-hair);
 }
 .stats-grid .stat-card:nth-child(odd)  .stat-card__sources::before { left: 20px; }
 .stats-grid .stat-card:nth-child(even) .stat-card__sources::before { right: 20px; }
@@ -460,8 +477,8 @@
 
 /* ---- composer ---- */
 .note-form {
-  border: 1.5px solid var(--ink-soft); border-radius: var(--r-md);
-  background: var(--bg-card); box-shadow: var(--shadow-soft);
+  border: 1px solid var(--line-hair); border-radius: var(--r-md);
+  background: var(--bg-card); box-shadow: var(--shadow-hair);
   padding: 14px 15px 15px; margin-bottom: 18px;
 }
 .note-form__area { min-height: 130px; }

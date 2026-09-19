@@ -193,7 +193,7 @@
 .field__input,
 .field__area {
   width: 100%;
-  border: 1.5px solid var(--ink-soft); border-radius: var(--r-xs);
+  border: 1px solid var(--line-hair); border-radius: var(--r-xs);
   background: var(--bg-input); padding: 10px 12px;
   font-family: var(--font-body); font-size: 15px; color: var(--ink);
   outline: none;
@@ -327,12 +327,16 @@
 /* ----------------------------------------------------------------- */
 .effects { display: flex; flex-direction: column; gap: 8px; }
 
+/* Hairline outline, matching the rest of the character tab and the Gear tab
+   rows. This one gains the most from it: the coloured spine on ::before is
+   what identifies a boon from a condition, and a heavy surrounding edge was
+   competing with the only part of the row that carries meaning. */
 .effect-row {
   position: relative; overflow: hidden;
   display: flex; align-items: center; justify-content: space-between; gap: 12px;
-  border: 1.5px solid var(--ink-soft); border-radius: var(--r-sm);
+  border: 1px solid var(--line-hair); border-radius: var(--r-sm);
   background: var(--bg-card); padding: 11px 12px 11px 15px;
-  box-shadow: var(--shadow-soft);
+  box-shadow: var(--shadow-hair);
 }
 /* kind reads as colour, not words: gilt spine for a boon, oxblood for a
    condition — so the two are separable at a glance mid-combat. */

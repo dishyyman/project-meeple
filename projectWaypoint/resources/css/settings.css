@@ -26,7 +26,6 @@
 }
 /* Appearance's "nothing happens yet" note. Italic and gold, the app's
    existing way of saying a thing is provisional rather than broken. */
-.settings__lede--soon { font-style: italic; color: var(--gold); }
 
 /* A settings row: an icon, a name, and a line saying what pressing it
    does. Shares the card treatment with .persona-card and .navcard so a
@@ -35,9 +34,9 @@
 .set-row {
   display: flex; align-items: flex-start; gap: 13px;
   width: 100%; text-align: left;
-  border: 1.5px solid var(--ink-soft); border-radius: var(--r-md);
+  border: 1px solid var(--line-hair); border-radius: var(--r-md);
   background: var(--bg-card); padding: 14px;
-  box-shadow: var(--shadow-card);
+  box-shadow: var(--shadow-hair);
 }
 /* The press. Takes the shadow away and moves the card into where it
    was, matching every other pressable card on the sheet. */
@@ -106,3 +105,56 @@
 .modal--file-ask .modal__card { display: flex; flex-direction: column; max-height: 100%; }
 .modal--file-ask .import__notes { margin-bottom: 4px; }
 .modal--file-ask .form-actions { margin-top: 14px; flex-shrink: 0; }
+
+/* ---- account block ----
+   Which of the two blocks paints is decided by data-account on .app, the
+   same attribute the Home card reads (see home.css). Signed out is the
+   default and the fallback: with the attribute missing or holding junk,
+   neither `--in` rule matches, so the screen shows "not signed in" and no
+   Sign out button — the safe direction to fail in. */
+.acct-block--in { display: none; }
+.app[data-account="in"] .acct-block--out { display: none; }
+.app[data-account="in"] .acct-block--in { display: block; }
+
+/* ---- appearance: mode tiles ----
+   Three across, equal columns: the set is fixed at three and the tiles should
+   divide the row evenly however long their words are, which is what a grid
+   gives and a flex row of content-sized buttons does not.
+
+   Built on the same hairline + --shadow-hair as every other card in the app,
+   and the chosen state borrows .tag-pick.is-on's accent edge so this control
+   and the Color chips below it agree about what "picked" looks like. */
+.mode-picks {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+.mode-pick {
+  display: flex; flex-direction: column; align-items: center; gap: 9px;
+  padding: 14px 6px 11px;
+  border: 1px solid var(--line-hair); border-radius: var(--r-sm);
+  background: var(--bg-card); box-shadow: var(--shadow-hair);
+  color: var(--ink-muted);
+}
+.mode-pick:active { transform: translate(1px, 1px); box-shadow: none; }
+/* The glyph inherits `color` from the tile, so selecting one moves the picture
+   and its word together rather than lighting only the frame. */
+.mode-pick__icon { width: 26px; height: 26px; display: block; }
+.mode-pick__icon svg { width: 100%; height: 100%; display: block; }
+.mode-pick__label {
+  font-family: var(--font-label); font-size: 12px;
+  letter-spacing: 0.04em; text-transform: uppercase;
+  color: inherit;
+}
+.mode-pick.is-on {
+  border-color: var(--accent); background: var(--bg-parchment2);
+  color: var(--accent-deep);
+}
+
+/* ---- account ----
+   Centred because it is the only thing in its block: a small button left-
+   aligned under a full-width paragraph reads as the start of a row that never
+   arrives. `block` + auto margins rather than a flex wrapper — there is one
+   child, and a container element to centre it would be markup doing a
+   stylesheet's job. */
+.acct-block--out .account__btn { display: block; margin: 0 auto; }

@@ -1,19 +1,70 @@
-    <!-- ================= HOME ================= -->
+    <!-- ================= HOME =================
+         Two blocks under the title: the account card, then the four
+         destinations as a single column.
+
+         The account card holds BOTH states in the markup at once and lets
+         CSS pick between them off data-account on .app — the same
+         state-on-an-attribute pattern data-view and data-tab use. Nothing
+         here is built or torn down on sign-in; the JS flips one attribute.
+         There is no login flow behind it yet, and the name is a placeholder.
+         ============================================================= -->
     <section class="screen screen--home">
       <div class="home">
         <h1 class="home__title">Home</h1>
+
+        <!-- ---------- ACCOUNT ---------- -->
+        <div class="account">
+          <span class="account__avatar" aria-hidden="true">
+            <svg width="22" height="22" viewBox="0 0 22 22" fill="none"><circle cx="11" cy="7.5" r="3.3" stroke="currentColor" stroke-width="1.6"/><path d="M5 18c0-3.3 2.7-5.5 6-5.5s6 2.2 6 5.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+          </span>
+
+          <!-- Signed OUT. The button is deliberately small: signing in is
+               optional and nothing on this screen needs it, so it should not
+               compete with the four destinations below. -->
+          <span class="account__body account__body--out">
+            <span class="account__name">Not signed in</span>
+            <span class="account__note">Sign in to sync across devices.</span>
+          </span>
+          <button class="account__btn" data-action="sign-in" type="button">Sign in</button>
+
+          <!-- Signed IN. Name first, then the status beneath it — the name is
+               what you look for, the tick only confirms it. The tick is part
+               of the status line rather than a badge on the avatar so that
+               the confirmation is READ as words; an icon alone leaves the
+               player to infer what it means. -->
+          <span class="account__body account__body--in">
+            <span class="account__name" data-bind="accountName">John</span>
+            <span class="account__status">
+              <span class="account__check" aria-hidden="true">
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2.5 6.3 4.8 8.6 9.5 3.9" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </span>
+              Signed in
+            </span>
+          </span>
+        </div>
+
+        <!-- ---------- DESTINATIONS ---------- -->
+        <!-- One column, in the order they are reached for: characters most
+             often, settings least. Each row is a nav target, so each carries
+             a chevron. -->
         <nav class="navlist">
           <button class="navcard" data-nav="characters">
             <span class="navcard__icon">
               <svg width="22" height="22" viewBox="0 0 22 22" fill="none"><circle cx="11" cy="7.5" r="3.3" stroke="currentColor" stroke-width="1.6"/><path d="M5 18c0-3.3 2.7-5.5 6-5.5s6 2.2 6 5.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
             </span>
             <span class="navcard__body"><span class="navcard__name">Characters</span></span>
+            <span class="navcard__go" aria-hidden="true">
+              <svg width="8" height="14" viewBox="0 0 8 14" fill="none"><path d="M1.5 1.5 7 7l-5.5 5.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </span>
           </button>
           <button class="navcard" data-action="compendium">
             <span class="navcard__icon">
               <svg width="22" height="22" viewBox="0 0 22 22" fill="none"><path d="M4 4.5h6a2 2 0 012 2V18a2 2 0 00-2-2H4z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M18 4.5h-6a2 2 0 00-2 2V18a2 2 0 012-2h6z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
             </span>
             <span class="navcard__body"><span class="navcard__name">Compendium</span></span>
+            <span class="navcard__go" aria-hidden="true">
+              <svg width="8" height="14" viewBox="0 0 8 14" fill="none"><path d="M1.5 1.5 7 7l-5.5 5.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </span>
           </button>
           <button class="navcard" data-action="gm">
             <span class="navcard__icon">
@@ -23,6 +74,9 @@
               <svg width="22" height="22" viewBox="0 0 22 22" fill="none"><circle cx="11" cy="11" r="8" stroke="currentColor" stroke-width="1.6"/><path d="M14.6 7.4 12.5 12.5 7.4 14.6 9.5 9.5Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
             </span>
             <span class="navcard__body"><span class="navcard__name">Guide Tools</span></span>
+            <span class="navcard__go" aria-hidden="true">
+              <svg width="8" height="14" viewBox="0 0 8 14" fill="none"><path d="M1.5 1.5 7 7l-5.5 5.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </span>
           </button>
           <button class="navcard" data-nav="settings">
             <span class="navcard__icon">
@@ -35,6 +89,9 @@
               <svg width="22" height="22" viewBox="0 0 22 22" fill="none"><path d="M9.4 4.9L9.2 2L12.8 2L12.6 4.9L14.2 5.5L16.1 3.4L18.6 5.9L16.5 7.9L17.1 9.4L20 9.2L20 12.8L17.1 12.6L16.5 14.1L18.6 16.1L16.1 18.6L14.2 16.5L12.6 17.1L12.8 20L9.2 20L9.4 17.1L7.9 16.5L5.9 18.6L3.4 16.1L5.5 14.1L4.9 12.6L2 12.8L2 9.2L4.9 9.4L5.5 7.8L3.4 5.9L5.9 3.4L7.8 5.5Z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><circle cx="11" cy="11" r="2.9" stroke="currentColor" stroke-width="1.4"/></svg>
             </span>
             <span class="navcard__body"><span class="navcard__name">Settings</span></span>
+            <span class="navcard__go" aria-hidden="true">
+              <svg width="8" height="14" viewBox="0 0 8 14" fill="none"><path d="M1.5 1.5 7 7l-5.5 5.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </span>
           </button>
         </nav>
       </div>

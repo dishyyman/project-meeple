@@ -6,71 +6,127 @@
 /* ----------------------------------------------------------------- */
 /* 6. HOME SCREEN                                                     */
 /* ----------------------------------------------------------------- */
-/* A flex COLUMN, which is what lets the nav grid below claim the whole of what
-   the title leaves. `min-height` rather than `height`, so the screen can still
-   grow if a label ever wraps to a third line instead of being clipped by a box
-   pinned to the frame. */
+/* A flex COLUMN that SCROLLS. It used to be a fixed box whose nav grid
+   stretched to fill whatever the title left; with the account card added the
+   content can now exceed the frame, and the four destinations are worth more
+   as consistently-sized rows than as tiles squeezed to fit. So the column is
+   bounded by the screen and its overflow scrolls, the same shape Settings has.
+
+   `height`, NOT `min-height`: an auto-height box grows to fit its content, so
+   overflow-y would never have anything to act on and the surplus would simply
+   be clipped by .app. The scroll container has to be the bounded one. */
 .home {
-  min-height: 100%;
+  height: 100%;
   display: flex; flex-direction: column;
   padding: 64px 22px 44px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
-/* The title now carries the gap to the nav list itself — the subtitle that
-   used to supply that bottom margin is gone. */
 .home__title {
   font-family: var(--font-display); font-size: 36px; color: var(--heading);
-  line-height: 1.02; margin-bottom: 28px;
+  line-height: 1.02; margin-bottom: 22px;
   flex-shrink: 0;
 }
-/* Four destinations, so a 2x2 grid of equal tiles: every card lands the same
-   size no matter how long its label is. `1fr 1fr` on both axes rather than
-   auto-fit — the count is fixed and the pairing is deliberate, not a function
-   of available space.
 
-   `flex: 1` is what fills the screen: the grid takes every pixel left under
-   the title and the two `1fr` rows split it, so the menu runs to the bottom
-   padding instead of stopping a third of the way down with the rest of the
-   phone empty. On the 402x874 frame that lands each tile at roughly 172x344.
-   Nothing here is a magic number — change the frame, the padding or the title
-   and the tiles re-divide whatever is left. */
+/* ---- account card ----
+   ONE card holding both states. Which one paints is decided by
+   data-account on .app, exactly as data-view decides which screen paints —
+   see the block at the bottom of this section. Keeping both in the DOM is
+   what lets sign-in be an attribute flip with no render call behind it.
+
+   Quieter than a .navcard on purpose: it is a status line you read, not a
+   destination you aim at. Flat, no shadow, warm hairline. */
+.account {
+  flex-shrink: 0;
+  display: flex; align-items: center; gap: 13px;
+  padding: 14px;
+  margin-bottom: 26px;
+  border: 1.5px solid var(--line-warm); border-radius: var(--r-md);
+  background: var(--bg-parchment2);
+}
+.account__avatar {
+  width: 42px; height: 42px; flex-shrink: 0;
+  border: 1.5px solid var(--line-gold); border-radius: 999px;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--ink-muted);
+  background: var(--bg-card);
+}
+.account__avatar svg { width: 24px; height: 24px; }
+/* Takes the middle so the Sign in button is pushed to the far edge. */
+.account__body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.account__name {
+  font-family: var(--font-display); font-size: 17px; color: var(--ink);
+  line-height: 1.15;
+  /* A real account name is not length-checked by this app, so it truncates
+     rather than pushing the button off the card. */
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.account__note {
+  font-family: var(--font-body); font-size: 12px; color: var(--ink-muted);
+  line-height: 1.35;
+}
+/* The status line, under the name. Green rather than the app's rust: rust is
+   the accent every pressable thing already uses, and a confirmation should
+   not read as something to press. */
+.account__status {
+  display: flex; align-items: center; gap: 5px;
+  font-family: var(--font-label); font-size: 12px;
+  letter-spacing: 0.04em; text-transform: uppercase;
+  color: var(--heal-border);
+}
+.account__check {
+  width: 15px; height: 15px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 999px;
+  background: var(--heal); color: var(--heal-text);
+}
+/* ---- destinations ----
+   A single column. The tiles used to divide the leftover height between them,
+   which made their size a function of the title and the frame; as rows they
+   are a fixed, equal height instead, and the list simply runs as long as it
+   runs. `flex-shrink: 0` so a scrolling column cannot compress them. */
 .navlist {
-  flex: 1;
-  /* Without this a grid whose content is taller than its share refuses to
-     shrink, and the last row would push past the bottom padding. */
-  min-height: 0;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  grid-template-rows: 1fr 1fr;
-  gap: 14px;
+  flex-shrink: 0;
+  display: flex; flex-direction: column;
+  gap: 12px;
 }
 .navcard {
-  /* Column stack, everything centred: icon on top, label beneath it. At this
-     height the pair sits in the middle of a tall panel, which is the point —
-     the tile is the target, and centring keeps all four reading identically
-     however long the label is. */
-  display: flex; flex-direction: column; align-items: center; justify-content: center;
-  gap: 18px; width: 100%; height: 100%; text-align: center;
-  /* A floor, not the size. The grid row decides the height; this only matters
-     if the space ever collapses — better a short tile than a vanished one. */
-  min-height: 132px;
-  border: 1.5px solid var(--ink-soft); border-radius: var(--r-md);
-  background: var(--bg-card); padding: 24px 14px;
-  box-shadow: var(--shadow-card);
+  /* Icon, label, chevron — the same three-part row the Settings screen uses,
+     so Home introduces no new idiom. */
+  display: flex; flex-direction: row; align-items: center;
+  gap: 14px; width: 100%; text-align: left;
+  border: 1px solid var(--line-hair); border-radius: var(--r-md);
+  background: var(--bg-card); padding: 15px 16px;
+  box-shadow: var(--shadow-hair);
 }
+/* The press, matching every other pressable card in the app. */
+.navcard:active { transform: translate(1px, 1px); box-shadow: none; }
 .navcard__icon {
-  /* Scaled with the tile. At panel height a 54px badge read as a stray mark in
-     a large empty card; the icon is the thing you aim at, and it has to carry
-     the space the label cannot. */
-  width: 80px; height: 80px; flex-shrink: 0;
-  border: 1.5px solid var(--line-gold); border-radius: var(--r-md);
+  /* 44px: large enough to carry the glyph at a glance, small enough that the
+     row stays a row. The badge keeps the gold border it had as a tile. */
+  width: 44px; height: 44px; flex-shrink: 0;
+  border: 1.5px solid var(--line-gold); border-radius: var(--r-sm);
   display: flex; align-items: center; justify-content: center;
   color: var(--accent);
 }
 /* The glyphs ship at 22px in the markup; scale them here so the sizing stays
    a CSS decision and the SVGs stay untouched. */
-.navcard__icon svg { width: 38px; height: 38px; }
-/* 21px, not larger: "Compendium" and "Guide Tools" both have to clear a 172px
-   tile with its padding on one line, and a label that wraps for two of the
-   four breaks the symmetry the grid exists to hold. */
-.navcard__name { font-family: var(--font-display); font-size: 21px; color: var(--ink); line-height: 1.15; }
+.navcard__icon svg { width: 24px; height: 24px; }
+.navcard__body { flex: 1; min-width: 0; }
+/* 19px now rather than 21px: in a row the label sits beside the badge instead
+   of under it, so it no longer has a tile's width to itself — and every label
+   still has to clear the chevron on one line. */
+.navcard__name { font-family: var(--font-display); font-size: 19px; color: var(--ink); line-height: 1.15; }
+/* Faint on purpose: it says "this goes somewhere", which the row already
+   implies. Loud enough to notice, quiet enough not to be the target. */
+.navcard__go { flex-shrink: 0; display: flex; align-items: center; color: var(--ink-faint); }
 
+/* ---- which account state paints ----
+   data-account lives on .app beside data-view and data-tab, and is written by
+   main.js. Signed out is the default, and is what shows if the attribute is
+   missing entirely — a corrupt or empty store can therefore only ever fail
+   toward "not signed in", never toward a name the player never entered. */
+.account__body--in,
+.app[data-account="in"] .account__body--out,
+.app[data-account="in"] .account .account__btn { display: none; }
+.app[data-account="in"] .account__body--in { display: flex; }

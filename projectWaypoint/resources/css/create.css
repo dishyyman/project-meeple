@@ -88,8 +88,8 @@
    The whole card is the expander; the tick is the commit. Two acts, so two
    controls — tapping to read must never quietly choose for you. */
 .pick-card {
-  border: 1.5px solid var(--ink-soft); border-radius: var(--r-md);
-  background: var(--bg-card); box-shadow: var(--shadow-card);
+  border: 1px solid var(--line-hair); border-radius: var(--r-md);
+  background: var(--bg-card); box-shadow: var(--shadow-hair);
   margin-bottom: 10px; overflow: hidden;
 }
 .pick-card[data-chosen] { border-color: var(--accent); border-width: 2px; }
@@ -293,7 +293,7 @@
   position: relative;
   grid-column: span var(--slot-span, 1);
   min-height: 74px;
-  border: 1.5px solid var(--ink-soft); border-radius: var(--r-sm);
+  border: 1px solid var(--line-hair); border-radius: var(--r-sm);
   background: var(--bg-parchment2);
 }
 .gear-slot__open {

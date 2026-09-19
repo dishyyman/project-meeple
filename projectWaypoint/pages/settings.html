@@ -30,9 +30,9 @@
 
           <!-- ---------- BACKUP ---------- -->
           <div class="rule"><span class="rule__label">&#10022; Backup &#10022;</span></div>
-          <p class="settings__lede">Every character on this device in one file &mdash; sheets, portraits and
-            journals. The app keeps them in this browser&rsquo;s storage and nowhere else, so a cleared
-            browser is a lost roster unless you have one of these.</p>
+          <p class="settings__lede">Save all characters on this device as one file and export it. Import
+            allows you to drop in characters from a previous export, which allows for cross-device
+            uploads.</p>
           <div class="stack stack--tight">
             <!-- Arrow out of an open-topped tray, the drawer's Share glyph. -->
             <button class="set-row" data-backup-export>
@@ -56,16 +56,15 @@
               </span>
               <span class="set-row__body">
                 <span class="set-row__name">Import Characters</span>
-                <span class="set-row__note">Add them alongside your own, or overwrite the ones you already have.</span>
+                <span class="set-row__note">Click to select file</span>
               </span>
             </button>
           </div>
 
           <!-- ---------- COMPENDIUM ---------- -->
           <div class="rule"><span class="rule__label">&#10022; Compendium &#10022;</span></div>
-          <p class="settings__lede">The game&rsquo;s content &mdash; classes, subclasses, traits, skills and gear.
-            Characters store ids and read every number out of here, so replacing this re-points every
-            sheet at once.</p>
+          <p class="settings__lede">A file including the games content, allowing for updates when content
+            updates.</p>
           <!-- Which compendium is installed, written by renderSettings(). Sits
                above the buttons because it is what both of them act on. -->
           <div class="set-meta">
@@ -88,7 +87,7 @@
               </span>
               <span class="set-row__body">
                 <span class="set-row__name">Import Compendium</span>
-                <span class="set-row__note">Add entries this device is missing, or replace the compendium outright.</span>
+                <span class="set-row__note">Click to select file</span>
               </span>
             </button>
             <!-- Only in the markup once there is something to undo:
@@ -108,22 +107,23 @@
           </div>
 
           <!-- ---------- APPEARANCE ---------- -->
-          <!-- FRAME ONLY, deliberately. The chips below track a choice and draw
-               it, and nothing else in the app reads that choice — the design
-               tokens these would drive are expected to move before any of this
-               is wired up, and a half-applied theme is harder to finish than an
-               unstarted one. The note says so on the screen rather than only in
-               this comment, because a control that visibly does nothing and
-               does not admit it reads as a bug. -->
+          <!-- FRAME ONLY, deliberately. The controls below track a choice and
+               draw it, and nothing else in the app reads that choice — the
+               design tokens these would drive are expected to move before any
+               of this is wired up, and a half-applied theme is harder to finish
+               than an unstarted one. -->
           <div class="rule"><span class="rule__label">&#10022; Appearance &#10022;</span></div>
-          <p class="settings__lede settings__lede--soon">Not wired up yet. These remember what you pick, but
-            the app keeps its parchment either way until the theme work lands.</p>
+          <!-- Mode is three picture tiles rather than word chips: light, dark
+               and auto are the one setting here a player recognises faster by
+               shape than by reading. Exactly one is ever chosen — the handler
+               assigns rather than toggles, so the set cannot reach a state with
+               none or two picked. Painted by renderAppearance(). -->
           <div class="tag-picks tag-picks--flush">
             <div class="tag-picks__label">Mode</div>
-            <div class="tag-picks__row" data-list="apMode"></div>
+            <div class="mode-picks" data-list="apMode"></div>
           </div>
           <div class="tag-picks">
-            <div class="tag-picks__label">Colour Theme</div>
+            <div class="tag-picks__label">Color</div>
             <div class="tag-picks__row" data-list="apTheme"></div>
           </div>
 
@@ -159,6 +159,45 @@
             </button>
           </div>
 
+
+          <!-- ---------- ACCOUNT ---------- -->
+          <!-- Last section on the screen: signing out is the most destructive
+               thing here and the least often wanted, so it sits where it is
+               found on purpose rather than met on the way past.
+
+               Both states are in the markup and CSS picks between them off
+               data-account on .app — the same arrangement the Home card uses,
+               for the same reason: there is no login flow behind any of this
+               yet, so state is one attribute and nothing renders. -->
+          <div class="rule"><span class="rule__label">&#10022; Account &#10022;</span></div>
+
+          <div class="acct-block acct-block--out">
+            <p class="settings__lede">You are not signed in. Waypoint keeps everything in this
+              browser&rsquo;s storage either way &mdash; signing in is only about carrying it
+              between devices.</p>
+            <!-- The same control as the one on the Home card, down to the
+                 data-action: one handler, one state, two places to reach it. -->
+            <button class="account__btn" data-action="sign-in" type="button">Sign in</button>
+          </div>
+
+          <div class="acct-block acct-block--in">
+            <p class="settings__lede">Signed in as <b data-bind="accountName">John</b>.
+              Signing out leaves every character on this device untouched.</p>
+            <div class="stack stack--tight">
+              <!-- Door with an arrow leaving it — the same line-drawing idiom as
+                   every other glyph here, rather than a power symbol, which
+                   means "off" and not "leave". -->
+              <button class="set-row set-row--quiet" data-action="sign-out">
+                <span class="set-row__icon">
+                  <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true"><path d="M7.2 2.6H4.4a1.8 1.8 0 0 0-1.8 1.8v9.2a1.8 1.8 0 0 0 1.8 1.8h2.8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M11.4 12.2 14.6 9l-3.2-3.2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M14.4 9H7.4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+                </span>
+                <span class="set-row__body">
+                  <span class="set-row__name">Sign out</span>
+                  <span class="set-row__note">Nothing is deleted from this device.</span>
+                </span>
+              </button>
+            </div>
+          </div>
           <!-- One picker for both imports; which one asked is state, not a
                second input. Kept out of view rather than display:none, so the
                click that opens it is a real user gesture in every browser —

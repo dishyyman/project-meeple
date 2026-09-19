@@ -5753,6 +5753,62 @@
   /* is split from importing rather than being one call.                 */
   /* ================================================================== */
 
+  /* ---- account ---------------------------------------------------------
+     A PLACEHOLDER. There is no login flow, no server and no credential
+     anywhere in this app — signing in flips a boolean and signing out flips
+     it back. It exists so the two visual states can be designed and reviewed
+     before any of that is built, and so the Home card and the Settings
+     section have one source of truth to read from rather than two.
+
+     When a real account system arrives, the shape below is what it has to
+     satisfy: something that answers "signed in?" and "under what name?", and
+     a render that pushes both into the DOM. Nothing else in the app reads
+     this state, so replacing the middle of it should not reach past here.
+
+     Persisted for the same reason the rest of the app is: sign in on Home,
+     walk to Settings, and the Sign out button has to be there. Without a
+     store that survives a reload, the two screens would disagree the moment
+     the page refreshed. */
+  const ACCOUNT_KEY = 'waypoint.account';
+
+  /* The signed-OUT default is deliberate and is repeated in CSS: a missing or
+     unreadable store must land here, never on a name nobody entered. */
+  const account = { signedIn: false, name: 'John' };
+
+  function loadAccount() {
+    let raw = null;
+    try { raw = JSON.parse(localStorage.getItem(ACCOUNT_KEY) || 'null'); }
+    catch (_) { /* corrupt — fall through to the default */ }
+    /* Read defensively: this is the one part of the app whose stored shape is
+       expected to change once real accounts exist, so an old or half-written
+       record should degrade to signed-out rather than throw on boot. */
+    if (raw && typeof raw === 'object') {
+      account.signedIn = raw.signedIn === true;
+      if (typeof raw.name === 'string' && raw.name.trim()) account.name = raw.name.trim();
+    }
+    renderAccount();
+  }
+
+  function saveAccount() {
+    try { localStorage.setItem(ACCOUNT_KEY, JSON.stringify(account)); }
+    catch (_) { /* private mode: the session still works, it just won't persist */ }
+  }
+
+  /* One attribute and one string. Both the Home card and the Settings section
+     hold both states in the markup and let CSS choose, so there is nothing to
+     build or tear down here — which is why sign-in can be instant and why
+     neither screen needs to be the current view for this to be correct. */
+  function renderAccount() {
+    app.setAttribute('data-account', account.signedIn ? 'in' : 'out');
+    setText('accountName', account.name);
+  }
+
+  function setSignedIn(next) {
+    account.signedIn = next;
+    saveAccount();
+    renderAccount();
+  }
+
   function renderSettings() {
     // Cheap to call and called from several places (entering the screen, after
     // an import, after a compendium reset), so it is written to be safe on a
@@ -5764,21 +5820,19 @@
 
   /* ---- backup --------------------------------------------------------- */
 
-  /* How many characters the file would hold and what it would weigh. The
-     weight is the point: it is the difference between a file any chat app will
-     carry and one several of them refuse, and the only honest way to put a
-     number on it is to build the file and weigh it — the same call the share
-     window makes, for the same reason. Cheap enough: this runs when the screen
-     is opened, not in a loop. */
+  /* How many characters the export would hold.
+
+     It used to report the file's WEIGHT alongside the count, and dropping that
+     is what makes this cheap: weighing the file meant building it first —
+     every character and every portrait serialised — to paint one subtitle on a
+     screen a player may only be passing through. The count answers the
+     question that actually matters ("did it get everything?") and costs a
+     roster length. The share window still weighs its file, where the number
+     decides whether an attachment will send. */
   function renderBackupNote() {
-    if (!roster.length) {
-      setText('backupNote', 'No characters yet — nothing to export.');
-      return;
-    }
-    const file = characterFile(roster.map((r) => r.id));
-    const count = file ? file.characters.length : 0;
+    const count = roster.length;
     setText('backupNote', count
-      ? `${count} character${count === 1 ? '' : 's'} · about ${fileSize(byteSize(characterJson(file)))}`
+      ? `${count} character${count === 1 ? '' : 's'}`
       : 'No characters yet — nothing to export.');
   }
 
@@ -5847,10 +5901,12 @@
 
   function renderCompendiumNote() {
     const meta = LIBRARY.waypoint || {};
-    const count = Object.keys(entriesOf(LIBRARY)).length;
     setText('libTitle', meta.title || 'Unknown compendium');
     setText('libVersion', meta.version ? `v${meta.version}` : '');
-    setText('compendiumNote', `${count} ${count === 1 ? 'entry' : 'entries'}, as this device has them.`);
+    // Not a count: which content is installed is the useful fact, and the
+    // title and version above already name it. "Current content" says the
+    // export will be what the app is running right now.
+    setText('compendiumNote', 'Current content');
     // The undo only exists once there is something to undo.
     const reset = $('[data-compendium-reset]');
     if (reset) reset.hidden = !hasStoredLibrary();
@@ -6152,10 +6208,49 @@
 
      The lists are data so that adding a theme later is one line here and one
      token block there. */
+  /* Mode glyphs. Line drawings at 26px on a 0 0 26 26 bed, matching every
+     other icon in the app — stroked, not filled, so they take their colour
+     from the tile and shift with its selected state.
+
+     The exception is Auto's right half, which IS filled: it has to read as
+     the dark side of a divided disc, and an outline there would read as a
+     second empty circle. The divider is the fill's own straight edge, drawn
+     again as a stroke so it stays visible at the same weight as the rim. */
+  const MODE_GLYPHS = {
+    /* Sun: a disc and eight rays on the 45° steps, struck from r=7 to r=9.5. */
+    light: '<svg viewBox="0 0 26 26" fill="none" aria-hidden="true">'
+      + '<circle cx="13" cy="13" r="5" stroke="currentColor" stroke-width="1.6"/>'
+      + '<g stroke="currentColor" stroke-width="1.6" stroke-linecap="round">'
+      + '<path d="M13 6V3.5"/><path d="M13 20v2.5"/>'
+      + '<path d="M20 13h2.5"/><path d="M6 13H3.5"/>'
+      + '<path d="M17.95 8.05l1.77-1.77"/><path d="M8.05 17.95l-1.77 1.77"/>'
+      + '<path d="M17.95 17.95l1.77 1.77"/><path d="M8.05 8.05L6.28 6.28"/>'
+      + '</g></svg>',
+    /* Crescent: one arc bitten out of another, the standard two-arc path. */
+    dark: '<svg viewBox="0 0 26 26" fill="none" aria-hidden="true">'
+      + '<path d="M20.8 15.9A7.6 7.6 0 0 1 10.6 5.7 7.6 7.6 0 1 0 20.8 15.9Z"'
+      + ' stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>',
+    /* Half sun, half moon, split down the middle: rays on the left, solid on
+       the right, one rule between them. "Whichever the system is." */
+    system: '<svg viewBox="0 0 26 26" fill="none" aria-hidden="true">'
+      + '<path d="M13 6.5a6.5 6.5 0 0 1 0 13Z" fill="currentColor"/>'
+      + '<circle cx="13" cy="13" r="6.5" stroke="currentColor" stroke-width="1.6"/>'
+      + '<g stroke="currentColor" stroke-width="1.6" stroke-linecap="round">'
+      + '<path d="M13 6.5v13"/>'
+      + '<path d="M4.5 13H2"/>'
+      + '<path d="M7 7L5.2 5.2"/>'
+      + '<path d="M7 19l-1.8 1.8"/>'
+      + '</g></svg>',
+  };
+
   const APPEARANCE_MODES = [
     { id: 'light',  label: 'Light' },
     { id: 'dark',   label: 'Dark' },
-    { id: 'system', label: 'Match System' },
+    /* "Auto" rather than "Match System": it sits under a 3-across tile that a
+       two-word label would wrap, and it is the word the rest of the platform
+       uses for the same setting. The id stays `system` — it is what the stored
+       preference already holds, and renaming it would strand that. */
+    { id: 'system', label: 'Auto' },
   ];
 
   const APPEARANCE_THEMES = [
@@ -6172,13 +6267,29 @@
   function renderAppearance() {
     // aria-pressed, matching the share window's format chips and the weapon
     // tags: the same control doing the same job of reporting which one of a
-    // set is chosen.
+    // set is chosen. role="radio" would describe an exclusive set more
+    // precisely, but every other one-of-many control in this app is a pressed
+    // button, and CLAUDE.md puts consistency above the finer ARIA.
     const chips = (list, chosen, attr) => list.map((o) => {
       const on = o.id === chosen;
       return `<button class="tag-pick${on ? ' is-on' : ''}" ${attr}="${esc(o.id)}"`
         + ` aria-pressed="${on}">${esc(o.label)}</button>`;
     }).join('');
-    fillList('apMode',  chips(APPEARANCE_MODES,  state.appearance.mode,  'data-ap-mode'));
+
+    /* Mode gets picture tiles instead: glyph above, word below, whole tile is
+       the target. The glyph is trusted markup from MODE_GLYPHS, never player
+       input, so it goes in unescaped — the label beside it is escaped as
+       everything from a data list is. */
+    const modes = APPEARANCE_MODES.map((o) => {
+      const on = o.id === state.appearance.mode;
+      return `<button class="mode-pick${on ? ' is-on' : ''}" data-ap-mode="${esc(o.id)}"`
+        + ` aria-pressed="${on}">`
+        + `<span class="mode-pick__icon">${MODE_GLYPHS[o.id] || ''}</span>`
+        + `<span class="mode-pick__label">${esc(o.label)}</span>`
+        + '</button>';
+    }).join('');
+
+    fillList('apMode',  modes);
     fillList('apTheme', chips(APPEARANCE_THEMES, state.appearance.theme, 'data-ap-theme'));
   }
 
@@ -7667,6 +7778,12 @@
       if (t.hasAttribute('data-rules-toggle')) { toggleAllRules(); return; }
       if (t.dataset.action === 'roll') { openDice(); return; }
       if (t.dataset.action === 'create-character') { startCreate(); return; }
+      /* Placeholder account state — no credential is checked and none is
+         stored; see the account block above renderSettings(). Both flip one
+         attribute, so the Home card and the Settings section update together
+         whichever screen the press came from. */
+      if (t.dataset.action === 'sign-in')  { setSignedIn(true);  return; }
+      if (t.dataset.action === 'sign-out') { setSignedIn(false); return; }
       if (t.dataset.action === 'add-equipment') { openWizPicker('equip:new'); return; }
 
       // --- not-yet-built actions: stubbed so nothing silently fails ---
@@ -8094,6 +8211,10 @@
     // Builds the roster, migrates a pre-roster install, and opens a character
     // — so it stands in for the old load() + loadPortrait() pair.
     loadRoster();
+    // Paints the Home card and the Settings section from the stored flag.
+    // Independent of the roster and cheap, so its order against the rest of
+    // init() does not matter — it runs here simply because the markup exists.
+    loadAccount();
     renderAll();
     wire();
     // Start on the character sheet (matches the prototype's default view).

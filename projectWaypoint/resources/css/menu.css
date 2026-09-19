@@ -55,8 +55,8 @@
 .drawer__group { display: flex; flex-direction: column; gap: 10px; }
 .drawer-btn {
   display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%;
-  border: 1.5px solid var(--ink-soft); border-radius: 11px; background: var(--bg-card);
-  color: var(--ink); padding: 14px; box-shadow: var(--shadow-soft);
+  border: 1px solid var(--line-hair); border-radius: 11px; background: var(--bg-card);
+  color: var(--ink); padding: 14px; box-shadow: var(--shadow-hair);
 }
 .drawer-btn span {
   font-family: var(--font-label); font-size: 14px;

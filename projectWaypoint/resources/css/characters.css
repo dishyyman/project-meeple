@@ -17,8 +17,8 @@
    used to be the card itself. */
 .persona-card {
   display: block; width: 100%; text-align: left;
-  border: 1.5px solid var(--ink-soft); border-radius: var(--r-md);
-  background: var(--bg-card); padding: 14px; box-shadow: var(--shadow-card);
+  border: 1px solid var(--line-hair); border-radius: var(--r-md);
+  background: var(--bg-card); padding: 14px; box-shadow: var(--shadow-hair);
 }
 .persona-card__main { display: flex; align-items: center; gap: 15px; width: 100%; }
 /* Opening the character. Stretches to fill the row so the tap target stays

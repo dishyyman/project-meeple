@@ -140,15 +140,23 @@
    the two buttons' labels line up with each other. */
 .btn-dashed__icon { width: 16px; height: 16px; flex-shrink: 0; }
 
-/* generic collapsible row (abilities / passives / skills / equipment) */
+/* generic collapsible row (abilities / passives / traits / skills / equipment)
+   Hairline outline, matching the character tab cards and the Gear tab rows:
+   these stack several deep under Actions, Traits, Passives and Skills, so a
+   1.5px --ink-soft edge repeated down a list was the heaviest thing on those
+   screens and boxed in prose that should read as prose. */
 .collapse {
-  border: 1.5px solid var(--ink-soft);
+  border: 1px solid var(--line-hair);
   border-radius: var(--r-sm);
   background: var(--bg-card);
-  box-shadow: var(--shadow-soft);
+  box-shadow: var(--shadow-hair);
   overflow: hidden;
 }
-.collapse--light { border: 1px solid var(--line-hair); box-shadow: none; }
+/* Now differs from the base only in carrying NO lift at all, plus the smaller
+   title below — the outline is the same hairline either way. Used where the
+   rows are already inside a bordered container (equipment on the Gear tab),
+   and a shadow inside a box reads as a seam. */
+.collapse--light { box-shadow: none; }
 .collapse__head {
   width: 100%;
   display: flex; align-items: center; justify-content: space-between; gap: 12px;
@@ -221,3 +229,24 @@
   margin: -1px; padding: 0; border: 0;
   clip: rect(0 0 0 0); clip-path: inset(50%); overflow: hidden; white-space: nowrap;
 }
+
+/* ---- sign-in button ----
+   Small by intent: signing in is optional and nothing in the app depends on
+   it, so it should not compete with the destinations it sits among.
+
+   Lives here rather than with either screen because BOTH the Home account
+   card and the Settings account section use it, and a selector defined in
+   two files is the one thing the @import order in style.css cannot survive.
+   Whichever screen it is dropped into supplies its own placement; this rule
+   only says what the button looks like. */
+.account__btn {
+  /* Only meaningful inside the Home card's flex row; harmless as a block. */
+  flex-shrink: 0;
+  font-family: var(--font-label); font-size: 12px;
+  letter-spacing: 0.05em; text-transform: uppercase;
+  color: var(--bg-card); background: var(--accent);
+  border: 1.5px solid var(--accent-deep); border-radius: var(--r-xs);
+  padding: 7px 14px;
+  box-shadow: var(--shadow-soft);
+}
+.account__btn:active { transform: translate(1px, 1px); box-shadow: none; }
