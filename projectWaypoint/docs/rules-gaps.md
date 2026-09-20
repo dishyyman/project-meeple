@@ -222,10 +222,15 @@ are identifiers and are never reused, so the next one is 2.11.
 ## 3. Not implemented — progression
 
 ### 3.1 Trait tiers above Tier 0
-**Guide:** one Trait chosen per level, from a tier gated by levels *in that
-subclass* — 1–3 Tier 1, 4–6 Tier 2, 7–9 Tier 3, 10 Tier 4 (capstone).
-**App:** only `TIER_0` is read (`tier0TraitOf()`); Tier 0 traits are granted from
-the build and displayed. No trait *selection* exists at all.
+**Guide:** one Trait chosen per level, from a tier gated by levels — 1–3 Tier 1,
+4–6 Tier 2, 7–9 Tier 3, 10 Tier 4 (capstone). A **subclass** trait counts levels
+in that subclass; a **class** trait counts the umbrella total across every
+subclass under it (schema §4.5).
+**App:** the *gating* now exists — `levelsInSubclass()`, `levelsInClass()`,
+`unlockedTier()` and `availableTraitsOf()` derive which tiers a build has
+unlocked, and Tier 0 (which may be several traits, not one) is granted from the
+build and displayed. What is still missing is the **selection**: nothing spends
+a level-up on a trait, and nothing stores a chosen one on the character.
 
 ### 3.2 The level-up itself
 **Guide:** each level grants 1 Attribute Point, 1 Skill Point, 1 Trait, and — on odd

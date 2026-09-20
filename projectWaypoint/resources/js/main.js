@@ -65,20 +65,20 @@
     build: {
       // Chosen at character creation, which the rules treat as LEVEL 0: you
       // have a class and a subclass and have taken no level-ups at all.
-      origin: 'subclass.marksman',
+      origin: 'subclass.hunter',
       // One subclass id per LEVEL-UP, in the order taken. Its length is the
       // character's level. A multiclass character simply has mixed entries.
       levels: [
-        'subclass.marksman', 'subclass.marksman', 'subclass.marksman',
-        'subclass.marksman', 'subclass.marksman',
+        'subclass.hunter', 'subclass.hunter', 'subclass.hunter',
+        'subclass.hunter', 'subclass.hunter',
       ],
       // Multiclass tiebreak only — see primarySubclass(). null = derive it.
       hpFrom: null,
     },
 
     // Worn armour. `null` is a legitimate, fully-specified state, not a missing
-    // value: an unarmoured character falls back to BASE_STATS, which is exactly
-    // why no class in the library restates the base block.
+    // value: an unarmoured character stands on their subclass's own base block
+    // (see baseStat()), which every subclass states in the library.
     armorWorn: 'armor.light',   // a library id, or null for unarmoured
 
     // Everything held in hands — weapons and shields alike, since they draw on
@@ -126,7 +126,7 @@
 
     // Attribute budget is 4 at creation + 1 per level (guide, ch.2), so a
     // level 5 character has 9 points to spend. These nine are a plausible
-    // Marksman spread; the previous placeholder totalled 39 and produced
+    // Hunter spread; the previous placeholder totalled 39 and produced
     // impossible derived numbers once the stats stopped being hardcoded.
     stats: [
       { name: 'Power',        value: 2 },
@@ -304,7 +304,39 @@
     // looks like a rules bug rather than a missing file.
     console.error('Waypoint: library.js did not load — run `node tools/csv-to-json.mjs`.');
   }
-  const subclassOf = (id) => (LIBRARY.subclasses || []).find((s) => s.id === id) || null;
+  /* ---- renamed subclasses ---------------------------------------------
+     A subclass id is derived from its NAME (schema §4.2), so renaming Hunter
+     to Kindred turns `subclass.hunter` into `subclass.kindred`. That keeps the
+     library honest and breaks every character built on the old id, which is
+     what `formerIds` is for: the sheet records the id a row used to have, and
+     everything here resolves through that record.
+
+     Built once, at load, from the library — the same place every other index
+     comes from. A former id pointing at a live subclass is rejected by the
+     converter, so this map can never redirect a working reference. */
+  const ALIASES = (() => {
+    const m = new Map();
+    for (const sc of LIBRARY.subclasses || []) {
+      for (const f of sc.formerIds || []) m.set(f, sc.id);
+    }
+    return m;
+  })();
+
+  /* The id something goes by TODAY. Unknown and current ids pass through
+     untouched, so this is safe to call on anything. Chains are resolved so
+     that Marksman -> Hunter -> Kindred still lands on Kindred, with a guard
+     against a cycle a hand-edited sheet could introduce. */
+  function migrateId(id) {
+    let out = id;
+    for (let hops = 0; ALIASES.has(out) && hops < 10; hops++) out = ALIASES.get(out);
+    return out;
+  }
+
+  /* Resolves through migrateId(), so a character holding a pre-rename id still
+     finds its subclass. cleanBuild() rewrites the stored id on the way in, so
+     a save heals the first time it is written back. */
+  const subclassOf = (id) =>
+    (LIBRARY.subclasses || []).find((s) => s.id === migrateId(id)) || null;
   const classOf    = (id) => (LIBRARY.classes    || []).find((c) => c.id === id) || null;
   const subclassesOf = (classId) => (LIBRARY.subclasses || []).filter((s) => s.classId === classId);
 
@@ -314,19 +346,94 @@
      follow from it. Rewriting one in the spreadsheet therefore updates every
      character holding it, the same way rewording a skill does.
 
-     Tier 0 is what choosing a class or a subclass confers (guide, steps 1-2).
-     The converter guarantees exactly one exists per class and per live
-     subclass, so this returns a trait rather than a list — a caller that had
-     to handle "none" or "several" would be handling a state the data cannot
-     be in. */
-  const TIER_0 = 0;
-  const tier0TraitOf = (ownerId) =>
-    (LIBRARY.traits || []).find((t) => t.grantedBy === ownerId && t.tier === TIER_0) || null;
+     Tier 0 is everything choosing a class or a subclass confers (guide, steps
+     1-2), granted the moment a character first levels into it.
 
-  /* Every Tier 0 trait a build confers: one per subclass taken, plus one per
-     PARENT CLASS, deduped. The dedupe is the whole subtlety — levelling
-     Berserker and then Primal is two subclasses but one Barbarian, and the
-     class trait is granted once for being a Barbarian, not once per level. */
+     There can be MORE THAN ONE. A Pyromancer's Tier 0 is both `Fire Mage` (a
+     passive) and `Pyroblast` (the spell it grants), and both arrive together,
+     so this returns every matching row rather than the first. The converter
+     guarantees at least one exists per class and per live subclass; it used to
+     guarantee exactly one, and this function used to return a single trait
+     because of it. That cap is gone, so nothing here may assume a single row
+     again — picking the first would silently drop whatever was authored
+     second. */
+  const TIER_0 = 0;
+  const tier0TraitsOf = (ownerId) =>
+    (LIBRARY.traits || []).filter((t) => t.grantedBy === ownerId && t.tier === TIER_0);
+
+  /* ---- how many levels a character has WHERE ------------------------
+     Two different counts, and the difference is the whole of trait gating.
+
+       levelsInSubclass  levels taken in one subclass. Gates that SUBCLASS's
+                         traits.
+       levelsInClass     levels taken in ANY subclass under one umbrella class,
+                         added together. Gates that CLASS's traits.
+
+     A character with 3 levels of Pyromancer and 3 of Frostcaller is a level 6
+     Elementalist but only a level 3 Pyromancer: they unlock Tier 2 Elementalist
+     traits and Tier 1 Pyromancer traits at the same moment. Counting levels
+     once and using it for both would be wrong in both directions.
+
+     Creation is NOT a level (the rules treat it as level 0), so `origin` is
+     excluded here — it grants Tier 0 and nothing more. */
+  const levelsInSubclass = (subclassId, build = character.build) =>
+    build.levels.filter((id) => id === subclassId).length;
+
+  const levelsInClass = (classId, build = character.build) =>
+    build.levels.filter((id) => subclassOf(id)?.classId === classId).length;
+
+  /* ---- which tier a given number of levels has unlocked --------------
+     Guide: levels 1-3 offer Tier 1, 4-6 Tier 2, 7-9 Tier 3, and 10 the Tier 4
+     capstone. Written as thresholds rather than `Math.ceil(level / 3)` because
+     the last band is one level wide, not three — the arithmetic version quietly
+     offers Tier 4 at level 10, 11 and 12 and makes the cap look like a bug.
+
+     Level 0 unlocks Tier 0 only, which is what a freshly created character has.
+     The list is descending so the FIRST match wins. */
+  const TIER_BANDS = [
+    { minLevel: 10, tier: 4 },
+    { minLevel: 7,  tier: 3 },
+    { minLevel: 4,  tier: 2 },
+    { minLevel: 1,  tier: 1 },
+  ];
+  const unlockedTier = (levels) =>
+    (TIER_BANDS.find((b) => levels >= b.minLevel) || { tier: TIER_0 }).tier;
+
+  /* The highest tier this character has unlocked from one owner — reading the
+     class's levels for a class, the subclass's for a subclass. Everything that
+     needs to ask "may they take this trait yet?" goes through here, so the
+     class/subclass distinction above is made in exactly one place. */
+  function unlockedTierFor(ownerId, build = character.build) {
+    const sc = subclassOf(ownerId);
+    return unlockedTier(sc ? levelsInSubclass(ownerId, build)
+                           : levelsInClass(ownerId, build));
+  }
+
+  /* Every trait an owner offers that this character has the levels for, Tier 0
+     included. This is the pool a level-up picker chooses FROM — it is not what
+     the character has taken. Tier 0 is the only tier granted outright; the
+     rest are chosen one per level, which is the flow that does not exist yet
+     (docs/rules-gaps.md §3.1). */
+  const availableTraitsOf = (ownerId, build = character.build) => {
+    const cap = unlockedTierFor(ownerId, build);
+    return (LIBRARY.traits || []).filter((t) => t.grantedBy === ownerId && t.tier <= cap);
+  };
+
+  /* Every Tier 0 trait a build confers, from every subclass taken plus each of
+     their PARENT CLASSES, deduped.
+
+     Tier 0 is the one tier granted rather than chosen, and it lands the moment
+     the character first commits to that owner: at creation for the class and
+     subclass they start as, and on the FIRST level taken into a new subclass
+     when multiclassing. Both of those are covered by reading `subclassIds()`,
+     which is origin plus every level — the first level into a new subclass is
+     what puts its id in that list, and taking a second changes nothing.
+
+     Deduping the OWNERS rather than the traits is what makes multiclassing
+     work: levelling Berserker and then Oakheart is two subclasses but one
+     Barbarian, and the Barbarian traits are granted once for being a
+     Barbarian, not once per subclass under it. Each owner contributes its
+     whole Tier 0 set exactly once. */
   function tier0Traits(build = character.build) {
     const owners = [];
     for (const id of subclassIds(build)) {
@@ -335,7 +442,7 @@
       if (!owners.includes(sc.classId)) owners.push(sc.classId);
       if (!owners.includes(sc.id)) owners.push(sc.id);
     }
-    return owners.map(tier0TraitOf).filter(Boolean);
+    return owners.flatMap(tier0TraitsOf);
   }
 
   /* ---- the skill catalog ---------------------------------------------
@@ -790,9 +897,24 @@
   };
 
   /* ---- defensive stats ----------------------------------------------
-     Every character stands on this block whether or not they are wearing
-     anything, which is why no class in the library restates it. */
+     The base block is CONTENT now: every subclass states its own evasion,
+     armor, fortitude and speed in tools/csv/subclasses.csv. Today all 27 rows
+     say the same 8 / 0 / 8 / 5, but they are authored per subclass precisely
+     so they can diverge — when one does, the sheet is the only thing that
+     changes.
+
+     BASE_STATS stays as the fallback for a character who has no subclass to
+     read (an unfinished build, or one whose subclass left the compendium),
+     and as the profile a downed character drops to. It is the same
+     "derive, don't store" rule the rest of the sheet follows: the number is
+     looked up on every render, never copied onto the character. */
   const BASE_STATS = { evasion: 8, armor: 0, fortitude: 8, speed: 5 };
+
+  // The base value of one defensive stat for THIS character — their subclass's
+  // if they have one, the shared block if they do not. Every formula below
+  // starts here rather than at a literal, so re-tuning a subclass moves its
+  // armour, shield and condition maths with it and nothing else has to know.
+  const baseStat = (key) => primarySubclass()?.[key] ?? BASE_STATS[key];
 
   /* ---- the gear catalog, from the library ----------------------------
      Armour, weapons, shields and equipment are all CONTENT now: they live in
@@ -824,9 +946,11 @@
   const ITEMS = new Map([...ARMOR, ...WEAPONS, ...EQUIPMENT].map((e) => [e.id, e]));
   const itemOf = (id) => ITEMS.get(id) || null;
 
-  // Every armour value is now a MODIFIER on BASE_STATS — evasion included.
-  // That was not always true (armour used to state Evasion absolutely), so if
-  // you are comparing against an older build, this is the line that changed.
+  // Every armour value is a MODIFIER on the wearer's base block — evasion
+  // included. That was not always true (armour used to state Evasion
+  // absolutely), so if you are comparing against an older build, this is the
+  // line that changed. The base it modifies is now the subclass's, not a
+  // single shared constant.
   const armorSummary = (a) =>
     `Evasion ${modLabel(a.evasionMod)} · Armor ${modLabel(a.armorMod)} · Speed ${modLabel(a.speedMod)}`;
 
@@ -912,32 +1036,33 @@
 
   /* ---- downed ------------------------------------------------------
      A downed character is helpless: not dodging, not resisting, not moving. So
-     Evasion and Fortitude fall back to BASE_STATS — every bonus that belongs to
-     someone still on their feet (Dexterity, Fortune, armour, shields) stops
-     applying — and Speed goes to zero outright, which is below the base 5 and
-     so has to be stated rather than derived.
+     Evasion and Fortitude fall back to their base values — every bonus that
+     belongs to someone still on their feet (Dexterity, Fortune, armour,
+     shields) stops applying — and Speed goes to zero outright, which is below
+     any base and so has to be stated rather than derived.
 
-     Evasion and Fortitude are written against BASE_STATS rather than as literal
+     Evasion and Fortitude are written as baseStat() calls rather than literal
      8s so the rule stays "you lose your bonuses", not "you become an 8":
-     re-tune the base block and the downed profile follows it.
+     re-tune a subclass's base block and its downed profile follows it.
 
      Armor and Speed are stated zeros instead, because neither is a bonus being
      stripped. Speed 0 is below the base 5 — being downed is not moving at all.
      And Armor stops meaning anything once a character is down: Armor exists to
      reduce incoming damage numbers, and damage numbers no longer matter to
      someone already at the bottom of their Wound track. That is a flat zero by
-     intent, not a coincidence of BASE_STATS.armor also being 0 today, so it is
-     written as its own constant and will hold if the base block is re-tuned. */
+     intent, not a coincidence of every subclass's base armor also being 0
+     today, so it is written as its own constant and will hold when one of
+     them is re-tuned. */
   const DOWNED_ARMOR = 0;
   const DOWNED_SPEED = 0;
 
   function evasion() {
-    if (isDowned()) return BASE_STATS.evasion;
+    if (isDowned()) return baseStat('evasion');
     // Armour's Evasion is a MODIFIER on the base, exactly like its Armor and
     // Speed. It used to REPLACE the base (Light Armor *was* Evasion 12); the
     // item sheet now states +4 and the base stays underneath, which is the
     // same 12 arrived at honestly and one fewer special case.
-    return BASE_STATS.evasion
+    return baseStat('evasion')
       + (wornArmor()?.evasionMod || 0)
       + statValue('Dexterity')
       + shieldBonus('evasionMod')
@@ -950,7 +1075,7 @@
     // purely a condition again — the last Wound used to apply 2 Vulnerable
     // instead of Armor, and that special case is gone.
     const vulnerable = stacksOf('condition.vulnerable');
-    return BASE_STATS.armor
+    return baseStat('armor')
       + (wornArmor()?.armorMod || 0)
       + shieldBonus('armorMod')
       + stacksOf('boon.protection')
@@ -958,10 +1083,10 @@
       + woundPenalty('armor');
   }
 
-  const fortitude = () => (isDowned() ? BASE_STATS.fortitude
-                                     : BASE_STATS.fortitude + statValue('Fortune'));
+  const fortitude = () => (isDowned() ? baseStat('fortitude')
+                                     : baseStat('fortitude') + statValue('Fortune'));
 
-  const speed = () => (isDowned() ? DOWNED_SPEED : BASE_STATS.speed
+  const speed = () => (isDowned() ? DOWNED_SPEED : baseStat('speed')
     + (wornArmor()?.speedMod || 0)
     - stacksOf('condition.slow')
     + woundPenalty('speed'));
@@ -1309,19 +1434,25 @@
   /* A build sanitised against the library. Every id has to resolve to a
      subclass that still exists, because a build is the one stored thing that
      every derived number reads: an origin naming a subclass that has been
-     renamed or retired would zero the health pool, the mana pool, the wound
-     track and the proficiency list all at once, and the sheet would look
-     broken rather than unclassed. An unresolvable origin therefore becomes
+     retired would zero the health pool, the mana pool, the wound track and the
+     proficiency list all at once, and the sheet would look broken rather than
+     unclassed. A RENAMED subclass is not that case — migrateId() carries the
+     reference across, provided the sheet recorded the old id in `formerIds`. An unresolvable origin therefore becomes
      null — "no class", a state the app already renders — and unresolvable
      level entries are dropped rather than left to read as zero. */
   function cleanBuild(b) {
     if (!b || typeof b !== 'object') return { origin: null, levels: [], hpFrom: null };
-    const origin = subclassOf(b.origin) ? b.origin : null;
-    const levels = Array.isArray(b.levels) ? b.levels.filter((id) => subclassOf(id)) : [];
+    // Rewritten to today's ids rather than merely resolved, so the save heals:
+    // a character stored before a rename is written back holding the new id and
+    // stops depending on the alias. An id that is already current passes
+    // through migrateId() unchanged.
+    const origin = subclassOf(b.origin) ? migrateId(b.origin) : null;
+    const levels = Array.isArray(b.levels)
+      ? b.levels.filter((id) => subclassOf(id)).map(migrateId) : [];
     // The tiebreak only means anything if it names a subclass actually
     // levelled into; anything else is stale and primarySubclass() would
     // ignore it anyway, so it is dropped rather than kept as noise.
-    const hpFrom = levels.includes(b.hpFrom) ? b.hpFrom : null;
+    const hpFrom = levels.includes(migrateId(b.hpFrom)) ? migrateId(b.hpFrom) : null;
     return { origin, levels, hpFrom };
   }
 
@@ -1977,8 +2108,8 @@
   function detailLines(g) {
     const out = [];
     if (g.type === 'Armor') {
-      // All three are modifiers on BASE_STATS, so all three are written the
-      // same way. Shown even at +0, because "this armour adds no Armor" is
+      // All three are modifiers on the wearer's base block, so all three are
+      // written the same way. Shown even at +0, because "this armour adds no Armor" is
       // information and a silently absent line reads as an oversight.
       out.push(['Evasion', modLabel(g.evasionMod)]);
       out.push(['Armor', modLabel(g.armorMod)]);
@@ -2567,7 +2698,7 @@
     if (el) el.hidden = !on;
   }
 
-  // "Marksman Ranger", or "Marksman Ranger +1" once a second subclass is in
+  // "Hunter Ranger", or "Hunter Ranger +1" once a second subclass is in
   // play — the full ledger is too much for a caption line, so it names the
   // pool the character mostly is and flags that there is more.
   /* The caption under a character's name, on the hero and on their Personae
@@ -2575,14 +2706,14 @@
      used to prefix the hero's and no longer exists, so having two was just two
      places to forget to change.
 
-     Reads "5 Marksman": the subclass and how many levels are in it, nothing
-     else. A multiclass character gets one term per subclass — "3 Marksman ·
+     Reads "5 Hunter": the subclass and how many levels are in it, nothing
+     else. A multiclass character gets one term per subclass — "3 Hunter ·
      2 Sentinel" — because "the level you are" is per subclass here, and a
      single total would hide the split that primarySubclass() turns on.
 
      A character's level IN a subclass is how many LEVEL-UPS went to it.
      Creation is level 0 (see SEED_CHARACTER), so the origin subclass earns no
-     level from being chosen — a freshly created character reads "0 Marksman",
+     level from being chosen — a freshly created character reads "0 Hunter",
      which is exactly the level the rules say they are. */
   const buildMeta = (build = character.build) => {
     // Set, because a subclass taken at creation and then levelled into is the
@@ -5282,7 +5413,7 @@
       if (!sc) { ids.add(id); continue; }
       ids.add(sc.id);
       ids.add(sc.classId);
-      for (const t of [tier0TraitOf(sc.id), tier0TraitOf(sc.classId)]) if (t) ids.add(t.id);
+      for (const t of [...tier0TraitsOf(sc.id), ...tier0TraitsOf(sc.classId)]) ids.add(t.id);
     }
     for (const k of c.skills || []) ids.add(k.id);
     for (const h of c.hands || []) ids.add(h.id);
@@ -6393,12 +6524,14 @@
   /* Warrior / Rogue / Mage. Purely a reading aid: they group nine classes so
      the eye lands on three shelves instead of one list. A family is not a
      choice, grants nothing, and no rule asks which one a class is in — which
-     is exactly why it is code rather than a column in classes.csv, the same
-     call docs/library-schema.md §6 makes for the six attributes and the five
-     skill categories. Order, here and on the page, is the guide's order. */
+     is exactly why it is code rather than library content, the same call
+     docs/library-schema.md §6 makes for the six attributes and the five skill
+     categories. (There is no classes sheet to put it on either — classes are
+     derived from subclasses.csv, §4.2.) Order, here and on the page, is the
+     guide's order. */
   const FAMILIES = [
     { name: 'Warrior', classIds: ['class.barbarian', 'class.fighter', 'class.knight'] },
-    { name: 'Rogue',   classIds: ['class.assassin', 'class.monk', 'class.ranger'] },
+    { name: 'Rogue',   classIds: ['class.rogue', 'class.monk', 'class.ranger'] },
     { name: 'Mage',    classIds: ['class.elementalist', 'class.magician', 'class.occultist'] },
   ];
 
@@ -6850,7 +6983,7 @@
         </button>
         <div class="pick-card__body">
           ${descHtml(c.desc)}
-          ${traitHtml(tier0TraitOf(c.id))}
+          ${traitsHtml(tier0TraitsOf(c.id))}
           <button class="pick-card__choose" data-wiz-pick="class:${c.id}">
             ${chosen ? 'Chosen — continue' : `Choose ${esc(c.name)}`}
           </button>
@@ -6868,12 +7001,20 @@
       : '<p class="pick-card__desc" data-placeholder>Description not yet written.</p>';
   }
 
-  function traitHtml(t) {
+  // Every Tier 0 trait an owner grants, in sheet order. A subclass may grant
+  // several (a passive plus the spell it hands you), so the picker renders a
+  // list; the label singularises only when there is in fact one.
+  function traitsHtml(list) {
+    return (list || []).map((t, i) => traitHtml(t, list.length > 1, i)).join('');
+  }
+
+  function traitHtml(t, many = false, i = 0) {
     if (!t) return '';
     const written = t.desc && !t.desc.startsWith('Placeholder —');
+    const label = many ? `Tier 0 Trait ${i + 1}` : 'Tier 0 Trait';
     return `
       <div class="pick-card__trait">
-        <span class="pick-card__trait-label">Tier 0 Trait</span>
+        <span class="pick-card__trait-label">${label}</span>
         <span class="pick-card__trait-name">${esc(t.name)}</span>
         <span class="pick-card__trait-desc"${written ? '' : ' data-placeholder'}>${
           esc(written ? t.desc : 'Rules text not yet written.')}</span>
@@ -6894,7 +7035,7 @@
     const chosen = d.subclassId === s.id;
     // Mana is shown as the pool plus its growth, because the two are different
     // rules: the pool comes from the subclass you started as, the growth from
-    // the subclass you take AT each level. A Spellsword generates mana in
+    // the subclass you take AT each level. A Spellblade generates mana in
     // combat instead of holding a pool, which is what manaModel records — so
     // it is named rather than shown as a bare 0, which would read as a bug.
     const mana = s.manaModel === 'generated'
@@ -6915,7 +7056,7 @@
         </button>
         <div class="pick-card__body">
           ${descHtml(s.desc)}
-          ${traitHtml(tier0TraitOf(s.id))}
+          ${traitsHtml(tier0TraitsOf(s.id))}
           <div class="pick-card__stats">
             ${stat(s.hp, 'Health')}${stat(s.wounds, 'Wounds')}${stat(s.patches, 'Patches')}
           </div>

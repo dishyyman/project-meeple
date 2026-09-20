@@ -60,47 +60,78 @@ const META = {
 /* are added here when their sheets are authored.                       */
 /*                                                                     */
 /* `items` is the one spec that ROUTES rather than maps 1:1 — see       */
-/* ROUTING below and schema §4.6.                                      */
+/* ROUTING below and schema §4.7.                                      */
 /* ------------------------------------------------------------------ */
 const SPECS = {
-  classes: {
-    fields: {
-      id:   { type: 'id',   required: true },
-      name: { type: 'text', required: true },
-      desc: { type: 'text', required: true },
-    },
-  },
+  /* ---- subclasses --------------------------------------------------
+     THE authoring tab. Its header is the Google Sheet's own header, not a
+     translation of it: `subclass`, `armorType`, `description` and the three
+     `concentration` columns are spelled the way the sheet spells them, so an
+     export drops in with no renaming step. The few places the JSON key
+     differs are listed in RENAMES below.
+
+     There is deliberately no `classes.csv`. A class is a name and a set of
+     subclasses, both of which this sheet already states, so the classes
+     collection is DERIVED from the `class` column (see deriveClasses()).
+     A second tab holding nine rows would be a second place to edit and a
+     join that can silently fail.
+
+     There is also no `active` column any more. It existed to strip subclasses
+     that had not been designed yet; every subclass is now live, and a row that
+     should not ship can simply be deleted or marked `deprecated` (§2). */
   subclasses: {
     fields: {
-      id:           { type: 'id',   required: true },
-      name:         { type: 'text', required: true },
-      classId:      { type: 'ref',  required: true, collection: 'classes' },
-      // Not exported. See stripUnstarted() — an unstarted subclass is not
-      // content the app should know about, so it never reaches the output.
-      active:       { type: 'bool' },
+      // NO `id` column. The id is DERIVED from `subclass` — see
+      // deriveSubclassIds(). Renaming a subclass renames its id to match,
+      // which is the behaviour this project wants: an id that still says
+      // `subclass.hunter` long after the row is called Kindred is a lie that
+      // gets harder to read every year.
+      //
+      // The cost of that is real and is paid by `formerIds` below: a saved
+      // character stores subclass ids, so a rename orphans it unless the old
+      // id is recorded.
+      formerIds:    { type: 'list' },
+      // The sheet says "Assassin"; the JSON key is `name`.
+      subclass:     { type: 'text', required: true },
+      // A display name ("Ranger"), not an id. deriveClasses() slugs it into
+      // `class.ranger` and emits the classes collection from the distinct set.
+      class:        { type: 'text', required: true },
       hp:           { type: 'int',  required: true },
       wounds:       { type: 'int',  required: true },
       patches:      { type: 'int',  required: true },
+      // The base defensive block, per subclass. Every subclass currently
+      // states the same 8 / 0 / 8 / 5, which is exactly why these are columns
+      // and not a constant: the values are expected to diverge, and the day
+      // one subclass starts at Speed 6 the sheet should be the only thing
+      // that changes.
+      //
+      // These are ABSOLUTE values, unlike items.csv's armorMod / evasionMod /
+      // speedMod, which are signed deltas applied on top of them.
+      evasion:      { type: 'int',  required: true },
+      armor:        { type: 'int',  required: true },
+      fortitude:    { type: 'int',  required: true },
+      speed:        { type: 'int',  required: true },
       // `none` is a deliberate authoring value meaning "no proficiencies at
       // all", and it has to be spelled out because a BLANK cell must stay
-      // available to mean "nobody has filled this in yet" — otherwise the
-      // converter can never tell a finished row from an unfinished one.
-      // No subclass currently uses it: The Master was the one design that did,
-      // and it now trains in Light/Medium armour and melee/ranged weapons like
-      // any other. The value stays supported for the next class that wants it.
-      armorTypes:   { type: 'list', required: true },
-      weaponTypes:  { type: 'list', required: true },
+      // available to mean "nobody has filled this in yet".
+      armorType:    { type: 'list', required: true },
+      weaponType:   { type: 'list', required: true },
       startingMana: { type: 'int',  required: true },
       manaPerLevel: { type: 'int',  required: true },
-      // The Spellsword's 0/0 is not a small pool, it is a different mechanic
+      // The Spellblade's 0/0 is not a small pool, it is a different mechanic
       // (mana generated in combat, and the one class excluded from the Short
       // Rest half-mana restore). Naming the model keeps that rule out of a
       // magic zero that some future reader would "fix".
       manaModel:    { type: 'enum', required: true, values: ['pool', 'generated'] },
-      // Order and REPEATS are meaningful — Chaos really is three-way Burst
+      // Three dropdown columns in the sheet, folded into one `roles` list on
+      // the way out — see foldConcentrations(). Three cells is what makes them
+      // comfortable to author; one ordered list is what the app wants. Order
+      // and REPEATS are meaningful — the Unmaker really is three-way Burst
       // Damage, and that weighting is the point. Never dedupe this.
-      roles:        { type: 'list' },
-      desc:         { type: 'text', required: true },
+      concentration1: { type: 'text' },
+      concentration2: { type: 'text' },
+      concentration3: { type: 'text' },
+      description:  { type: 'text', required: true },
       note:         { type: 'text' },
     },
   },
@@ -110,7 +141,7 @@ const SPECS = {
      `desc` carries the whole rule — there is no cost, no roll and no trigger
      column, because nothing about a trait is a number the app computes.
 
-     The two columns docs/library-schema.md §4.4 does not yet describe:
+     The two columns docs/library-schema.md §4.5 does not yet describe:
 
        tier       Which tier grants it. 0 is the trait you get for CHOOSING
                   the class or subclass, which is the only tier the rules
@@ -130,7 +161,11 @@ const SPECS = {
      its own pass below, as it is for subclasses.classId. */
   traits: {
     fields: {
-      id:        { type: 'id',   required: true },
+      // NO `id` column, for the same reason subclasses have none: the id is
+      // derived from `name`, so renaming a trait renames its id to match.
+      // `Firestarter` -> `trait.firestarter`. Record the old one in
+      // `formerIds` when you rename, and nothing holding it is orphaned.
+      formerIds: { type: 'list' },
       name:      { type: 'text', required: true },
       tier:      { type: 'int',  required: true },
       grantedBy: { type: 'ref',  required: true, collections: ['classes', 'subclasses'] },
@@ -398,11 +433,134 @@ function loadCollection(name) {
 /* ------------------------------------------------------------------ */
 /* BUILD                                                              */
 /* ------------------------------------------------------------------ */
-const classes    = loadCollection('classes');
 const subclasses = loadCollection('subclasses');
+
+/* ------------------------------------------------------------------ */
+/* SHEET SHAPE -> JSON SHAPE                                          */
+/*                                                                    */
+/* Three small transforms, all of them here so that the SPEC above can */
+/* go on describing the sheet exactly as the sheet is written. Nothing */
+/* downstream of this block knows the sheet's column names.            */
+/* ------------------------------------------------------------------ */
+
+/* A couple of columns are named for a human reading a spreadsheet rather than
+   for the app. Renaming here rather than in the sheet keeps the export a
+   straight download with no find-and-replace step before it can be used. */
+const RENAMES = { subclass: 'name', armorType: 'armorTypes', weaponType: 'weaponTypes', description: 'desc' };
+for (const sc of subclasses) {
+  for (const [from, to] of Object.entries(RENAMES)) {
+    if (from in sc) { sc[to] = sc[from]; delete sc[from]; }
+  }
+}
+
+/* ---- subclass ids, derived from the subclass name -------------------
+   `Hunter` -> `subclass.hunter`, `The Beast` -> `subclass.the-beast`. Renaming
+   a row renames its id with it, so the library never carries an id that
+   contradicts the name beside it.
+
+   This is a deliberate reversal of schema §2's "an ID is permanent", and the
+   thing that makes it survivable is `formerIds`: on a rename, the old id goes
+   in that column and the app migrates any character still holding it
+   (migrateId() in main.js). Skip that step and the rename silently orphans
+   every character built on the subclass — the converter cannot detect it,
+   because nothing in the library knows a rename happened.
+
+   Two rows sharing a name collapse to one id, which the global duplicate-id
+   check below catches. */
+const slugId = (name, prefix) =>
+  prefix + '.' + name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+
+function deriveSubclassIds(rows) {
+  for (const sc of rows) {
+    if (!sc.name) continue;
+    sc.id = slugId(sc.name, 'subclass');
+  }
+  /* A former id that is also a LIVE id would make migrateId() rewrite a
+     perfectly good reference into a different subclass — the one failure mode
+     of this scheme that corrupts data rather than losing it, so it is an
+     error rather than a warning. */
+  const live = new Set(rows.map((sc) => sc.id));
+  for (const sc of rows) {
+    for (const f of sc.formerIds || []) {
+      if (!/^[a-z]+\.[a-z0-9-]+$/.test(f)) err(sc.__where, `formerId "${f}" is not a valid id`);
+      if (live.has(f)) err(sc.__where, `formerId "${f}" is also a live subclass id — it would redirect a working reference`);
+    }
+  }
+}
+deriveSubclassIds(subclasses);
+
+/* Three dropdown cells become one ordered list. Blanks are dropped, but
+   repeats are NOT — a subclass concentrating three ways on Burst Damage is
+   making a statement, and deduping would erase it. */
+function foldConcentrations(sc) {
+  const roles = [sc.concentration1, sc.concentration2, sc.concentration3].filter(Boolean);
+  delete sc.concentration1; delete sc.concentration2; delete sc.concentration3;
+  if (roles.length) sc.roles = roles;
+}
+subclasses.forEach(foldConcentrations);
+
+/* The classes collection, derived from the `class` column rather than authored
+   in a tab of its own. A class IS its name plus the subclasses that point at
+   it, and both are already on this sheet.
+
+   The id is slugged from the display name, which is the one place this
+   pipeline generates an id instead of reading an authored one (schema §2).
+   That is a deliberate, bounded exception: there are nine of them, and a class
+   rename breaks LOUDLY — every `grantedBy` in traits.csv naming the old id
+   fails to resolve and the converter refuses to write. Contrast a subclass,
+   where the same slugging would silently repoint saved characters, which is
+   why subclasses carry a hand-authored `id` column and classes do not.
+
+   Order follows first appearance in the sheet, so re-ordering rows re-orders
+   the class list in the app with no code change. */
+function deriveClasses(rows) {
+  const out = [];
+  const seen = new Map();
+  for (const sc of rows) {
+    if (!sc.class) continue;
+    const id = slugId(sc.class, 'class');
+    if (!seen.has(id)) {
+      seen.set(id, sc.class);
+      // No `desc`: there is no tab to write one in. The class picker shows the
+      // class's subclasses instead, which is the more useful thing anyway.
+      out.push({ id, name: sc.class, __where: `classes "${id}"` });
+    } else if (seen.get(id) !== sc.class) {
+      // "Ranger" and "ranger" would slug to one id and silently merge.
+      err(sc.__where, `class "${sc.class}" and "${seen.get(id)}" both slug to ${id}`);
+    }
+    sc.classId = id;
+    delete sc.class;
+  }
+  return out;
+}
+const classes = deriveClasses(subclasses);
 const items      = loadCollection('items');
 const skills     = loadCollection('skills');
 const traits     = loadCollection('traits');
+
+/* ---- trait ids, and carrying grantedBy across a subclass rename ------
+   Trait ids derive from the trait's own name, exactly as subclass ids derive
+   from theirs.
+
+   `grantedBy` is the other half. A trait sheet naming `subclass.hunter` still
+   says so the morning after Hunter is renamed, and without this it would fail
+   to resolve and block the whole build. Resolving it through the subclass
+   alias map keeps the rename to a one-cell edit — but it WARNS, because the
+   trait sheet is now carrying an id nothing calls that subclass any more, and
+   the alias is a bridge rather than somewhere to live. */
+const SUBCLASS_ALIASES = new Map();
+for (const sc of subclasses) {
+  for (const f of sc.formerIds || []) SUBCLASS_ALIASES.set(f, sc.id);
+}
+
+for (const t of traits) {
+  if (t.name) t.id = slugId(t.name, 'trait');
+  const to = SUBCLASS_ALIASES.get(t.grantedBy);
+  if (to) {
+    warn(t.__where, `grantedBy "${t.grantedBy}" is a former id — migrated to "${to}". Update traits.csv.`);
+    t.grantedBy = to;
+  }
+}
 
 /* ---- ids are globally unique, not just per collection (schema §2) ---- */
 const byId = new Map();
@@ -412,12 +570,11 @@ for (const e of [...classes, ...subclasses, ...items, ...skills, ...traits]) {
   byId.set(e.id, e);
 }
 
-/* ---- every reference resolves ---- */
-for (const s of subclasses) {
-  if (s.classId && !classes.some((c) => c.id === s.classId)) {
-    err(s.__where, `classId "${s.classId}" matches no row in classes.csv`);
-  }
-}
+/* ---- every reference resolves ----
+   `subclasses.classId` is not checked here: deriveClasses() sets it from the
+   same row it emits the class from, so it resolves by construction. The check
+   that used to live here dated from a separate classes.csv, where the two
+   sheets really could disagree. */
 for (const t of traits) {
   if (t.grantedBy
       && !classes.some((c) => c.id === t.grantedBy)
@@ -468,55 +625,37 @@ for (const p of itemProfs) {
   if (!grantedProfs.has(p)) warn('proficiencies', `no subclass grants training in "${p}"`);
 }
 
-/* Unfinished rows are reported after the strip below, where the live trait
-   list exists — see "PLACEHOLDER TEXT". */
+/* Unfinished rows are reported below — see "PLACEHOLDER TEXT". */
 
-/* ------------------------------------------------------------------ */
-/* STRIP UNSTARTED CONTENT                                            */
-/* `active: FALSE` means the subclass has not been designed yet — it   */
-/* is not a retired entry that old characters still reference (that is */
-/* what schema §2's `deprecated` is for), so there is nothing to       */
-/* preserve. Dropping it here rather than exporting a flag means the   */
-/* app never has to know the concept exists, and no picker, filter or  */
-/* validator can forget to exclude it. The row stays in the CSV, so    */
-/* starting the subclass is a one-cell edit.                           */
-/* ------------------------------------------------------------------ */
-function stripUnstarted(entries) {
-  const kept = entries.filter((e) => e.active !== false);
-  for (const e of entries) {
-    if (e.active === false) console.log(`  · skipped ${e.id} (active FALSE — not started)`);
-  }
-  return kept;
-}
-
-const liveSubclasses = stripUnstarted(subclasses);
+/* Every subclass on the sheet ships. There used to be an `active` column that
+   stripped ones not yet designed, along with any trait granting to them; every
+   subclass is now live, so the column and the strip are both gone. A row that
+   should stop shipping is deleted, or marked `deprecated` (§2) if characters
+   already reference it. */
 
 for (const c of classes) {
-  const n = liveSubclasses.filter((s) => s.classId === c.id).length;
-  if (n === 0) warn(c.__where, 'has no started subclasses — it will not be selectable');
+  const n = subclasses.filter((s) => s.classId === c.id).length;
+  if (n === 0) warn(c.__where, 'has no subclasses — it will not be selectable');
 }
 
-/* A trait granted by a subclass that was never started goes with it. Exporting
-   it would ship content for a subclass the app has no other knowledge of, and
-   every consumer would then need the same "unless its subclass is missing"
-   caveat. Stripping once here means none of them do. */
-const liveIds = new Set([...classes.map((c) => c.id), ...liveSubclasses.map((s) => s.id)]);
-const liveTraits = traits.filter((t) => liveIds.has(t.grantedBy));
-for (const t of traits) {
-  if (!liveIds.has(t.grantedBy)) console.log(`  · skipped ${t.id} (grants to an unstarted subclass)`);
-}
+const ownerIds = new Set([...classes.map((c) => c.id), ...subclasses.map((s) => s.id)]);
+const liveTraits = traits.filter((t) => ownerIds.has(t.grantedBy));
 
-/* ---- every class and live subclass grants EXACTLY one Tier 0 trait ----
-   Character creation hands out a Tier 0 trait for the class and one for the
-   subclass (guide, steps 1-2), so a class missing one is not a thin entry —
-   it is a step of creation with nothing to show. Zero and two are both
-   errors: the second would silently pick whichever row was authored first. */
-for (const owner of [...classes, ...liveSubclasses]) {
+/* ---- every class and live subclass grants AT LEAST one Tier 0 trait ----
+   Tier 0 is everything a character gets for CHOOSING that class or subclass,
+   handed out the moment they first level into it (guide, steps 1-2). It is
+   not capped at one: a Pyromancer's Tier 0 is both `Fire Mage` (a passive)
+   and `Pyroblast` (a spell it grants), and both arrive together.
+
+   So only zero is an error — a creation step with nothing to show. Two or
+   more is normal and the app grants all of them. This used to error on two,
+   on the reasoning that a consumer reading "the" Tier 0 trait would silently
+   take whichever row was authored first; the fix for that is that nothing
+   reads a single one any more (see tier0TraitsOf() in main.js), not a limit
+   on what the sheet may say. */
+for (const owner of [...classes, ...subclasses]) {
   const t0 = liveTraits.filter((t) => t.grantedBy === owner.id && t.tier === 0);
   if (t0.length === 0) err(owner.__where, 'has no Tier 0 trait in traits.csv');
-  if (t0.length > 1) {
-    err(owner.__where, `has ${t0.length} Tier 0 traits (${t0.map((t) => t.id).join(', ')}) — exactly one is granted`);
-  }
 }
 
 /* ------------------------------------------------------------------ */
@@ -532,8 +671,10 @@ for (const owner of [...classes, ...liveSubclasses]) {
 const isPlaceholder = (e) =>
   (e.desc || '').length < 20 || (e.desc || '').startsWith('Placeholder —');
 
+/* `classes` is not in this list: a derived class has no `desc` to write, so
+   every one of them would report as unfinished forever. */
 for (const [label, entries] of Object.entries({
-  classes, subclasses: liveSubclasses, items, skills, traits: liveTraits,
+  subclasses, items, skills, traits: liveTraits,
 })) {
   const n = entries.filter(isPlaceholder).length;
   if (n) warn(label, `${n} of ${entries.length} desc still placeholder text`);
@@ -541,7 +682,7 @@ for (const [label, entries] of Object.entries({
 
 /* ---- drop the bookkeeping keys the app has no use for ---- */
 const clean = (e) => {
-  const { __where, active, ...rest } = e;
+  const { __where, ...rest } = e;
   return rest;
 };
 
@@ -559,7 +700,7 @@ for (const it of items) {
 const library = {
   waypoint: META,
   classes: classes.map(clean),
-  subclasses: liveSubclasses.map(clean),
+  subclasses: subclasses.map(clean),
   armor: routed.armor,
   weapons: routed.weapons,
   equipment: routed.equipment,

@@ -90,7 +90,7 @@ its `portrait`. **It holds library IDS, not copies of library content:**
   "id": "cmtg8pdvp",
   "name": "Grimm Oathbreaker",
   "bio": { "age": "41", "height": "6'2\"", "weight": "220 lb", "eyes": "grey", "hair": "black" },
-  "build": { "origin": "subclass.primal", "levels": [], "hpFrom": null },
+  "build": { "origin": "subclass.oakheart", "levels": [], "hpFrom": null },
   "stats": [ { "name": "Power", "value": 2 }, … ],
   "skills": [ { "id": "skill.gymnast", "rank": 1 }, … ],
   "armorWorn": "armor.heavy",
