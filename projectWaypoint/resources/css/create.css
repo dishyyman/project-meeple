@@ -51,9 +51,9 @@
 .wizard__pip[data-state="done"] + .wizard__pip::before { background: var(--line-warm); }
 .wizard__pip[data-state="here"] .wizard__pip-dot {
   background: var(--accent); border-color: var(--accent-deep);
-  box-shadow: 0 0 0 3px rgba(181,98,58,0.18);
+  box-shadow: 0 0 0 3px var(--accent-wash);
 }
-.wizard__pip[data-state="here"] { color: var(--accent-deep); }
+.wizard__pip[data-state="here"] { color: var(--accent-bright); }
 .wizard__pip[disabled] { opacity: 0.55; }
 
 .wizard__lede {
@@ -165,17 +165,17 @@
 /* A concentration is what the subclass is FOR, so it reads in the accent
    rather than as another neutral chip. Repeats are meaningful — three Burst
    Damage entries is a real answer — so they are never deduped. */
-.pick-card__tag--role { border-color: var(--accent); color: var(--accent-deep); }
+.pick-card__tag--role { border-color: var(--accent); color: var(--accent-bright); }
 
 .pick-card__choose {
   width: 100%; border-radius: var(--r-sm); padding: 11px;
-  border: 1.5px solid var(--accent-deep); background: var(--accent); color: #f7ecd8;
+  border: 1.5px solid var(--accent-deep); background: var(--accent); color: var(--on-accent);
   font-family: var(--font-label); font-size: 12.5px;
   letter-spacing: 0.08em; text-transform: uppercase;
-  box-shadow: 2px 2px 0 rgba(59,46,33,0.2);
+  box-shadow: var(--shadow-soft);
 }
 .pick-card[data-chosen] .pick-card__choose {
-  background: transparent; color: var(--accent-deep); box-shadow: none;
+  background: transparent; color: var(--accent-bright); box-shadow: none;
 }
 
 /* ---- the "you are here" chip on step 2 ---- */
@@ -255,7 +255,7 @@
   border: 1.5px solid var(--line); border-radius: var(--r-md);
   background: var(--bg-card); margin-bottom: 10px; overflow: hidden;
 }
-.loadout-sec[data-open] { border-color: var(--ink-soft); box-shadow: var(--shadow-card); }
+.loadout-sec[data-open] { border-color: var(--rule-strong); box-shadow: var(--shadow-card); }
 .loadout-sec__head {
   display: flex; align-items: center; gap: 10px; width: 100%;
   padding: 13px 14px; background: transparent; text-align: left;
@@ -269,7 +269,7 @@
 }
 /* An answered section says so in the accent, so scanning the three headers
    tells you what is left without opening any of them. */
-.loadout-sec[data-done] .loadout-sec__state { color: var(--accent-deep); }
+.loadout-sec[data-done] .loadout-sec__state { color: var(--accent-bright); }
 .loadout-sec__caret { color: var(--line-warm); transition: transform 140ms ease; }
 .loadout-sec[data-open] .loadout-sec__caret { transform: rotate(90deg); }
 .loadout-sec__body { display: none; padding: 0 14px 14px; }
@@ -374,7 +374,7 @@
   letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-muted);
 }
 .wiz-chip[data-on] {
-  border-color: var(--accent-deep); background: var(--accent); color: #f7ecd8;
+  border-color: var(--accent-deep); background: var(--accent); color: var(--on-accent);
 }
 /* Divides the two kinds of chip: what a thing IS on the left (all, consumable,
    gear), what it is FOR on the right. They filter the same list but answer

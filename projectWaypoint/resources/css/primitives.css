@@ -19,25 +19,27 @@
   color: var(--ink-muted);
   display: flex; align-items: center; justify-content: center;
 }
-.icon-btn--menu { flex-direction: column; gap: 4px; }
-.icon-btn--menu span { width: 18px; height: 2px; background: var(--ink-soft); border-radius: 2px; }
+/* The menu button was three stacked spans and is now one glyph, so the column
+   layout that spaced them is gone. The modifier stays for the one thing it
+   still decides: these bars were --ink-soft where .icon-btn inks at
+   --ink-muted, and dropping to currentColor would have quietly dimmed every
+   hamburger in the app. */
+.icon-btn--menu { color: var(--ink-soft); }
 
 /* translucent buttons floating over the hero image */
 .glass-btn {
   width: 42px; height: 42px;
   border-radius: 50%;
-  background: rgba(243,231,207,0.24);
+  background: var(--wash-lift2);
   backdrop-filter: blur(6px);
   -webkit-backdrop-filter: blur(6px);
-  box-shadow: inset 0 0 0 1px rgba(247,236,216,0.5);
-  color: #f7ecd8;
+  box-shadow: inset 0 0 0 1px var(--hairline);
+  color: var(--on-dark);
   display: flex; align-items: center; justify-content: center;
 }
-.glass-btn--menu { flex-direction: column; gap: 4px; }
-.glass-btn--menu span { width: 20px; height: 2px; background: #f7ecd8; border-radius: 2px; }
 .glass-btn--accent {
-  background: rgba(181,98,58,0.9);
-  box-shadow: inset 0 0 0 1px rgba(247,236,216,0.5), 0 2px 8px rgba(37,29,20,0.4);
+  background: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--hairline), 0 2px 8px rgba(0,0,0,0.5);
 }
 
 /* screen title (oxblood, medieval) */
@@ -94,7 +96,7 @@
   color: var(--ink-faint); white-space: nowrap;
 }
 /* Over the hand/equipment budget — the one state worth shouting about. */
-.rule__count--over { color: var(--accent); }
+.rule__count--over { color: var(--accent-bright); }
 
 /* small uppercase eyebrow label */
 .eyebrow {
@@ -121,21 +123,13 @@
 /* JS hides "Add Modifier" while a row is unanswered; display:flex above would
    otherwise beat the browser's default rule for [hidden]. */
 .btn-dashed[hidden] { display: none; }
-/* the plus glyph is shared by every dashed "add" affordance */
+/* The plus glyph is shared by every dashed "add" affordance. It used to be two
+   pseudo-element bars on a positioned span; it is an SVG now, like the rest of
+   the app's icons, so this rule is only the bed it sits on. Same 16px as
+   .btn-dashed__icon below, so a dashed button's label lines up whichever glyph
+   it carries. */
 .btn-dashed .plus,
-.effect-add .plus {
-  position: relative; width: 16px; height: 16px; display: inline-block;
-}
-.btn-dashed .plus::before,
-.btn-dashed .plus::after,
-.effect-add .plus::before,
-.effect-add .plus::after {
-  content: ""; position: absolute; background: currentColor; border-radius: 2px;
-}
-.btn-dashed .plus::before,
-.effect-add .plus::before { top: 7px; left: 0; width: 16px; height: 2px; }
-.btn-dashed .plus::after,
-.effect-add .plus::after  { left: 7px; top: 0; width: 2px; height: 16px; }
+.effect-add .plus { width: 16px; height: 16px; flex-shrink: 0; }
 /* SVG glyphs in a dashed button sit on the same 16px bed as the .plus, so
    the two buttons' labels line up with each other. */
 .btn-dashed__icon { width: 16px; height: 16px; flex-shrink: 0; }
@@ -190,7 +184,7 @@
   padding: 11px 14px 13px;
   border-top: 1px solid var(--line-soft);
   font-family: var(--font-body);
-  font-size: 14px; line-height: 1.55; color: #5c4d3a;
+  font-size: 14px; line-height: 1.55; color: var(--ink-soft);
 }
 .collapse.is-open .collapse__body { display: block; }
 

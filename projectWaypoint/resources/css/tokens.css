@@ -1,61 +1,194 @@
 /* WAYPOINT · tokens.css
    Design tokens (§1) — the single place to change the look.
    Loaded first by style.css, so every other part can read these. Change a
-   value here and it cascades everywhere; that is the point of the file. */
+   value here and it cascades everywhere; that is the point of the file.
 
-/* ----------------------------------------------------------------- */
-/* 1. DESIGN TOKENS — the single place to change the look             */
-/* ----------------------------------------------------------------- */
+   THEME: "Ember Journal" — the field journal after dark. The parchment is
+   gone; what is left is the desk it sat on, the lamp over it, and the coal
+   in the brazier. Built on a 60/30/10 split:
+
+     60%  --palette-1  #232323  near-black neutral — every page and screen
+     30%  --palette-2  #684d00  deep gold  \
+          --palette-3  #a47e05  mid gold   /  rules, labels, secondary fills
+     10%  --palette-4  #a73500  ember      — buttons and standout spots
+
+   The four below are the source. Everything else here is derived from them:
+   the surfaces step around palette-1, and the accents are the palette-4
+   family.
+
+   The 30% is a RANGE, not one value. palette-2 and palette-3 share a hue
+   (44.4° and 45.7°) and differ only in weight, so they read as one material
+   at two depths — which is what lets a card edge, a section rule and a
+   filled key all be "the gold" without flattening into each other. The line
+   ramp below is built on the axis between them and quotes both at their
+   literal values.
+
+   NOTHING outside the palette-4 family may be the loudest thing on a screen.
+   That is the whole job of the 10%: one ember standout per screen, with the
+   gold carrying everything that merely needs to be found rather than
+   obeyed. */
 :root {
-  /* Surfaces */
-  --bg-app:        #211d18;   /* space behind the phone */
-  --bg-page:       #f3e7cf;   /* parchment */
-  --bg-card:       #f7eed9;   /* raised card */
-  --bg-inset:      #f3e7cf;   /* wells / inputs recess */
-  --bg-parchment2: #efe0c2;   /* portrait / secondary fill */
-  --bg-input:      #f2e6cc;   /* text & number inputs — a tint of the page, not white on it */
+  --palette-1: #232323;
+  --palette-2: #684d00;
+  --palette-3: #a47e05;
+  --palette-4: #a73500;
 
-  /* Ink / text */
-  --ink:        #2f2416;   /* primary display text */
-  --ink-soft:   #3b2e21;   /* body + strong borders */
-  --ink-muted:  #7a6a54;   /* labels */
-  --ink-faint:  #9a8a6c;   /* captions, inactive */
+  /* ---- 60% · surfaces ----
+     A five-step ramp around palette-1. Each step carries a little more of
+     palette-2 the further it rises, so a stack of cards warms as it lifts
+     instead of going grey — the dark equivalent of parchment catching light. */
+  --bg-app:        #131313;   /* space behind the phone — below the page */
+  --bg-page:       #232323;   /* palette-1 · the 60% */
+  --bg-card:       #2b2926;   /* raised card */
+  --bg-inset:      #1b1b1a;   /* wells / inputs recess — below the page */
+  --bg-parchment2: #332d20;   /* portrait / secondary fill — the warmest surface */
+  --bg-input:      #1c1b18;   /* text & number inputs — a recess, not a panel */
 
-  /* Lines & rules */
-  --line:       #cbb890;
-  --line-gold:  #d9c187;
-  --line-soft:  #e0cfa8;
-  --line-warm:  #c3ab74;
-  --line-hair:  #d8c59b;
+  /* ---- ink ----
+     Warm off-whites, not pure white: the display face is a serif and the
+     theme is lamplight. Every step below is checked against --bg-page —
+     --ink-muted 5.6:1 and --ink-faint 4.7:1 both clear WCAG AA for body
+     text, which the light theme's equivalents did not. Do not darken these
+     without re-checking; they are the floor, not a starting point. */
+  --ink:        #f0e9dd;   /* primary display text */
+  --ink-soft:   #d6cdbd;   /* body text */
+  --ink-muted:  #a89881;   /* labels */
+  --ink-faint:  #a19583;   /* captions, inactive */
 
-  /* Accents */
-  --accent:      #b5623a;   /* rust — primary accent / health */
-  --accent-deep: #8a5233;
-  --heading:     #742230;   /* oxblood — screen titles */
-  --gold:        #8a6a1f;   /* section labels */
-  --gold-bright: #a9822f;   /* corner diamonds */
+  /* ---- 30% · lines & rules ----
+     The palette-2 family, and the app's largest surface after the page
+     itself: ~120 borders across the screens. This is where the 30% actually
+     lives — not in big blocks of gold, but in every rule, divider and card
+     edge reading as one warm system. */
+  --line:       #564211;
+  --line-gold:  #a47e05;   /* palette-3 — the strongest, most visible rule */
+  --line-soft:  #3d3823;
+  --line-warm:  #684d00;   /* palette-2 itself */
+  --line-hair:  #33301f;
+  /* Structural rules that divide one region from another — the tab bar's top
+     edge, the dice tray's lid, a selected section's outline. The light theme
+     spent --ink-soft on these, which inverted into a near-white 1.5px bar
+     across the bottom of the app: the loudest line on the screen, marking the
+     least important thing. Split out so body text and structure can move
+     independently. */
+  --rule-strong: #866502;   /* midway between palette-2 and palette-3 */
 
-  /* Health / Mana / Wounds */
-  --health:     #b5623a;
-  /* Wounds are the one mark on the sheet that is literally blood, and they had
-     been sharing the rust the health bar uses — which made a filled pip and a
-     full health cell read as the same event at a glance. Bright blood red
-     separates them and is the loudest thing on the vitals card, which a Wound
-     deserves to be. */
-  --wound:      #c1272d;
-  --health-off: #e3d2ad;
-  --mana:       #4a6a92;
-  --mana-deep:  #3f5a7a;
-  --mana-off:   #c9d2dd;
-  --mana-text:  #eaf0f7;   /* legible on a filled mana button */
+  /* ---- 10% · accents ----
+     palette-4, and the only thing on any screen allowed to shout. Deeper and
+     redder than the health orange it used to share a value with, which is the
+     point: a button and a vital are no longer the same colour, and the button
+     no longer has to win a brightness contest it was losing anyway.
+     --accent is the FILL (buttons, an active pip). It is too dark to set type
+     on a dark page — 2.4:1 — so anything accent-coloured that is *text or an
+     icon* takes --accent-bright instead, which clears AA at 4.9:1. Filled and
+     spoken, same voice, two registers. */
+  --accent:        #a73500;   /* palette-4 · fills */
+  --accent-deep:   #8a2c00;   /* the fill's own border */
+  --accent-bright: #ee6728;   /* accent as TEXT or icon on a dark surface */
+  --on-accent:     #fdf1e7;   /* type sitting on an accent fill — 6.0:1 */
+  /* Type and glyphs over a PHOTO or a glass button rather than a flat fill —
+     the hero name, the cropper's hint, the menu bars floating on a portrait.
+     Same warm white, named separately because the surface underneath is out
+     of our control: these must never be re-pointed at an ink token when the
+     thing behind them is someone's uploaded image. */
+  --on-dark:      #fdf1e7;
+  --on-dark-soft: #e6d3ac;   /* the hero's subtitle — present, not competing */
 
-  /* Action colors */
-  --heal:         #4f6f3f;
-  --heal-border:  #3b5c2f;
-  --heal-text:    #f3ead2;
-  --damage:       #8a2e2e;
-  --damage-border:#6e2020;
-  --damage-text:  #f6e4d8;
+  /* ---- gold ----
+     The 30% lifted until it is legible. Neither source value can carry small
+     type on the page — palette-2 is 2.0:1 and palette-3 is 4.2:1 — so the
+     SPOKEN gold is brighter than the DRAWN gold. Same hue, same family,
+     different job: these two are for text, everything above is for ink on
+     the page itself. */
+  --gold:        #cb9f13;   /* section labels — 6.4:1 */
+  --gold-bright: #e5b316;   /* corner diamonds, flourishes */
+  /* Gold as a LARGE fill — the dice keypad's operator rail. Deliberately NOT
+     palette-3: at 8px diamonds and 4px spines palette-3 is perfect, but
+     spread across four full-height keys it out-weighs the Roll button and
+     the 10% stops being the loudest thing on the screen. Sized to sit just
+     under the ember instead, with warm white type at 5.4:1. */
+  --gold-fill:   #7d5f03;
+
+  /* Screen titles. The light theme used oxblood here and ALSO used it for
+     every destructive control, because one "this matters" colour covered
+     both. Inverted, that choice forces a single hue to mean "you are here"
+     and "this deletes things" at once — so the two have been separated.
+     Titles take the bright gold and stay inside the 30%; the accent is
+     left free for the one button per screen that deserves it. */
+  --heading:  #e2b455;
+
+  /* Destructive and alarming: delete buttons, the portrait error, a crit.
+     Kept clearly red rather than orange so it never reads as the accent —
+     a confirm button and a Save must not look like the same event.
+     Split the same way the accent is, and for the same reason: the fill has
+     to be dark enough to carry --on-dark type (4.9:1) and the text has to be
+     light enough to read on the page (5.1:1). One value cannot do both. */
+  --danger:        #c0392f;   /* fills: a destructive button */
+  --danger-deep:   #8f251d;   /* that fill's border */
+  --danger-bright: #f0685c;   /* danger as TEXT, an icon or an outline */
+  --danger-wash:   rgba(240, 104, 92, 0.12);
+
+  /* ---- health / mana / wounds ----
+     Health keeps the brighter orange it had when it WAS the accent, now that
+     the accent has moved deeper into palette-4. The two are a deliberate pair
+     rather than a duplicate: a vital is a readout you scan, a button is a
+     thing you press, and health being the brighter of the two is correct —
+     it is the most important number on the sheet.
+     Wounds take palette-4 outright — the same value --accent carries. That is
+     deliberate, not a duplicate: the ember is the app's "this costs you"
+     colour, and a wound is the loudest instance of that on the sheet. It does
+     mean a filled wound pip and a button are now the same red, so the two are
+     told apart by shape and place rather than hue — pips are 22px squares in
+     the vitals card, buttons are wide and live at the foot of a screen.
+     Health stays the brighter orange above it; the cracked-heart glyph is the
+     second cue, so the row does not lean on colour alone. */
+  --health:     #bd4200;
+  --wound:      #a73500;   /* = palette-4 */
+  --health-off: #3a332a;   /* the empty half of the bar — a trough, not a fill */
+  --mana:       #4a72a4;
+  --mana-bright:#7fa5d4;   /* the mana label and stepper — 6.2:1 on the page */
+  --mana-deep:  #3a5c85;
+  --mana-off:   #2a2f36;
+  --mana-text:  #f2f6fb;   /* legible on a filled mana button */
+
+  /* ---- action colors ----
+     Heal and Damage are a matched pair and must stay equally loud, so both
+     are lifted to the same weight against the dark page. */
+  --heal:         #527a3d;
+  --heal-border:  #456831;
+  --heal-text:    #f2f7ec;
+  --damage:       #a33232;
+  --damage-border:#7a2222;
+  --damage-text:  #fbeae4;
+
+  /* ---- washes & overlays ----
+     On parchment, depth came from ink bleeding into the page. On a dark page
+     that reads as a hole, so depth now comes from light: a lift is white at
+     a few percent, a recess is black. --scrim is what a modal puts between
+     itself and the screen behind it; it is heavier than the light theme's
+     because a dark card on a dark page needs the separation. */
+  --wash-lift:  rgba(255,255,255,0.055);   /* raise a panel off its surface */
+  --wash-lift2: rgba(255,255,255,0.10);    /* the same panel, pressed */
+  --scrim:      rgba(0,0,0,0.66);
+  --hairline:   rgba(255,255,255,0.22);    /* an edge catching light */
+  --gold-wash:  rgba(203,159,19,0.20);     /* search hits, selected bands */
+  --accent-wash:rgba(167,53,0,0.18);       /* focus rings, hovered rows */
+  /* The hatch that fills an empty portrait. Inverted from ink-on-parchment to
+     light-on-dark, and kept very faint — it is a texture, not a pattern. */
+  --hatch:      rgba(255,255,255,0.045);
+
+  /* ---- shadows ----
+     The hard offset shadows are the theme's woodcut signature and they stay,
+     but they are black now rather than brown ink, and heavier: a soft brown
+     shadow is invisible against #232323. The glass and modal shadows do the
+     real work of separating a floating thing from the page. */
+  --shadow-card:  3px 3px 0 rgba(0,0,0,0.45);
+  --shadow-soft:  2px 2px 0 rgba(0,0,0,0.38);
+  /* Lighter again than --shadow-soft, to pair with a --line-hair outline:
+     at a 1px border a 2px offset reads as a second, blurrier edge rather
+     than as lift. Used by the character tab cards. */
+  --shadow-hair:  1px 1px 0 rgba(0,0,0,0.30);
+  --shadow-modal: 0 18px 44px rgba(0,0,0,0.62);
 
   /* Hero & the elastic pull.
      --hero-h is the hero's resting height; --pull is how far past it the
@@ -74,15 +207,6 @@
   --pv-x:    50%;   /* centred left-to-right */
   --pv-y:    0%;    /* anchored to the top — where faces are in a portrait */
   --pv-zoom: 1;
-
-  /* Shadows */
-  --shadow-card:  3px 3px 0 rgba(59,46,33,0.12);
-  --shadow-soft:  2px 2px 0 rgba(59,46,33,0.10);
-  /* Lighter again than --shadow-soft, to pair with a --line-hair outline:
-     at a 1px border a 2px offset reads as a second, blurrier edge rather
-     than as lift. Used by the character tab cards. */
-  --shadow-hair:  1px 1px 0 rgba(59,46,33,0.07);
-  --shadow-modal: 6px 6px 0 rgba(59,46,33,0.22);
 
   /* Layout */
   /* How wide the app is allowed to grow when the phone frame is off.
@@ -118,4 +242,3 @@
   --font-body:    'Spectral', serif;        /* descriptions, italics */
   --font-mono:    'JetBrains Mono', monospace;
 }
-

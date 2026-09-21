@@ -13,9 +13,9 @@
   background: var(--bg-page);
   border-radius: 46px;
   box-shadow:
-    0 0 0 12px #14110d,
-    0 0 0 14px #2b251d,
-    0 30px 60px rgba(0,0,0,0.5);
+    0 0 0 12px #0d0d0d,
+    0 0 0 14px #2b2926,
+    0 30px 60px rgba(0,0,0,0.7);
   overflow: hidden;
 }
 .device__statusbar {
@@ -37,7 +37,7 @@
   top: 12px; left: 50%;
   transform: translateX(-50%);
   width: 120px; height: 30px;
-  background: #14110d;
+  background: #0d0d0d;
   border-radius: 16px;
   z-index: 61;
 }
@@ -78,8 +78,8 @@
 .app[data-view="settings"]   .screen--settings    { display: flex; flex-direction: column; }
 
 .tabpage { display: none; }
+.app[data-tab="action"]    .tabpage--action    { display: block; }
 .app[data-tab="character"] .tabpage--character { display: block; }
-.app[data-tab="stats"]     .tabpage--stats     { display: block; }
 .app[data-tab="gear"]      .tabpage--gear      { display: block; }
 .app[data-tab="notes"]     .tabpage--notes     { display: block; }
 
@@ -131,8 +131,8 @@
   padding: 8px 13px;
   font-family: var(--font-label);
   font-size: 12px; letter-spacing: 0.04em; text-transform: uppercase;
-  color: var(--bg-page);
-  background: rgba(20, 17, 13, 0.88);
+  color: var(--ink-muted);
+  background: rgba(43, 41, 38, 0.92);
   border: 1px solid color-mix(in srgb, var(--accent) 50%, transparent);
   border-radius: 999px;
   cursor: pointer;
@@ -159,6 +159,6 @@
 .boot-error p { margin: 0 0 11px; }
 .boot-error code {
   font-family: var(--font-mono); font-size: 0.9em;
-  background: rgba(0, 0, 0, 0.07); padding: 1px 5px; border-radius: 3px;
+  background: rgba(255, 255, 255, 0.08); padding: 1px 5px; border-radius: 3px;
 }
 .boot-error__detail { margin-top: 18px; font-size: 12px; opacity: 0.65; }

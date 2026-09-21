@@ -49,7 +49,11 @@
   flex-shrink: 0; width: 34px; height: 34px;
   border: 1.5px solid var(--line-gold); border-radius: var(--r-xs);
   display: flex; align-items: center; justify-content: center;
-  color: var(--accent);
+  /* Ink in a gold box, the same badge the Home screen's nav rows wear, and for
+     the same reason: a list of eight rows tinted with the accent spends the
+     10% on navigation and leaves nothing louder for the thing worth pressing.
+     .set-row--quiet drops further to --ink-muted below. */
+  color: var(--ink);
 }
 .set-row__body { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
 .set-row__name { font-family: var(--font-display); font-size: 16px; color: var(--ink); line-height: 1.2; }
@@ -148,7 +152,7 @@
 }
 .mode-pick.is-on {
   border-color: var(--accent); background: var(--bg-parchment2);
-  color: var(--accent-deep);
+  color: var(--accent-bright);
 }
 
 /* ---- account ----

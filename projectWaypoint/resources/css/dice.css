@@ -38,7 +38,7 @@
 .app[data-modal="share"] .modal--share { display: flex; }
 .app[data-modal="downed"] .modal--downed { display: flex; }
 .app[data-modal="wiz-pick"] .modal--wiz-pick { display: flex; }
-.modal__scrim { position: absolute; inset: 0; background: rgba(37,29,20,0.55); }
+.modal__scrim { position: absolute; inset: 0; background: var(--scrim); }
 /* No max-width. The .modal's own padding is the single place a card's inset is
    decided — a second constraint here meant the padding could be tightened all
    day and the card would stay 300px wide, stranding 50px of dead space either
@@ -64,7 +64,7 @@
 .calc-row { display: flex; align-items: center; gap: 10px; margin-bottom: 18px; }
 .calc-step {
   flex-shrink: 0; width: 38px; height: 44px; border-radius: 9px;
-  border: 1.5px solid var(--line); background: var(--bg-card); color: var(--accent-deep);
+  border: 1.5px solid var(--line); background: var(--bg-card); color: var(--accent-bright);
   font-family: var(--font-label); font-size: 24px; line-height: 1;
 }
 .calc-input {
@@ -80,7 +80,7 @@
 .btn-heal, .btn-damage {
   flex: 1; border-radius: var(--r-sm); padding: 13px;
   font-family: var(--font-label); font-size: 14px; letter-spacing: 0.08em; text-transform: uppercase;
-  box-shadow: 2px 2px 0 rgba(59,46,33,0.2);
+  box-shadow: var(--shadow-soft);
 }
 .btn-heal   { border: 1.5px solid var(--heal-border);   background: var(--heal);   color: var(--heal-text); }
 .btn-damage { border: 1.5px solid var(--damage-border); background: var(--damage); color: var(--damage-text); }
@@ -104,9 +104,9 @@
   display: flex;
   flex-direction: column;
   background: var(--bg-page);
-  border-top: 1.5px solid var(--ink-soft);
+  border-top: 1.5px solid var(--rule-strong);
   border-radius: 20px 20px 0 0;
-  box-shadow: 0 -10px 34px rgba(37,29,20,0.4);
+  box-shadow: 0 -10px 34px rgba(0,0,0,0.55);
   padding: 10px 12px calc(12px + env(safe-area-inset-bottom, 0px));
   animation: sheet-rise 0.22s ease-out;
 }
@@ -164,7 +164,7 @@
 
 /* individual die results inside the breakdown */
 .roll { color: var(--ink); font-weight: 500; }
-.roll--max { color: var(--accent); font-weight: 600; }
+.roll--max { color: var(--accent-bright); font-weight: 600; }
 .roll--min { color: var(--damage); font-weight: 600; }
 
 /* ---- keypad ---- */
@@ -195,9 +195,9 @@
 
 /* operator rail — gilt */
 .key--op {
-  background: var(--gold-bright);
-  border-color: var(--gold);
-  color: #f7ecd8;
+  background: var(--gold-fill);
+  border-color: var(--line-gold);
+  color: var(--on-dark);
   font-size: 22px;
 }
 /* backspace — oxblood */
@@ -211,7 +211,7 @@
   grid-row: span 2;
   background: var(--accent);
   border-color: var(--accent-deep);
-  color: #f7ecd8;
+  color: var(--on-accent);
   flex-direction: column; gap: 3px;
 }
 .key--roll span {
@@ -299,7 +299,7 @@
 .die { color: var(--ink); }
 /* Marked by COLOUR rather than a filled tile, which is what lets a highlight
    live inside a run of ordinary text. Weight carries it at this size. */
-.die--max { color: var(--accent); font-weight: 700; }
+.die--max { color: var(--accent-bright); font-weight: 700; }
 .die--min { color: var(--damage); font-weight: 700; }
 /* The operators between faces and before the modifier — deliberately lighter
    than the numbers they join, so the eye lands on the values first. */
@@ -315,8 +315,8 @@
   display: flex; flex-direction: column; align-items: center; gap: 2px;
   margin: 2px 0 10px;
   padding: 7px 14px;
-  border: 1.5px solid var(--heading); border-radius: var(--r-xs);
-  background: rgba(116, 34, 48, 0.07);
+  border: 1.5px solid var(--danger-bright); border-radius: var(--r-xs);
+  background: var(--danger-wash);
 }
 /* A display: value beats the browser's default [hidden] rule, so a class that
    sets one has to say this itself — same as .patches and .btn-dashed. */
@@ -324,7 +324,7 @@
 .roll-card__crit-label {
   font-family: var(--font-label); font-size: 13px;
   letter-spacing: 0.14em; text-transform: uppercase;
-  color: var(--heading);
+  color: var(--danger-bright);
 }
 /* The window, when Lethality has widened it. Quiet — it explains the banner
    above it rather than competing with it, and is empty at Lethality 0. */
@@ -338,7 +338,7 @@
    highest face", which is a different claim — a d20 showing 19 can be a crit
    and a d8 showing 8 never is. Oxblood and heavy, matching the banner above so
    the face reads as its cause at a glance. */
-.die--crit { color: var(--heading); font-weight: 700; }
+.die--crit { color: var(--danger-bright); font-weight: 700; }
 
 /* The flat bonus, outside the parentheses because that is where it sits in the
    notation. Muted against the faces: it is the part that did not get rolled. */
@@ -438,7 +438,7 @@
 .roll-card__adv {
   font-family: var(--font-label); font-size: 11px;
   letter-spacing: 0.1em; text-transform: uppercase;
-  color: var(--accent-deep); margin-top: 3px;
+  color: var(--accent-bright); margin-top: 3px;
 }
 .roll-card__adv:empty { display: none; }
 
@@ -494,8 +494,8 @@
   flex: 1; border-radius: var(--r-sm); padding: 12px;
   font-family: var(--font-label); font-size: 13px;
   letter-spacing: 0.08em; text-transform: uppercase;
-  box-shadow: 2px 2px 0 rgba(59,46,33,0.2);
-  border: 1.5px solid var(--accent-deep); background: var(--accent); color: #f7ecd8;
+  box-shadow: var(--shadow-soft);
+  border: 1.5px solid var(--accent-deep); background: var(--accent); color: var(--on-accent);
   /* Icon and word on ONE line, where the calculator's Roll key stacks them in
      two — that key is a tall grid cell spanning two rows and this is a wide
      bar. Same glyph, same rust, laid out for the space each one has. */

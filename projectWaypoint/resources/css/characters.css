@@ -35,7 +35,7 @@
   width: 54px; height: 66px; flex-shrink: 0;
   border-radius: var(--r-xs); border: 1.5px solid var(--line);
   background-color: var(--bg-parchment2);
-  background-image: repeating-linear-gradient(45deg, rgba(59,46,33,0.07) 0 6px, transparent 6px 12px);
+  background-image: repeating-linear-gradient(45deg, var(--hatch) 0 6px, transparent 6px 12px);
 }
 /* min-width:0 lets a long name wrap instead of pushing the chevron off the
    row — a flex item's default min-width is its content. */
@@ -68,7 +68,7 @@
 .text-btn {
   background: transparent; border: 0; padding: 6px 2px;
   font-family: var(--font-label); font-size: 12px;
-  letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent-deep);
+  letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent-bright);
 }
 .text-btn:disabled { opacity: 0.35; }
 
@@ -79,12 +79,14 @@
    outside edit mode, so entering it is a width transition rather than a
    reflow that makes every row jump. */
 .persona-card__del,
+.persona-card__export,
 .persona-card__grip {
   flex: 0 0 auto; width: 0; overflow: hidden;
   opacity: 0; pointer-events: none;
   transition: width 140ms ease, opacity 140ms ease, margin 140ms ease;
 }
 .app[data-roster="edit"] .persona-card__del,
+.app[data-roster="edit"] .persona-card__export,
 .app[data-roster="edit"] .persona-card__grip {
   width: 30px; opacity: 1; pointer-events: auto;
 }
@@ -104,16 +106,16 @@
 .persona-card__grip span { display: block; width: 15px; height: 1.5px; background: currentColor; border-radius: 1px; }
 .app[data-roster="edit"] .persona-card__chevron { display: none; }
 
-/* Export sits in the row body rather than the control gutter: it is about
-   this character, where delete and reorder are about the list. */
+/* Export used to be a labelled button under the row, on the grounds that it
+   is about this character where delete and reorder are about the list. It now
+   sits in the gutter with them, immediately left of the grip: as an icon it no
+   longer needs a line of its own, and a row whose controls are all on one axis
+   is easier to aim at than one with a button hanging beneath it. Centred on
+   the same 30px bed as its neighbours so all three share a baseline. */
 .persona-card__export {
-  display: none; margin-top: 7px;
-  border: 1.5px solid var(--line-warm); border-radius: var(--r-xs);
-  background: var(--bg-parchment2); padding: 5px 11px;
-  font-family: var(--font-label); font-size: 10px;
-  letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-muted);
+  display: flex; align-items: center; justify-content: center;
+  height: 30px; color: var(--ink-muted);
 }
-.app[data-roster="edit"] .persona-card__export { display: inline-block; }
 
 /* ---- dragging ----
    --drag-y is the live pointer offset, written by JS. It is a continuous
@@ -123,7 +125,7 @@
 .persona-card[data-dragging] {
   transform: translateY(var(--drag-y, 0px));
   position: relative; z-index: 3;
-  box-shadow: 0 8px 20px rgba(37,29,20,0.28);
+  box-shadow: 0 8px 20px rgba(0,0,0,0.5);
   border-color: var(--accent);
   cursor: grabbing;
 }
@@ -165,8 +167,8 @@
 .app[data-roster-empty] .btn-dashed--lead {
   border: 1.5px solid var(--accent-deep);
   background: var(--accent);
-  color: #f7ecd8;
-  box-shadow: 2px 2px 0 rgba(59,46,33,0.2);
+  color: var(--on-accent);
+  box-shadow: var(--shadow-soft);
 }
 
 /* ---- confirm + import modals ---- */

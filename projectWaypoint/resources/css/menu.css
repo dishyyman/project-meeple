@@ -8,10 +8,10 @@
 /* ----------------------------------------------------------------- */
 .drawer { position: absolute; inset: 0; z-index: 40; display: none; }
 .app[data-menu="open"] .drawer { display: block; }
-.drawer__scrim { position: absolute; inset: 0; background: rgba(37,29,20,0.5); }
+.drawer__scrim { position: absolute; inset: 0; background: var(--scrim); }
 .drawer__panel {
   position: absolute; top: 0; right: 0; bottom: 0; width: 82%;
-  background: var(--bg-page); box-shadow: -8px 0 30px rgba(37,29,20,0.35);
+  background: var(--bg-page); box-shadow: -8px 0 30px rgba(0,0,0,0.6);
   padding: 54px 0 40px; overflow: auto;
 }
 .drawer__head { display: flex; align-items: center; justify-content: space-between; padding: 6px 20px 12px; }
@@ -36,9 +36,9 @@
 .levelup-btn {
   display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%;
   border: 1.5px solid var(--accent-deep); border-radius: 11px; background: var(--accent);
-  color: #f7ecd8; padding: 15px; box-shadow: 3px 3px 0 rgba(59,46,33,0.28);
+  color: var(--on-accent); padding: 15px; box-shadow: var(--shadow-card);
 }
-.levelup-btn:active { transform: translateY(1px); box-shadow: 1px 1px 0 rgba(59,46,33,0.28); }
+.levelup-btn:active { transform: translateY(1px); box-shadow: var(--shadow-hair); }
 .levelup-btn span {
   font-family: var(--font-label); font-size: 15px;
   letter-spacing: 0.14em; text-transform: uppercase;

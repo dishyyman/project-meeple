@@ -28,7 +28,7 @@
   width: 118px; height: 142px; flex-shrink: 0; overflow: hidden;
   border: 1px solid var(--line-hair); border-radius: var(--r-xs);
   background-color: var(--bg-parchment2);
-  background-image: repeating-linear-gradient(45deg, rgba(59,46,33,0.07) 0 6px, transparent 6px 12px);
+  background-image: repeating-linear-gradient(45deg, var(--hatch) 0 6px, transparent 6px 12px);
   box-shadow: var(--shadow-hair);
 }
 .portrait-edit__frame img { width: 100%; height: 100%; display: none; }
@@ -39,7 +39,7 @@
   position: absolute; left: 0; right: 0; bottom: 0; display: none;
   font-family: var(--font-label); font-size: 8.5px; letter-spacing: 0.12em;
   text-transform: uppercase; text-align: center; padding: 3px 0;
-  color: #f7ecd8; background: rgba(37,29,20,0.62);
+  color: var(--on-dark); background: var(--scrim);
 }
 .app[data-portrait="set"] .portrait-edit__hint { display: block; }
 .app[data-portrait="set"] .portrait-edit__frame img { display: block; }
@@ -100,15 +100,15 @@
 }
 .crop__grid::before {
   background-image:
-    linear-gradient(to right, rgba(247,236,216,0.5) 1px, transparent 1px),
-    linear-gradient(to right, rgba(247,236,216,0.5) 1px, transparent 1px);
+    linear-gradient(to right, var(--hairline) 1px, transparent 1px),
+    linear-gradient(to right, var(--hairline) 1px, transparent 1px);
   background-position: 33.333% 0, 66.666% 0;
   background-size: 1px 100%;
 }
 .crop__grid::after {
   background-image:
-    linear-gradient(to bottom, rgba(247,236,216,0.5) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(247,236,216,0.5) 1px, transparent 1px);
+    linear-gradient(to bottom, var(--hairline) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--hairline) 1px, transparent 1px);
   background-position: 0 33.333%, 0 66.666%;
   background-size: 100% 1px;
 }

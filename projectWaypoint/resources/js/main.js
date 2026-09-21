@@ -1609,7 +1609,7 @@
      cost of being wrong is somebody's session, and the cost of the extra write
      is nothing. */
   function switchCharacter(id) {
-    if (id === character.id) { app.setAttribute('data-view', 'sheet'); app.setAttribute('data-tab', 'character'); return; }
+    if (id === character.id) { app.setAttribute('data-view', 'sheet'); app.setAttribute('data-tab', 'action'); return; }
     if (!roster.some((r) => r.id === id)) return;   // stale row; the list will be right after the next paint
     save();
     openCharacter(id);
@@ -1618,7 +1618,7 @@
     // Opening a character always lands on the Character tab, for the reason
     // the nav handler gives: a visit starts fresh rather than resuming.
     app.setAttribute('data-view', 'sheet');
-    app.setAttribute('data-tab', 'character');
+    app.setAttribute('data-tab', 'action');
     releasePull();
   }
 
@@ -2571,8 +2571,8 @@
     </button>`;
   }
 
-  const PENCIL_SVG = '<svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M11.2 1.9 14.1 4.8 5.6 13.3 2 14l.7-3.6z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><path d="M9.6 3.5 12.5 6.4" stroke="currentColor" stroke-width="1.4"/></svg>';
-  const TRASH_SVG  = '<svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M2.8 4.3h10.4M6.4 4.3V2.9h3.2v1.4M4 4.3l.6 9h6.8l.6-9" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+    const PENCIL_SVG = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/><path d="m15 5 4 4"/></svg>';
+    const TRASH_SVG  = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>';
 
   // The backpack shows ONE item at a time. The sheet's ledger is already the
   // index, so making the player scan a second list to find what they just
@@ -2768,7 +2768,7 @@
       <div class="persona-card" data-row="${esc(r.id)}"${r.id === character.id ? ' data-current' : ''}>
         <div class="persona-card__main">
           <button class="persona-card__del" data-char-del="${esc(r.id)}" aria-label="Delete ${esc(r.name)}"${editing ? '' : ' tabindex="-1"'}>
-            <svg width="19" height="19" viewBox="0 0 19 19" fill="none" aria-hidden="true"><circle cx="9.5" cy="9.5" r="8.5" stroke="currentColor" stroke-width="1.6"/><path d="M5.5 9.5h8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M8 12h8"/></svg>
           </button>
           <button class="persona-card__open" data-open-character="${esc(r.id)}"${editing ? ' disabled' : ''}>
             <span class="persona-card__portrait"><img data-roster-img="${esc(r.id)}" alt=""></span>
@@ -2776,14 +2776,21 @@
               <span class="persona-card__name">${esc(r.name)}</span>
               <span class="persona-card__meta">${esc(buildMeta(r.build))}</span>
             </span>
-            <svg class="persona-card__chevron" width="8" height="14" viewBox="0 0 8 14" fill="none"><path d="M1 1l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <svg class="persona-card__chevron" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+          </button>
+          <!-- Export now sits in the control gutter beside the grip rather than
+               as a labelled button under the row. It lost its text with the
+               move, so it carries an aria-label: an icon-only control has no
+               accessible name otherwise, and "Export" was doing that job. -->
+          <button class="persona-card__export" data-char-export="${esc(r.id)}"${editing ? '' : ' tabindex="-1"'}
+                  aria-label="Export ${esc(r.name)}">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"/><path d="M14 2v5a1 1 0 0 0 1 1h5"/><path d="M12 12v6"/><path d="m15 15-3-3-3 3"/></svg>
           </button>
           <button class="persona-card__grip" data-char-grip="${esc(r.id)}"${editing ? '' : ' tabindex="-1"'}
                   aria-label="Reorder ${esc(r.name)} — use the arrow keys, or drag">
             <span></span><span></span><span></span>
           </button>
         </div>
-        <button class="persona-card__export" data-char-export="${esc(r.id)}"${editing ? '' : ' tabindex="-1"'}>Export</button>
       </div>`).join('')
       // Nothing at all when the roster is empty — .roster-lead above says it in
       // prose, and the Create and Import buttons below are the answer. A
@@ -3000,7 +3007,7 @@
   // have no hero to reveal, and a modal is its own surface.
   const canPull = () =>
     app.getAttribute('data-view') === 'sheet' &&
-    app.getAttribute('data-tab') === 'character' &&
+    app.getAttribute('data-tab') === 'action' &&
     app.getAttribute('data-modal') === 'closed';
 
   /* Resistance. Distance dragged maps onto an asymptote at --pull-max, so the
@@ -3940,7 +3947,7 @@
     // a control that teaches the player to distrust the others.
     if (clear) clear.hidden = character.effects.length === 0;
     const rows = character.effects.map(effectRow).join('');
-    fillList('effects', `${rows}<button class="effect-add" data-effect-open aria-label="Add a boon or condition"><span class="plus"></span></button>`);
+    fillList('effects', `${rows}<button class="effect-add" data-effect-open aria-label="Add a boon or condition"><svg class="plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="M12 5v14"/></svg></button>`);
   }
 
   function openEffectPicker() { app.setAttribute('data-modal', 'effects'); }
@@ -4303,13 +4310,25 @@
     track.innerHTML = html;
   }
 
+  /* What a TAKEN wound puts in the box: a cracked heart. Like PATCH_ICON it
+     carries no stroke, fill or size — .pip svg in sheet.css sets all three, so
+     the glyph inherits the filled pip's colour.
+
+     An untaken wound stays empty on purpose. The pips are a tally read as a
+     row: an outline in every box would make the row uniform and force the
+     count to be worked out rather than seen, where a run of filled boxes
+     against empty ones is legible without counting at all. */
+  const WOUND_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">'
+    + '<path d="M12.409 5.824c-.702.792-1.15 1.496-1.415 2.166l2.153 2.156a.5.5 0 0 1 0 .707l-2.293 2.293a.5.5 0 0 0 0 .707L12 15"/>'
+    + '<path d="M13.508 20.313a2 2 0 0 1-3 .019L5 15c-1.5-1.5-3-3.2-3-5.5a5.5 5.5 0 0 1 9.591-3.677.6.6 0 0 0 .818.001A5.5 5.5 0 0 1 22 9.5c0 2.29-1.5 4-3 5.5z"/></svg>';
+
   function renderWounds() {
     const el = $('[data-cells="wounds"]');
     if (!el) return;
     let html = '';
     for (let i = 0; i < woundsMax(); i++) {
       const on = i < character.wounds;
-      html += `<span class="pip${on ? ' is-on' : ''}" data-wound="${i}">${on ? '✕' : ''}</span>`;
+      html += `<span class="pip${on ? ' is-on' : ''}" data-wound="${i}">${on ? WOUND_ICON : ''}</span>`;
     }
     el.innerHTML = html;
     // The reset is only meaningful once a wound is marked, so it greys out at
@@ -4321,16 +4340,18 @@
     if (reset) reset.setAttribute('aria-disabled', character.wounds === 0 ? 'true' : 'false');
   }
 
-  /* What goes INSIDE the tally box: a bold medical cross, and nothing else.
-     This was a drawn med-kit case — a rounded body with a lid handle — which
-     at 22px was mostly border, and put a frame inside the box's own frame. The
-     box is the tally; the cross is what the tally is counting.
+  /* What goes INSIDE the tally box: a heart with a plus, the thing the tally
+     is counting. Carries no stroke, fill or size of its own — .patch svg in
+     sheet.css sets all three, so the glyph inherits the box's colour and flips
+     with it between the spent and available states.
 
-     Drawn as two strokes rather than a typed glyph so the weight is ours to
-     set: the font's "+" would be whatever the label face happens to give,
-     which is a plus sign, not a medical cross. */
-  const PATCH_ICON = '<svg viewBox="0 0 16 16" aria-hidden="true" focusable="false">'
-    + '<path d="M8 2.2v11.6M2.2 8h11.6"/></svg>';
+     An earlier pass here was a drawn med-kit case that at 22px was mostly
+     border and put a frame inside the box's own frame. This one earns the
+     detail back by being lighter: the heart is a single open outline rather
+     than a closed body, so the box's own border stays the only frame. */
+  const PATCH_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">'
+    + '<path d="m14.479 19.374-.971.939a2 2 0 0 1-3 .019L5 15c-1.5-1.5-3-3.2-3-5.5a5.5 5.5 0 0 1 9.591-3.676.56.56 0 0 0 .818 0A5.49 5.49 0 0 1 22 9.5a5.2 5.2 0 0 1-.219 1.49"/>'
+    + '<path d="M15 15h6"/><path d="M18 12v6"/></svg>';
 
   /* Boxes for the Patches the character still holds, faint outlines for the
      ones spent — the max stays visible at a glance, the way the Wound pips and
@@ -6383,39 +6404,33 @@
 
      The lists are data so that adding a theme later is one line here and one
      token block there. */
-  /* Mode glyphs. Line drawings at 26px on a 0 0 26 26 bed, matching every
-     other icon in the app — stroked, not filled, so they take their colour
-     from the tile and shift with its selected state.
+  /* Mode glyphs. Drawn on Lucide's 0 0 24 24 bed like the rest of the app's
+     icons, stroked rather than filled so they take their colour from the tile
+     and shift with its selected state.
 
-     The exception is Auto's right half, which IS filled: it has to read as
-     the dark side of a divided disc, and an outline there would read as a
-     second empty circle. The divider is the fill's own straight edge, drawn
-     again as a stroke so it stays visible at the same weight as the rim. */
+     .mode-pick__icon is 26px and its svg rule fills that box, so the artwork
+     is scaled up ~1.08x; stroke 1.5 lands at ~1.6 effective, which is the
+     weight these tiles were already drawn at. The earlier set was bespoke, and
+     Auto's right half was a FILLED half-disc — that exception is gone, because
+     sun-moon says "either one" with an eclipsed crescent instead of a disc cut
+     down the middle, and nothing here is filled any more. */
   const MODE_GLYPHS = {
-    /* Sun: a disc and eight rays on the 45° steps, struck from r=7 to r=9.5. */
-    light: '<svg viewBox="0 0 26 26" fill="none" aria-hidden="true">'
-      + '<circle cx="13" cy="13" r="5" stroke="currentColor" stroke-width="1.6"/>'
-      + '<g stroke="currentColor" stroke-width="1.6" stroke-linecap="round">'
-      + '<path d="M13 6V3.5"/><path d="M13 20v2.5"/>'
-      + '<path d="M20 13h2.5"/><path d="M6 13H3.5"/>'
-      + '<path d="M17.95 8.05l1.77-1.77"/><path d="M8.05 17.95l-1.77 1.77"/>'
-      + '<path d="M17.95 17.95l1.77 1.77"/><path d="M8.05 8.05L6.28 6.28"/>'
-      + '</g></svg>',
-    /* Crescent: one arc bitten out of another, the standard two-arc path. */
-    dark: '<svg viewBox="0 0 26 26" fill="none" aria-hidden="true">'
-      + '<path d="M20.8 15.9A7.6 7.6 0 0 1 10.6 5.7 7.6 7.6 0 1 0 20.8 15.9Z"'
-      + ' stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>',
-    /* Half sun, half moon, split down the middle: rays on the left, solid on
-       the right, one rule between them. "Whichever the system is." */
-    system: '<svg viewBox="0 0 26 26" fill="none" aria-hidden="true">'
-      + '<path d="M13 6.5a6.5 6.5 0 0 1 0 13Z" fill="currentColor"/>'
-      + '<circle cx="13" cy="13" r="6.5" stroke="currentColor" stroke-width="1.6"/>'
-      + '<g stroke="currentColor" stroke-width="1.6" stroke-linecap="round">'
-      + '<path d="M13 6.5v13"/>'
-      + '<path d="M4.5 13H2"/>'
-      + '<path d="M7 7L5.2 5.2"/>'
-      + '<path d="M7 19l-1.8 1.8"/>'
-      + '</g></svg>',
+    light: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"'
+      + ' stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
+      + '<circle cx="12" cy="12" r="4"/>'
+      + '<path d="M12 2v2"/><path d="M12 20v2"/>'
+      + '<path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/>'
+      + '<path d="M2 12h2"/><path d="M20 12h2"/>'
+      + '<path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>',
+    dark: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"'
+      + ' stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
+      + '<path d="M20.985 12.486a9 9 0 1 1-9.473-9.472c.405-.022.617.46.402.803a6 6 0 0 0 8.268 8.268c.344-.215.825-.004.803.401"/></svg>',
+    system: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"'
+      + ' stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
+      + '<path d="M12 2v2"/>'
+      + '<path d="M14.837 16.385a6 6 0 1 1-7.223-7.222c.624-.147.97.66.715 1.248a4 4 0 0 0 5.26 5.259c.589-.255 1.396.09 1.248.715"/>'
+      + '<path d="M16 12a4 4 0 0 0-4-4"/>'
+      + '<path d="m19 5-1.256 1.256"/><path d="M20 12h2"/></svg>',
   };
 
   const APPEARANCE_MODES = [
@@ -6836,7 +6851,7 @@
     state.create = null;
     renderAll();
     app.setAttribute('data-view', 'sheet');
-    app.setAttribute('data-tab', 'character');
+    app.setAttribute('data-tab', 'action');
   }
 
   /* ------------------------------------------------------------------ */
@@ -6979,7 +6994,7 @@
           <span class="pick-card__name">${esc(c.name)}
             <span class="pick-card__note">${esc(subs.map((s) => s.name).join(' · '))}</span>
           </span>
-          <svg class="pick-card__caret" width="8" height="14" viewBox="0 0 8 14" fill="none"><path d="M1 1l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <svg class="pick-card__caret" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
         </button>
         <div class="pick-card__body">
           ${descHtml(c.desc)}
@@ -7052,7 +7067,7 @@
           <span class="pick-card__name">${esc(s.name)}
             <span class="pick-card__note">${esc((s.roles || []).join(' · '))}</span>
           </span>
-          <svg class="pick-card__caret" width="8" height="14" viewBox="0 0 8 14" fill="none"><path d="M1 1l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <svg class="pick-card__caret" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
         </button>
         <div class="pick-card__body">
           ${descHtml(s.desc)}
@@ -7227,7 +7242,7 @@
         <button class="loadout-sec__head" data-wiz-sec="${key}" aria-expanded="${open}">
           <span class="loadout-sec__name">${esc(SECTION_LABEL[key])}</span>
           <span class="loadout-sec__state">${esc(sectionState(d, key))}</span>
-          <svg class="loadout-sec__caret" width="8" height="14" viewBox="0 0 8 14" fill="none" aria-hidden="true"><path d="M1 1l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <svg class="loadout-sec__caret" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
         </button>
         <div class="loadout-sec__body">${body}</div>
       </section>`;
@@ -7794,7 +7809,7 @@
         // last read is state that belongs to a visit, not to the app: leaving
         // on Gear and coming back through the roster should read as opening
         // the sheet fresh, not as resuming mid-thought.
-        if (t.dataset.nav === 'sheet') app.setAttribute('data-tab', 'character');
+        if (t.dataset.nav === 'sheet') app.setAttribute('data-tab', 'action');
         // Refilled on every entry, so an abandoned edit is discarded rather
         // than being inherited by the next visit.
         if (t.dataset.nav === 'edit') renderEditForm();
@@ -8409,7 +8424,7 @@
     // it. data-tab is still set: it is the sheet's OWN default, waiting for
     // whenever a character is opened.
     app.setAttribute('data-view', 'home');
-    app.setAttribute('data-tab', 'character');
+    app.setAttribute('data-tab', 'action');
   }
 
   /* Not DOMContentLoaded: the screens are fetched into .app by boot.js and

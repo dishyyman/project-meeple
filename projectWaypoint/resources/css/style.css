@@ -1,6 +1,8 @@
 /* =====================================================================
    WAYPOINT — Character Companion · Stylesheet
-   Design theme: "1a — Field Journal" (warm parchment, humanist serif)
+   Design theme: "Ember Journal" — the field journal after dark. Built on a
+   60/30/10 split: #232323 surfaces, dark gold rules and labels, ember orange
+   reserved for the one standout per screen. See the note atop tokens.css.
 
    ALL appearance lives here. HTML carries structure + class/data hooks;
    JS carries behavior. To re-skin the app, edit the tokens in tokens.css —

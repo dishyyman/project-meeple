@@ -107,7 +107,12 @@
   width: 44px; height: 44px; flex-shrink: 0;
   border: 1.5px solid var(--line-gold); border-radius: var(--r-sm);
   display: flex; align-items: center; justify-content: center;
-  color: var(--accent);
+  /* Ink rather than the ember, which these badges used to take. Home is the
+     one screen that was overspending the 10%: four accent glyphs plus the
+     Sign In button meant five things competing to be the standout, and the
+     only one you can actually press was losing. White-ish in a gold badge
+     leaves the ember to the button, which is the whole point of a 10%. */
+  color: var(--ink);
 }
 /* The glyphs ship at 22px in the markup; scale them here so the sizing stays
    a CSS decision and the SVGs stay untouched. */
@@ -127,6 +132,11 @@
    missing entirely — a corrupt or empty store can therefore only ever fail
    toward "not signed in", never toward a name the player never entered. */
 .account__body--in,
+.account__avatar--in,
 .app[data-account="in"] .account__body--out,
+.app[data-account="in"] .account__avatar--out,
 .app[data-account="in"] .account .account__btn { display: none; }
 .app[data-account="in"] .account__body--in { display: flex; }
+/* Same specificity as .account__avatar's own display:flex, so source order is
+   what decides — these must stay below it, exactly as the bodies do. */
+.app[data-account="in"] .account__avatar--in { display: flex; }

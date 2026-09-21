@@ -39,4 +39,52 @@ The app deliberately keeps behavior, structure, and appearance apart. Preserve t
 
 ## Design language
 
-Direction **1a "Field Journal"**: warm parchment, MedievalSharp / Marcellus / Spectral fonts, rust `#b5623a` + oxblood `#742230` accents, Latin flavor. Keep new UI consistent with it.
+Direction **"Ember Journal"** — direction 1a "Field Journal" after dark. Same
+Marcellus / Spectral type and Latin flavor; the parchment is now lamplit dark.
+Built on a 60/30/10 split, declared at the top of `tokens.css`:
+
+| share | token | value | role |
+|-------|-------|-------|------|
+| 60% | `--palette-1` | `#232323` | every page and screen surface |
+| 30% | `--palette-2` | `#684d00` | deep gold — the quieter rules and fills |
+| 30% | `--palette-3` | `#a47e05` | mid gold — the rules meant to be seen |
+| 10% | `--palette-4` | `#a73500` | ember — buttons and standout spots |
+
+**The 30% is a range, not one value.** palette-2 and palette-3 share a hue
+(44.4° / 45.7°) and differ only in weight, so they read as one material at two
+depths — which is what lets a card edge, a section rule and a filled key all be
+"the gold" without flattening into each other. The line ramp in `tokens.css` is
+built on the axis between them and quotes both at their literal values.
+
+Hues either side of the gold pair are used freely where a dark UI needs them — a
+*readable* gold is not a *dark* gold; neither source value can carry small type
+(palette-2 is 2.0:1, palette-3 is 4.2:1), so the spoken golds are lifted.
+**Nothing outside the palette-4 family may be the loudest thing on a screen**:
+one ember standout per screen.
+
+**Health is not the accent.** `--health` keeps the brighter `#bd4200` it had when
+it *was* the accent. A vital is a readout you scan and a button is a thing you
+press; health being the brighter of the two is correct, since it is the most
+important number on the sheet.
+
+### Token conventions this theme depends on
+
+Inverting the palette forced three tokens apart that the light theme could
+conflate. Reach for the right half — the wrong one is a contrast bug, not taste:
+
+- **`--accent` fills, `--accent-bright` speaks.** palette-3 is 2.9:1 on the page,
+  so accent-coloured *text or icons* take `--accent-bright`. Same for
+  `--danger` / `--danger-bright`.
+- **`--on-accent` for type on an accent fill; `--on-dark` for type over a photo
+  or glass**, where the surface underneath is out of our control.
+- **`--ink-soft` is body text; `--rule-strong` is structure.** The light theme
+  spent ink on both, which inverted into a near-white bar under the app.
+- Gold at size is `--gold-fill`, not `--gold-bright` — the latter is sized for
+  8px diamonds, and across a keypad it out-shouts the 10%.
+
+Every foreground/background pair in `tokens.css` clears **WCAG AA (4.5:1)**;
+the muted and faint inks are the floor, not a starting point. Re-check before
+darkening any of them.
+
+The light-parchment tokens are preserved in git history (`tokens.css` before the
+dark pass) if the Appearance → Mode picker is ever wired up for real.
