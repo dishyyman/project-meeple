@@ -783,6 +783,20 @@
   const skillPointsMax   = () => SKILL_POINTS_AT_CREATION + level() * SKILL_POINTS_PER_LEVEL;
   const skillPointsSpent = () => character.skills.reduce((n, k) => n + k.rank, 0);
 
+  /* The attribute budget — the same shape, and the comment above describes it
+     just as well: 4 at creation, 1 per level (guide, ch.2).
+
+     It lives HERE, beside its twin, rather than with the creation wizard's own
+     numbers where ATTR_POINTS_AT_CREATION used to sit. That filing was right
+     while creation was the only screen that could spend these points; now that
+     Edit Character can too, the figure is a rule about the character rather
+     than a rule about the wizard, and the per-level half has nowhere else to
+     go anyway. */
+  const ATTR_POINTS_AT_CREATION = 4;
+  const ATTR_POINTS_PER_LEVEL   = 1;
+  const attrPointsMax   = () => ATTR_POINTS_AT_CREATION + level() * ATTR_POINTS_PER_LEVEL;
+  const attrPointsSpent = () => character.stats.reduce((n, s) => n + s.value, 0);
+
   /* Creation spends its 4 points on four SEPARATE skills, one each. That is
      checkable without storing the order points were spent in: however many
      points a character has spent, the first four of them had to land on four
@@ -2073,9 +2087,14 @@
      Rows carry the name only. What a thing does is one tap away in the detail
      window rather than crowded into a badge, which keeps a full loadout
      scannable and stops the same numbers being stated in two places. */
-  function slotRow(label, hooks, empty = false) {
+  /* `right` is optional HTML pinned to the trailing edge — the editor's pen,
+     so far. The row is already justify-content: space-between, so it needs no
+     layout of its own; an empty string simply leaves the name alone on the
+     line, which is what the sheet passes. */
+  function slotRow(label, hooks, empty = false, right = '') {
     return `<div class="slot-row${empty ? ' slot-row--empty' : ''}"${hooks}>
       <span class="slot-row__name">${esc(label)}</span>
+      ${right}
     </div>`;
   }
 
@@ -2084,23 +2103,48 @@
   // character, so it belongs on the row rather than only in the detail window.
   const heldLabel = (h) => h.tag ? `${h.item.name} · ${h.tag}` : h.item.name;
 
-  function gearRows() {
+  /* The dashed "add" that stands in for an empty slot on the EDIT screen.
+     Emitted inside the list rather than parked under it the way the sheet's
+     is, because on a screen for changing things the gap itself should be the
+     invitation: an empty slot and the button that fills it are one thing, and
+     drawing them as two is what made the sheet need a "Nothing in hand" row to
+     explain the space above its button. */
+  const addSlot = (hook, label) => `<button class="btn-dashed btn-dashed--sm" ${hook}>
+      <svg class="plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="M12 5v14"/></svg><span>${esc(label)}</span>
+    </button>`;
+
+  /* Both screens' hand lists. `edit` is what tells them apart, for the same
+     reason renderSkills() paints two lists from one array: they are two views
+     of one set of slots, and painting them apart is how they would come to
+     disagree.
+
+     What the flag actually changes is what an EMPTY hand looks like. The sheet
+     reports ("Nothing in hand"); the editor offers (a dashed Add). The trailing
+     add is emitted whenever a hand is free, so a character holding one weapon
+     gets a row and an invitation rather than a row and nothing. */
+  function gearRows(edit = false) {
     const held = handEntries();
-    if (!held.length) return slotRow('Nothing in hand', '', true);
-    return held.map((h) =>
-      slotRow(heldLabel(h), ` role="button" tabindex="0" data-detail="hands:${h.index}"`)
+    const pen = edit ? `<span class="slot-row__pen" aria-hidden="true">${PENCIL_SVG}</span>` : '';
+    const rows = held.map((h) =>
+      slotRow(heldLabel(h), ` role="button" tabindex="0" data-detail="hands:${h.index}"`, false, pen)
     ).join('');
+    if (!edit) return held.length ? rows : slotRow('Nothing in hand', '', true);
+    return rows + (handsFree() > 0 ? addSlot('data-gear-add', 'Add Gear') : '');
   }
 
-  /* Nothing worn renders NOTHING, unlike the hands slot above. The "+ Add
-     Armor" button directly beneath is shown exactly when this is empty, so a
-     "No armor worn" row would sit above a button that already says the same
-     thing in a form you can act on. The hands slot keeps its empty row because
-     its own button disappears when both hands are full, leaving the row as the
-     only thing that would explain the gap. */
-  function armorRow() {
-    if (!wornArmor()) return '';
-    return slotRow(wornArmor().name, ' role="button" tabindex="0" data-detail="armor"');
+  /* On the sheet, nothing worn renders NOTHING — the "+ Add Armor" button
+     directly beneath is shown exactly when this is empty, so a "No armor worn"
+     row would sit above a button already saying the same thing in a form you
+     can act on. (The hands slot keeps its empty row because its own button
+     disappears when both hands are full, leaving the row as the only thing
+     that would explain the gap.)
+
+     The editor has no button beneath, so the empty state IS the button. */
+  function armorRow(edit = false) {
+    const worn = wornArmor();
+    if (!worn) return edit ? addSlot('data-armor-add', 'Add Armor') : '';
+    const pen = edit ? `<span class="slot-row__pen" aria-hidden="true">${PENCIL_SVG}</span>` : '';
+    return slotRow(worn.name, ' role="button" tabindex="0" data-detail="armor"', false, pen);
   }
 
   // The lines shown in the detail window. Built from the catalog, so nothing
@@ -2371,24 +2415,105 @@
     return collapsible({ id: k.id, title: k.name, desc: k.desc }, head, false, footer);
   }
 
-  /* The same list on the Edit Character page, as a ledger index rather than a
-     reading view — so it borrows .inv-row from the inventory and carries the
-     rank and category as its subtitle. The prose stays on the sheet, which is
-     where a skill is actually read.
+  /* The same list on the Edit Character page's dossier, laid out like the
+     attributes directly above it: stacked, name on the left, number on the
+     right. The two sections answer the same kind of question about a
+     character, so on one page they should read as a single column of facts
+     rather than as two unrelated widgets — which is what the ledger line this
+     replaces looked like beside a column of steppers.
 
-     Deliberately NOT skillRow(): collapse state is keyed by id in state.open,
-     so a second set of collapsibles over the same skills would open rows on
-     both pages at once. Same trap equipRow() sidesteps by keying on position. */
+     It EXPANDS, which an attribute has no need to: the dossier is where a
+     player decides what the next point buys, and a skill's own text is what
+     that decision is made on. The rank and category ride down there with it,
+     so the closed row can stay as quiet as an attribute's.
+
+     Namespaced #dossier because state.open is keyed by id and the toggle
+     handler resolves its box with a single querySelector. The key therefore
+     has to differ from BOTH of the other two renderings of the same skill —
+     the sheet's row (bare id) and the skills editor's (#edit) — or one of the
+     three silently stops opening. Same trap equipRow() sidesteps by position. */
   function skillLine(entry) {
     const k = skillOf(entry.id);
     if (!k) return '';
-    return `<div class="inv-row">
-      <span class="inv-row__body">
-        <span class="inv-row__name">${esc(k.name)}</span>
-        <span class="inv-row__mods">Rank ${entry.rank} &middot; ${esc(k.category)}</span>
-      </span>
-      <span class="val-box val-box--sm">${esc(formatMod(skillMod(entry.rank)))}</span>
+    const key = `${k.id}#dossier`;
+    const open = !!state.open[key];
+    /* The head is a DIV with the name as a button inside it, not one button
+       around the lot: the steppers beside it are buttons too, and a button
+       inside a button is invalid markup that browsers quietly unpick. Same
+       constraint collapsible() works around by putting real controls in its
+       footer, and skillEditRow() by making its prose band the toggle.
+
+       The stepper writes rank; the box between its buttons reads the BONUS,
+       because that is the number a player is actually choosing — rank is the
+       currency, +4 is what it buys. The rank itself is stated below, where
+       there is room to label it.
+
+       Never disabled on either side. Down is always allowed because rank 0 is
+       how a skill is given back (see stepSkillRank); up is always allowed
+       because the budget here is reported, not gated — the same rule the
+       attributes above follow. */
+    return `<div class="dossier-row${open ? ' is-open' : ''}" data-collapse="${esc(key)}">
+      <div class="attr-row dossier-row__head">
+        <button class="dossier-row__title" data-toggle="${esc(key)}" aria-expanded="${open}">
+          <span class="attr-row__name">${esc(k.name)}</span>
+          <span class="skill-tag dossier-row__tag">${esc(k.category)}</span>
+          <span class="collapse__caret"></span>
+        </button>
+        <span class="skill-step">
+          <button class="step-btn" data-skill-rank="${esc(k.id)}:-1" aria-label="${esc(k.name)}: one fewer rank">&minus;</button>
+          <span class="val-box val-box--sm">${esc(formatMod(skillMod(entry.rank)))}</span>
+          <button class="step-btn" data-skill-rank="${esc(k.id)}:1" aria-label="${esc(k.name)}: one more rank">+</button>
+        </span>
+      </div>
+      <div class="dossier-row__body">
+        <div class="skill-rank">
+          <span class="skill-tag">${esc(k.category)}</span>
+          <span class="skill-rank__value">
+            <span class="skill-rank__label">Rank</span>
+            <span class="skill-rank__num">${entry.rank}</span>
+          </span>
+        </div>
+        <p class="dossier-row__desc">${esc(k.desc)}</p>
+      </div>
     </div>`;
+  }
+
+  /* One press, one rank, written straight through — the dossier's steppers are
+     the attributes' steppers wearing a different number, and they commit the
+     same way.
+
+     Deliberately NOT the modal's draft. That editor exists to browse all 27
+     and to hold a NEW character to the four-separate-skills rule, which needs
+     a Save to check against; these rows only touch skills already taken, where
+     there is nothing to stage and nothing to cancel. Both report the budget
+     through renderSkillBudget(), so neither can disagree about it.
+
+     Stepping the last rank off a skill REMOVES it. Rank 0 is not a state a
+     character can be in — it means the skill was never taken — so it leaves
+     the list rather than sitting there as a +0 row. Exactly what draftSkills()
+     does when the modal saves, and the reason the row vanishes rather than
+     greying out. */
+  function stepSkillRank(spec) {
+    /* lastIndexOf, not split: a skill id is dotted (`skill.path-less-taken`)
+       and splitting on ':' would be fine today, but the delta is the ONLY
+       field guaranteed to be last. Cheap insurance against an id that ever
+       carries a colon. */
+    const cut = String(spec).lastIndexOf(':');
+    const id = String(spec).slice(0, cut);
+    const delta = Number(String(spec).slice(cut + 1));
+    const at = character.skills.findIndex((s) => s.id === id);
+    // Only a skill already on the list has a row, so a miss is a stale click
+    // on markup that has since been repainted.
+    if (at === -1) return;
+    const next = character.skills[at].rank + delta;
+    if (next < 0) return;
+    if (next === 0) character.skills.splice(at, 1);
+    else character.skills[at].rank = next;
+    // Nothing derived reads a skill rank — they are a readout, not an input to
+    // the combat block — so the skills list and its budget are the whole
+    // repaint. renderSkills() covers the sheet's copy too.
+    renderSkills();
+    save();
   }
 
   /* A row in the skill editor: the skill, what it covers, and a stepper. This
@@ -2439,7 +2564,7 @@
      Potions, and three rows sharing one id would share one entry in
      state.open — opening any of them would open all three at once. The slot a
      thing sits in is what makes it a distinct row on the sheet. */
-  function equipRow(id, index) {
+  function equipRow(id, index, edit = false) {
     const e = itemOf(id);
     // An id that has left the library is dropped rather than drawn as a blank
     // row — the same rule the hands budget follows on load.
@@ -2466,7 +2591,13 @@
         <button class="icon-act icon-act--delete" data-equip-drop="${index}"
                 aria-label="Remove ${esc(e.name)}">${TRASH_SVG}</button>
       </div>`;
-    return collapsible({ id: `${e.id}#${index}`, title: e.name, desc: e.desc }, right, true, footer);
+    /* Namespaced when this is the editor's copy. state.open is keyed by id and
+       the toggle handler finds its box with a single querySelector, so two
+       rows sharing a key would not merely open together — the second one would
+       never open at all, because the lookup always lands on the first. Same
+       trap skillEditRow() sidesteps with its own `#edit` suffix. */
+    const key = `${e.id}#${index}${edit ? '#edit' : ''}`;
+    return collapsible({ id: key, title: e.name, desc: e.desc }, right, true, footer);
   }
 
   function dropEquipment(index) {
@@ -2851,8 +2982,16 @@
       || '<div class="empty-note">Traits come from your class and subclass. Choose them to see yours.</div>');
     fillList('passives',    character.passives.map(passiveRow).join('')
       || '<div class="empty-note">Nothing written yet. Passives you add by hand appear here.</div>');
-    fillList('equipment',   character.equipment.map(equipRow).join(''));
+    /* Explicit arrows, NOT `.map(equipRow)`: map hands its callback a third
+       argument (the array itself), which would arrive as `edit` and be truthy
+       on both lists. The sheet's rows would then carry the editor's namespaced
+       keys and stop opening. */
+    fillList('equipment',     character.equipment.map((id, i) => equipRow(id, i)).join(''));
+    fillList('editEquipment', character.equipment.map((id, i) => equipRow(id, i, true)).join('')
+      || '<div class="empty-note">No equipment carried.</div>');
 
+    // setText writes to every match, so one call paints the count on the
+    // sheet's Gear tab and the editor's at once.
     setText('equipCount', `${character.equipment.length} / ${character.equipMax}`);
     renderSkills();
     renderGear();
@@ -2879,25 +3018,38 @@
   // The worn-armour slot and the button that swaps it. Separate from
   // renderDerived() only because the picker's own rows have to repaint too.
   function renderGear() {
-    fillList('gearSlots', gearRows());
-    fillList('armorSlot', armorRow());
+    fillList('gearSlots',     gearRows());
+    fillList('armorSlot',     armorRow());
+    fillList('editGearSlots', gearRows(true));
+    fillList('editArmorSlot', armorRow(true));
     setText('handsCount', `${handsUsed()} / ${HAND_CAPACITY}`);
-    const el = $('[data-bind="handsCount"]');
-    // Unreachable through the UI, but imported or hand-edited data can arrive
-    // over capacity, so the readout can still say so.
-    if (el) el.classList.toggle('rule__count--over', handsUsed() > HAND_CAPACITY);
+    /* Every match, not the first. The same bind is painted on the sheet's Gear
+       tab and on Edit Character now, and a single querySelector would colour
+       one readout and leave the other lying — the same reason
+       renderSkillBudget() walks its matches. */
+    $$('[data-bind="handsCount"]').forEach((el) => {
+      // Unreachable through the UI, but imported or hand-edited data can arrive
+      // over capacity, so the readout can still say so.
+      el.classList.toggle('rule__count--over', handsUsed() > HAND_CAPACITY);
+    });
 
-    // An add button for a slot that cannot take anything is a dead control, so
-    // each one is present only while it has something to offer.
-    const addGear = $('[data-gear-add]');
-    if (addGear) addGear.hidden = handsFree() <= 0;
-    const addArmor = $('[data-armor-add]');
-    if (addArmor) addArmor.hidden = !!character.armorWorn;
+    /* An add button for a slot that cannot take anything is a dead control, so
+       each one is present only while it has something to offer.
+
+       Walked rather than picked, for the reason above: left as a single lookup
+       these would only ever hide the sheet's copy, and filling both hands
+       would leave a live "Add Gear" sitting on the editor promising a slot
+       that does not exist. The editor's hands and armour adders are emitted by
+       gearRows()/armorRow() only when there is room, so these two pass over
+       them agreeing; equipment's is static markup and genuinely needs it. */
+    $$('[data-gear-add]').forEach((b)  => { b.hidden = handsFree() <= 0; });
+    $$('[data-armor-add]').forEach((b) => { b.hidden = !!character.armorWorn; });
 
     // Equipment has a real ceiling, so its add button goes when there is no
     // room — the same rule the hands and armour adders already follow.
-    const addEquip = $('[data-action="add-equipment"]');
-    if (addEquip) addEquip.hidden = character.equipment.length >= character.equipMax;
+    $$('[data-action="add-equipment"]').forEach((b) => {
+      b.hidden = character.equipment.length >= character.equipMax;
+    });
   }
 
   // The character tab's at-a-glance gear. Derived from the hands list, so
@@ -2951,10 +3103,15 @@
     fillList('combat',      combatStats().map(combatCell).join(''));
   }
 
+  /* Both ledgers. Unlike the equipment rows above, an inventory row is a plain
+     button with no open/closed state to collide over, so the two copies are
+     byte-identical and share one build. */
   function renderInventory() {
-    fillList('inventory', character.inventory.length
+    const rows = character.inventory.length
       ? character.inventory.map(invRow).join('')
-      : '<div class="empty-note">Nothing carried yet.</div>');
+      : '<div class="empty-note">Nothing carried yet.</div>';
+    fillList('inventory', rows);
+    fillList('editInventory', rows);
   }
 
   /* ------------------------------------------------------------------ */
@@ -3544,11 +3701,43 @@
   }
 
   /* ------------------------------------------------------------------ */
-  /* EDIT CHARACTER — bio                                               */
-  /* Name, portrait and the descriptive fields are one section and one  */
-  /* Save; the remaining sections are stubbed in index.html with their  */
-  /* real headings.                                                     */
+  /* EDIT CHARACTER — three tabs                                        */
+  /* Dossier (bio, attributes, skills), Levels and Gear. The tab lives  */
+  /* on .app as data-edit-tab and the stylesheet does the switching, so */
+  /* nothing here shows or hides a page.                                */
+  /*                                                                    */
+  /* It is deliberately NOT the data-tab the sheet uses: leaving the    */
+  /* editor resets data-tab to "action" (see the data-nav handler), so  */
+  /* one shared attribute would let a choice made here decide which     */
+  /* sheet tab you land on.                                             */
   /* ------------------------------------------------------------------ */
+
+  const EDIT_TABS = ['dossier', 'levels', 'gear'];
+
+  /* The chips are STATE, painted from the attribute rather than toggled in the
+     click handler, so the strip cannot drift out of step with the page that is
+     actually showing — the same reason .app carries data-edit-tab at all.
+     [data-on] is .wiz-chip's own selected look, borrowed whole. */
+  function renderEditTabs() {
+    const now = app.getAttribute('data-edit-tab') || 'dossier';
+    /* Scoped to the strip, NOT a bare [data-edit-tab]: .app carries this
+       attribute too, as the state the stylesheet switches on, so an unscoped
+       query paints the app root as though it were a chip — aria-selected and
+       all. Same trap the click handler's `t === app` guard exists for, and the
+       same rule behind it: the root is state, never a control. */
+    $$('.edit-tabs [data-edit-tab]').forEach((chip) => {
+      const on = chip.dataset.editTab === now;
+      chip.toggleAttribute('data-on', on);
+      // The attribute is for the stylesheet; this is for a screen reader.
+      chip.setAttribute('aria-selected', String(on));
+    });
+  }
+
+  function setEditTab(tab) {
+    if (!EDIT_TABS.includes(tab)) return;
+    app.setAttribute('data-edit-tab', tab);
+    renderEditTabs();
+  }
 
   const idField = (name) => $(`[data-id-${name}]`);
 
@@ -3562,6 +3751,85 @@
     for (const key of BIO_FIELDS) idField(key).value = (character.bio && character.bio[key]) || '';
     idField('error').hidden = true;
     refreshBioSave();
+    // Entering the screen lands on the dossier rather than wherever it was
+    // left, for the same reason the form above is refilled: a screen resumed
+    // mid-thought from a previous visit is a screen you have to re-read.
+    setEditTab('dossier');
+    renderEditAttrs();
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* EDIT CHARACTER — attributes                                        */
+  /* ------------------------------------------------------------------ */
+
+  /* Stacked one per line, name left and number right, rather than the sheet's
+     two-up grid. The grid is for GLANCING — six numbers taken in at once, which
+     is what a grid is good at. This is for CHANGING one, where what matters is
+     that every row's stepper lands in the same place under the thumb, and a
+     single column is the only arrangement that guarantees it.
+
+     .attr-row is the creation wizard's row, reused rather than re-cut: it is
+     already exactly this shape, and a second spelling of one control is how
+     the two would come to look slightly different for no reason. */
+  function renderEditAttrs() {
+    const spent = attrPointsSpent();
+    const max = attrPointsMax();
+
+    fillList('editStats', character.stats.map((s) => `
+      <div class="attr-row">
+        <span class="attr-row__name">${esc(s.name)}</span>
+        <button class="step-btn" data-edit-attr="${esc(s.name)}:-1"${s.value <= 0 ? ' disabled' : ''} aria-label="Lower ${esc(s.name)}">&minus;</button>
+        <span class="attr-row__val">${s.value}</span>
+        <button class="step-btn" data-edit-attr="${esc(s.name)}:1" aria-label="Raise ${esc(s.name)}">+</button>
+      </div>`).join(''));
+
+    setText('attrPoints', `${spent} / ${max}`);
+    $$('[data-bind="attrPoints"]').forEach((el) => {
+      el.classList.toggle('rule__count--over', spent > max);
+    });
+
+    /* Reported, never enforced — the same split the app already draws for
+       skills, and for the same two reasons: a GM may hand out a point, and a
+       sheet being rebuilt passes through illegal states on the way to a legal
+       one. Being fought by the tool in either case would be worse than being
+       told. (Hands are blocked instead, because two hands is physical rather
+       than a matter of permission.)
+
+       Which is why only the "−" is ever disabled: a negative attribute is not
+       a rules disagreement, it is a number the derived stats cannot use. */
+    const note = spent > max
+      ? `${spent - max} point${spent - max === 1 ? '' : 's'} over budget.`
+      : spent < max
+        ? `${max - spent} point${max - spent === 1 ? '' : 's'} left to spend.`
+        : '';
+    $$('[data-bind="attrNote"]').forEach((el) => {
+      el.textContent = note;
+      el.hidden = !note;
+      el.classList.toggle('note-line--warn', spent > max);
+    });
+  }
+
+  /* One press, one point. Writes straight through to the character — there is
+     no draft to commit, so the section has no Save of its own: the number on
+     screen IS the stored number, which is the whole reason a stepper is the
+     right control here and a text field would not be.
+
+     renderDerived() rather than renderContent(): it already repaints the stat
+     cards, the combat cells, the gear summary's To-Hit and every ability's
+     damage expression, so raising Power moves all four with nothing here
+     knowing they exist. */
+  function stepAttr(spec) {
+    const [name, delta] = String(spec).split(':');
+    const stat = character.stats.find((s) => s.name === name);
+    if (!stat) return;
+    const next = stat.value + Number(delta);
+    // Floored at zero and open-ended above — see the budget note in
+    // renderEditAttrs() for why only one end of this is a real limit.
+    if (next < 0) return;
+    stat.value = next;
+    renderEditAttrs();
+    renderDerived();
+    save();
   }
 
   // What the form would store if it were saved right now. Trimmed and capped
@@ -6560,10 +6828,13 @@
   ];
   const stepIndex = (key) => WIZARD_STEPS.findIndex((s) => s.key === key);
 
-  // Creation budgets. The per-level versions live with the derived stats; these
-  // are the creation-only numbers (guide, steps 3-5).
-  const ATTR_POINTS_AT_CREATION = 4;
-  const GEAR_AT_CREATION        = 3;
+  // The one genuinely creation-only budget left (guide, steps 3-5): you are
+  // handed three pieces of gear at creation and buy the rest in play, so
+  // unlike the attribute and skill budgets this number has no per-level half
+  // and nothing outside the wizard asks about it. Its former neighbour
+  // ATTR_POINTS_AT_CREATION moved up beside SKILL_POINTS_AT_CREATION once Edit
+  // Character could spend attribute points too.
+  const GEAR_AT_CREATION = 3;
 
   // The draft's build, in the same shape the character model uses — so every
   // rule already written (proficiencies, healthMax, tier0Traits) can be asked
@@ -7616,11 +7887,12 @@
       // processed below never has its own element pulled out from under it.
       if (state.openStat && !e.target.closest('.stat-card')) showStatPop(null);
 
-      const t = e.target.closest('[data-nav],[data-tab],[data-toggle],[data-step],[data-calc],[data-menu],[data-wound],[data-wound-reset],[data-calc-step],[data-calc-apply],[data-action],[data-key],[data-dice-back],[data-dice-roll],[data-roll],[data-roll-again],[data-inv-add],[data-inv-open],[data-item-save],[data-bp-step],[data-bp-edit],[data-bp-delete],[data-mod-add],[data-mod-remove],[data-stat-toggle],[data-effect-open],[data-effect-add],[data-effect-step],[data-effect-tick],[data-effects-clear],[data-tick-confirm],[data-skill-edit],[data-skill-draft],[data-skill-filter],[data-skill-save],[data-detail],[data-gear-add],[data-armor-add],[data-detail-remove],[data-pick],[data-tag],[data-note-add],[data-note-save],[data-note-cancel],[data-note-edit],[data-note-delete],[data-note-del-confirm],[data-portrait-pick],[data-portrait-remove],[data-portrait-menu],[data-rest],[data-patch],[data-patch-confirm],[data-poison-toggle],[data-adv],[data-rules-toggle],[data-id-save],[data-portrait-crop],[data-crop-save],[data-crop-reset],[data-open-character],[data-wiz],[data-wiz-step],[data-wiz-expand],[data-wiz-pick],[data-wiz-attr],[data-wiz-skill],[data-wiz-sec],[data-wiz-slot],[data-wiz-clear],[data-wiz-pick-group],[data-equip-drop],[data-roster-edit],[data-char-del],[data-char-del-confirm],[data-char-export],[data-import-open],[data-share-format],[data-share-send],[data-backup-export],[data-compendium-export],[data-compendium-reset],[data-file-open],[data-file-apply],[data-ap-mode],[data-ap-theme]');
+      const t = e.target.closest('[data-nav],[data-tab],[data-edit-tab],[data-edit-attr],[data-skill-rank],[data-toggle],[data-step],[data-calc],[data-menu],[data-wound],[data-wound-reset],[data-calc-step],[data-calc-apply],[data-action],[data-key],[data-dice-back],[data-dice-roll],[data-roll],[data-roll-again],[data-inv-add],[data-inv-open],[data-item-save],[data-bp-step],[data-bp-edit],[data-bp-delete],[data-mod-add],[data-mod-remove],[data-stat-toggle],[data-effect-open],[data-effect-add],[data-effect-step],[data-effect-tick],[data-effects-clear],[data-tick-confirm],[data-skill-edit],[data-skill-draft],[data-skill-filter],[data-skill-save],[data-detail],[data-gear-add],[data-armor-add],[data-detail-remove],[data-pick],[data-tag],[data-note-add],[data-note-save],[data-note-cancel],[data-note-edit],[data-note-delete],[data-note-del-confirm],[data-portrait-pick],[data-portrait-remove],[data-portrait-menu],[data-rest],[data-patch],[data-patch-confirm],[data-poison-toggle],[data-adv],[data-rules-toggle],[data-id-save],[data-portrait-crop],[data-crop-save],[data-crop-reset],[data-open-character],[data-wiz],[data-wiz-step],[data-wiz-expand],[data-wiz-pick],[data-wiz-attr],[data-wiz-skill],[data-wiz-sec],[data-wiz-slot],[data-wiz-clear],[data-wiz-pick-group],[data-equip-drop],[data-roster-edit],[data-char-del],[data-char-del-confirm],[data-char-export],[data-import-open],[data-share-format],[data-share-send],[data-backup-export],[data-compendium-export],[data-compendium-reset],[data-file-open],[data-file-apply],[data-ap-mode],[data-ap-theme]');
       if (!t) return;
       /* The app root is STATE, never a control. It carries data-view, data-tab,
-         data-menu and data-modal so the stylesheet can switch on them, and two
-         of those names are also hooks in the selector above — so a click that
+         data-edit-tab, data-menu and data-modal so the stylesheet can switch on
+         them, and three of those names are also hooks in the selector above —
+         data-edit-tab joined data-tab and data-action there — so a click that
          lands on no control at all (a modal scrim, the padding beside a row)
          climbs to .app and matches. Left unguarded it is then read as a press
          of the tab it is currently showing, which runs the tab branch below and
@@ -7638,6 +7910,17 @@
       if (t.hasAttribute('data-crop-reset'))      { resetCrop(); return; }
 
       // --- edit character ---
+      // Ahead of data-tab below, and reached only from a real chip: the guard
+      // above has already turned back the click that climbed to .app, which
+      // carries this attribute as state.
+      if (t.dataset.editTab)   { setEditTab(t.dataset.editTab); return; }
+      if (t.dataset.editAttr)  { stepAttr(t.dataset.editAttr); return; }
+      /* The steppers are SIBLINGS of the row's toggle button, not children of
+         it, so closest() lands on the stepper itself and the row never flips
+         as a side effect of a rank press. That is a fact about the markup
+         rather than about this ordering — see skillLine() for why the head
+         cannot simply be one big button. */
+      if (t.dataset.skillRank) { stepSkillRank(t.dataset.skillRank); return; }
       if (t.hasAttribute('data-id-save'))   { saveIdentity(); return; }
 
       // --- inventory & backpack ---

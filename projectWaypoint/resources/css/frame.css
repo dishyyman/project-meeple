@@ -83,6 +83,15 @@
 .app[data-tab="gear"]      .tabpage--gear      { display: block; }
 .app[data-tab="notes"]     .tabpage--notes     { display: block; }
 
+/* The Edit screen's three pages, switched the same way on an attribute of
+   their own. Filed here rather than in edit.css because this section IS the
+   router: every "which of these is showing" rule in the app lives together,
+   and splitting one out is how the two would drift. */
+.edit-page { display: none; }
+.app[data-edit-tab="dossier"] .edit-page--dossier { display: block; }
+.app[data-edit-tab="levels"]  .edit-page--levels  { display: block; }
+.app[data-edit-tab="gear"]    .edit-page--gear    { display: block; }
+
 
 /* ----------------------------------------------------------------- */
 /* 3b. FRAME MODE — phone shell vs. full viewport                     */

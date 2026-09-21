@@ -55,7 +55,11 @@
        in. The two have to agree: this attribute is what paints during the moment
        between boot.js injecting the markup and main.js running, so a different
        value here shows that screen and snaps away. -->
-  <div class="app" data-view="home" data-tab="character" data-menu="closed" data-modal="closed" data-account="out"></div>
+  <!-- data-edit-tab is the Edit screen's OWN tab state, deliberately not the
+       data-tab the sheet uses: leaving the editor resets data-tab to "action"
+       (see the data-nav handler in main.js), and sharing one attribute would
+       let a choice made in the editor decide which sheet tab you land on. -->
+  <div class="app" data-view="home" data-tab="character" data-edit-tab="dossier" data-menu="closed" data-modal="closed" data-account="out"></div>
 
 </div><!-- /.device -->
 
