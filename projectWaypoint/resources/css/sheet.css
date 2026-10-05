@@ -27,15 +27,12 @@
    caption and the dice button are anchored to the bottom, so they ride down
    with it for free.
 
-   The transition is applied only while settling back, via .is-settling. During
-   the drag there must be none at all, or the image lags the finger. */
+   There is deliberately NO transition here. The spring back is animated
+   frame by frame in main.js (see ELASTIC HERO), because a CSS transition can
+   only start from rest — it cannot pick up the speed of a finger or a
+   trackpad push, and that mismatch is what made the old return feel late.
+   Reduced motion is honoured there too. */
 .hero { position: relative; height: calc(var(--hero-h) + var(--pull)); width: 100%; overflow: hidden; }
-.hero.is-settling { transition: height var(--pull-settle) var(--pull-ease); }
-/* Direct manipulation is exempt from reduced-motion, but the spring back is
-   not — it becomes an instant restore rather than a glide. */
-@media (prefers-reduced-motion: reduce) {
-  .hero.is-settling { transition-duration: 1ms; }
-}
 .hero__img {
   position: absolute; inset: 0;
   background-color: var(--bg-parchment2);

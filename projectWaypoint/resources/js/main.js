@@ -1633,7 +1633,7 @@
     // the nav handler gives: a visit starts fresh rather than resuming.
     app.setAttribute('data-view', 'sheet');
     app.setAttribute('data-tab', 'action');
-    releasePull();
+    resetPull();
   }
 
   /* ------------------------------------------------------------------ */
@@ -3118,9 +3118,22 @@
   /* ELASTIC HERO — pull down at the top to see more of the portrait     */
   /* ------------------------------------------------------------------ */
   /* Pulling past the top of the character tab stretches the hero, and    */
-  /* letting go glides it back. The stylesheet owns every visual: JS      */
-  /* writes ONE number, --pull, and CSS decides that it grows the hero's  */
-  /* height, how it eases, and what respects reduced motion.              */
+  /* letting go springs it back. JS writes ONE number, --pull, and CSS     */
+  /* decides that it grows the hero's height.                             */
+  /*                                                                      */
+  /* Everything runs through a single animation loop with a spring that   */
+  /* is ALWAYS pulling the hero home. Input events only record what the   */
+  /* hand did; the loop applies it once per frame. That is what keeps it  */
+  /* smooth:                                                              */
+  /*   - no "has the hand left?" guess, so no moment where the image      */
+  /*     sits held open before it starts back. A wheel push simply        */
+  /*     fights the spring, and when the pushes fade (a trackpad's        */
+  /*     momentum tail included) the spring wins on its own;              */
+  /*   - the return starts from the current speed, so letting go of a     */
+  /*     drag never jumps or pauses;                                      */
+  /*   - at most one layout per frame, however fast events arrive.        */
+  /* An earlier version used a CSS transition plus release-detection      */
+  /* timers, and the timers were exactly where it felt like it lagged.    */
 
   // Read back from the stylesheet rather than restated here, so the ceiling
   // and the settle time are tuned in one place with the rest of the design.
@@ -3130,32 +3143,22 @@
     return Number.isFinite(n) ? n : fallback;
   };
 
-  let pullMax = 130;
-  let pullSettleMs = 520;
-  let pullDist = 0;       // raw gesture distance, before resistance
-  let pullFrom = null;    // gesture anchor, null when not tracking
-  let pullWheelTimer = null;
+  let pullMax = 130;        // px — stretch ceiling, from --pull-max
+  let pullOmega = 15.7;     // spring rate (1/s), derived from --pull-settle in init()
 
-  /* Wheel gestures need more than a timer to know when the hand has left.
-     A trackpad keeps firing wheel events after the fingers lift — macOS
-     momentum, decaying over the best part of a second — and treating that tail
-     as continued input is what pinned the hero open long after letting go.
-
-     Momentum has one property a real push does not: it only ever DECAYS. So a
-     delta that has fallen well below the gesture's peak means the hand is
-     already off, and that is as close to a touchend as a wheel gets. A mouse
-     wheel never decays like that, and falls back to the idle timer below. */
-  const WHEEL_IDLE_MS   = 110;   // silence that counts as "stopped" for a mouse wheel
-  const WHEEL_FADE_HITS = 4;     // consecutive SHRINKING deltas that read as a tail
-  const WHEEL_FADE_TO   = 0.8;   // ...and it must have fallen this far below the peak
-  const WHEEL_REPUSH    = 1.4;   // a delta rising this much again is a NEW gesture
-
-  let wheelPeak  = 0;       // biggest delta seen in the current gesture
-  let wheelLast  = 0;       // previous delta, for spotting decay and fresh pushes
-  let wheelFade  = 0;       // consecutive deltas smaller than the one before
-  let wheelSpent = false;   // released already — ignore the rest of this tail
-
-  const resetWheel = () => { wheelPeak = 0; wheelFade = 0; wheelSpent = false; };
+  const pull = {
+    x: 0,                   // current stretch in px, after resistance
+    v: 0,                   // current speed in px/s (+ = opening)
+    wheel: 0,               // wheel distance received since the last frame
+    tracking: false,        // a touch began at the top and may become a pull
+    dragging: false,        // a finger is on the hero's pull right now
+    anchor: 0,              // finger Y that corresponds to zero stretch
+    target: 0,              // where the finger says x should be
+    lastT: 0,               // timestamp of the previous touchmove, for speed
+    frame: null,            // rAF handle while the loop is running
+    frameT: 0,              // timestamp of the previous frame
+    written: -1,            // last value written to --pull, to skip no-op writes
+  };
 
   const heroEl = () => $('.hero');
   const scrollerEl = () => $('.sheet__scroll');
@@ -3170,36 +3173,90 @@
   /* Resistance. Distance dragged maps onto an asymptote at --pull-max, so the
      stretch never runs out abruptly and never exceeds its ceiling — it just
      gets progressively harder, which is what reads as elastic. At one
-     ceiling's worth of drag you have spent 63% of the travel. */
-  const resist = (d) => pullMax * (1 - Math.exp(-Math.max(0, d) / pullMax));
+     ceiling's worth of drag you have spent 63% of the travel.
+     unresist() is its inverse, used to catch a hero that is mid-return
+     without it jumping under the finger. */
+  const resist   = (d) => pullMax * (1 - Math.exp(-Math.max(0, d) / pullMax));
+  const unresist = (x) => -pullMax * Math.log(1 - Math.min(x, pullMax - 0.01) / pullMax);
 
-  function setPull(px) {
+  function writePull() {
+    const px = Math.round(pull.x * 10) / 10;
+    if (px === pull.written) return;
     const hero = heroEl();
     if (!hero) return;
+    pull.written = px;
     // A raw scalar, not appearance — see writeView() for the same reasoning.
-    hero.style.setProperty('--pull', `${px.toFixed(2)}px`);
+    hero.style.setProperty('--pull', `${px}px`);
   }
 
-  // Hand the stretch back. The transition lives behind .is-settling so that it
-  // applies ONLY here — during the drag the hero must track the finger with no
-  // easing at all, or it lags behind it.
-  function releasePull() {
-    pullFrom = null;
-    pullDist = 0;
-    clearTimeout(pullWheelTimer);
-    const hero = heroEl();
-    if (!hero) return;
-    hero.classList.add('is-settling');
-    setPull(0);
-    // Belt and braces: transitionend is the normal path, but a transition that
-    // never starts (already at 0, or reduced motion) would leave the class on.
-    clearTimeout(releasePull._t);
-    releasePull._t = setTimeout(() => hero.classList.remove('is-settling'), pullSettleMs + 60);
+  /* One step of a CRITICALLY DAMPED spring, solved exactly rather than
+     integrated: critical damping is the fastest return that never overshoots,
+     so the hero glides home without bouncing past its resting height, and the
+     exact solution stays stable however long a frame takes. */
+  function springStep(dt) {
+    const w = pullOmega;
+    const e = Math.exp(-w * dt);
+    const c = pull.v + w * pull.x;
+    pull.x = (pull.x + c * dt) * e;
+    pull.v = (pull.v - w * c * dt) * e;
   }
 
-  function beginPull() {
-    const hero = heroEl();
-    if (hero) hero.classList.remove('is-settling');
+  function pullFrame(now) {
+    // Capped so a backgrounded tab returning does not take one giant step.
+    const dt = Math.min((now - pull.frameT) / 1000, 1 / 30);
+    pull.frameT = now;
+
+    if (pull.dragging) {
+      // The finger is in charge: track it exactly, with no easing, or the
+      // image trails behind it.
+      pull.x = pull.target;
+    } else {
+      if (pull.wheel) {
+        // A push opening the hero meets the same resistance as a drag (the
+        // slope of resist() at x is 1 - x/max); closing it does not.
+        const d = pull.wheel;
+        pull.x += d > 0 ? d * (1 - pull.x / pullMax) : d;
+        pull.wheel = 0;
+      }
+      springStep(dt);
+    }
+
+    // Hold the range. Hitting zero stops dead rather than dipping below the
+    // resting height; hitting the ceiling sheds any speed still opening it.
+    if (pull.x <= 0) { pull.x = 0; pull.v = Math.max(pull.v, 0); }
+    if (pull.x >= pullMax) { pull.x = pullMax; pull.v = Math.min(pull.v, 0); }
+
+    // Settled: write the exact zero and let the loop go to sleep.
+    if (!pull.dragging && pull.x < 0.3 && Math.abs(pull.v) < 8) {
+      pull.x = 0; pull.v = 0;
+      writePull();
+      pull.frame = null;
+      return;
+    }
+    writePull();
+    pull.frame = requestAnimationFrame(pullFrame);
+  }
+
+  function wakePull() {
+    if (pull.frame !== null) return;
+    pull.frameT = performance.now();
+    pull.frame = requestAnimationFrame(pullFrame);
+  }
+
+  // The hand let go: the spring takes over from the current position and
+  // speed. Under reduced motion there is no glide — it restores at once.
+  function letGoPull() {
+    pull.dragging = false;
+    if (prefersReducedMotion()) { pull.x = 0; pull.v = 0; writePull(); return; }
+    wakePull();
+  }
+
+  // Leaving the tab mid-stretch would strand the hero open for the next
+  // visit, so navigation resets it outright rather than animating.
+  function resetPull() {
+    if (pull.frame !== null) cancelAnimationFrame(pull.frame);
+    Object.assign(pull, { x: 0, v: 0, wheel: 0, tracking: false, dragging: false, frame: null });
+    writePull();
   }
 
   /* ------------------------------------------------------------------ */
@@ -7123,6 +7180,7 @@
     renderAll();
     app.setAttribute('data-view', 'sheet');
     app.setAttribute('data-tab', 'action');
+    resetPull();
   }
 
   /* ------------------------------------------------------------------ */
@@ -8105,7 +8163,7 @@
         // is work nobody should pay for until they are looking at it.
         if (t.dataset.nav === 'settings') renderSettings();
         app.setAttribute('data-view', t.dataset.nav);
-        releasePull();
+        resetPull();
         // Edit Character is reached FROM the drawer, so navigation has to
         // close it — otherwise the panel stays over the screen it opened.
         app.setAttribute('data-menu', 'closed');
@@ -8120,7 +8178,7 @@
         app.setAttribute('data-tab', t.dataset.tab);
         app.setAttribute('data-menu', 'closed');
         // Leaving mid-stretch would strand the hero open for the next visit.
-        releasePull();
+        resetPull();
         return;
       }
 
@@ -8452,92 +8510,79 @@
     });
 
     /* ---- elastic hero: touch, then wheel ---------------------------- */
+    // The handlers only record input; pullFrame() does all the moving.
     const scroller = scrollerEl();
     if (scroller) {
       scroller.addEventListener('touchstart', (e) => {
-        if (!canPull() || e.touches.length !== 1) { pullFrom = null; return; }
-        pullFrom = e.touches[0].clientY;
-        pullDist = 0;
+        if (!canPull() || e.touches.length !== 1 || scroller.scrollTop > 0) return;
+        // Anchored so that the CURRENT stretch is where the finger already
+        // is — touching a hero that is still springing back catches it in
+        // place instead of snapping it shut.
+        pull.anchor = e.touches[0].clientY - (pull.x > 0 ? unresist(pull.x) : 0);
+        pull.target = pull.x;
+        pull.lastT = e.timeStamp;
+        pull.dragging = pull.x > 0;
+        if (pull.dragging) { pull.v = 0; wakePull(); }
+        pull.tracking = true;
       }, { passive: true });
 
-      // Not passive: a real pull has to preventDefault, or the browser's own
-      // overscroll runs at the same time and the page rubber-bands underneath.
+      // Not passive: a real pull has to preventDefault, or the list scrolls
+      // underneath the stretch.
       scroller.addEventListener('touchmove', (e) => {
-        if (pullFrom === null || !canPull() || e.touches.length !== 1) return;
+        if (!pull.tracking || !canPull() || e.touches.length !== 1) return;
         const y = e.touches[0].clientY;
-        const down = y - pullFrom;
+        const down = y - pull.anchor;
 
         // Only the top of the list stretches, and only downward. Anything else
         // is an ordinary scroll, so hand the gesture back and re-anchor —
         // without re-anchoring, scrolling down then up again would resume from
         // a stale origin and snap the hero open.
         if (down <= 0 || scroller.scrollTop > 0) {
-          if (pullDist > 0) releasePull();
-          pullFrom = y;
-          pullDist = 0;
+          if (pull.dragging) { pull.target = 0; pull.v = 0; letGoPull(); }
+          pull.anchor = y;
           return;
         }
-        if (pullDist === 0) beginPull();
         e.preventDefault();
-        pullDist = down;
-        setPull(resist(pullDist));
+        const next = resist(down);
+        // Speed of the stretch, smoothed over a few events so the hand-off to
+        // the spring on release carries the gesture's real momentum rather
+        // than one jittery sample.
+        const dt = (e.timeStamp - pull.lastT) / 1000;
+        if (dt > 0) pull.v = 0.6 * ((next - pull.target) / dt) + 0.4 * pull.v;
+        pull.lastT = e.timeStamp;
+        pull.target = next;
+        if (!pull.dragging) { pull.dragging = true; wakePull(); }
       }, { passive: false });
 
-      scroller.addEventListener('touchend', () => { if (pullDist > 0) releasePull(); }, { passive: true });
-      scroller.addEventListener('touchcancel', () => { if (pullDist > 0) releasePull(); }, { passive: true });
+      const endTouch = () => {
+        pull.tracking = false;
+        if (!pull.dragging) return;
+        // A finger that stopped before lifting has no speed left to hand on.
+        if (performance.now() - pull.lastT > 80) pull.v = 0;
+        // Capped so a hard flick cannot launch it at the ceiling.
+        pull.v = Math.max(-3000, Math.min(3000, pull.v));
+        letGoPull();
+      };
+      scroller.addEventListener('touchend', endTouch, { passive: true });
+      scroller.addEventListener('touchcancel', endTouch, { passive: true });
 
-      // Desktop equivalent. There is no touchend to wait for, so "let go" is
-      // inferred two ways: the deltas fading into a momentum tail (trackpad),
-      // or the events stopping altogether (mouse wheel). See the notes on
-      // WHEEL_FADE_TO above for why the first one is needed at all.
+      // Desktop equivalent. Every upward wheel delta at the top pushes against
+      // the spring; there is no release to detect, because the spring is
+      // pulling home the whole time and simply wins once the pushes fade.
+      // Off under reduced motion: with no glide, a stretch that only exists
+      // between wheel events would just flicker.
       scroller.addEventListener('wheel', (e) => {
-        if (!canPull() || scroller.scrollTop > 0) return;
-        if (e.deltaY >= 0) { if (pullDist > 0) releasePull(); resetWheel(); return; }
-
-        // Any activity at all postpones the idle release, momentum included —
-        // the tail must not be mistaken for silence.
-        clearTimeout(pullWheelTimer);
-        pullWheelTimer = setTimeout(() => { releasePull(); resetWheel(); }, WHEEL_IDLE_MS);
-
-        const mag  = -e.deltaY;
-        const prev = wheelLast;
-        wheelLast = mag;
-
-        // Already let go, and still coasting. Swallow the tail so it cannot
-        // re-stretch the hero — unless the delta climbs again, which momentum
-        // never does, and which therefore means a fresh push has started.
-        if (wheelSpent) {
-          if (prev > 0 && mag > prev * WHEEL_REPUSH) resetWheel();
-          else { e.preventDefault(); return; }
-        }
-
-        // Two signals together, because either alone misreads a real drag.
-        // MONOTONIC DECAY is the sharp one: momentum shrinks every single
-        // event, where a hand on the trackpad jitters up and down. The ratio
-        // is the safety net, so four small wobbles near full speed — a steady
-        // drag, not a tail — cannot trip it.
-        if (mag > wheelPeak) { wheelPeak = mag; wheelFade = 0; }
-        else if (prev > 0 && mag < prev) { wheelFade++; }
-        else { wheelFade = 0; }
-
-        // The hand is off. Start the glide back now rather than at the end of
-        // the tail — this is the whole difference between "springs back when
-        // you let go" and "hangs there for a second first".
-        if (wheelFade >= WHEEL_FADE_HITS && mag < wheelPeak * WHEEL_FADE_TO) {
-          wheelSpent = true;
-          e.preventDefault();
-          releasePull();
-          // releasePull() cancels the idle timer, so re-arm it here. Without
-          // this, a tail that stops at the very moment fade is detected would
-          // leave the gesture marked spent for good and block the next pull.
-          pullWheelTimer = setTimeout(resetWheel, WHEEL_IDLE_MS);
-          return;
-        }
-
+        if (!canPull() || prefersReducedMotion()) return;
+        if (scroller.scrollTop > 0 && pull.x === 0) return;
+        // Firefox can report in lines rather than pixels.
+        const dy = e.deltaMode === 1 ? e.deltaY * 16 : e.deltaY;
+        // Scrolling down with nothing stretched is an ordinary scroll.
+        if (dy >= 0 && pull.x === 0) return;
+        // Otherwise the wheel is working the hero: opening it, or (scrolling
+        // down while it is open) closing it before the list moves at all.
         e.preventDefault();
-        if (pullDist === 0) beginPull();
-        pullDist += mag;
-        setPull(resist(pullDist));
+        pull.wheel -= dy;
+        wakePull();
       }, { passive: false });
     }
 
@@ -8684,9 +8729,11 @@
   /* ------------------------------------------------------------------ */
   function init() {
     // Tuning lives in the stylesheet with the rest of the design; read it once
-    // here rather than keeping a second copy of the numbers in JS.
-    pullMax      = cssNumber('--pull-max', pullMax);
-    pullSettleMs = cssNumber('--pull-settle', pullSettleMs);
+    // here rather than keeping a second copy of the numbers in JS. The settle
+    // time becomes a spring rate: a critically damped spring is within 1% of
+    // home after about 6.6 / rate seconds.
+    pullMax   = cssNumber('--pull-max', pullMax);
+    pullOmega = 6.6 / (cssNumber('--pull-settle', 420) / 1000);
     // Before loadRoster(), because opening a character resolves its ids and a
     // fallback entry that arrives afterwards is a fallback that arrived too
     // late — the character would already have dropped what it referenced.

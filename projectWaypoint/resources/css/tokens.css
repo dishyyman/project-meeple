@@ -195,10 +195,11 @@
      gesture has currently stretched, written by JS (see main.js) and read
      back here. Nothing else in the app should set --pull. */
   --hero-h:       376px;
-  --pull:         0px;    /* live gesture distance — JS owns this */
+  --pull:         0px;    /* live stretch — JS owns this */
   --pull-max:     130px;  /* the stretch ceiling the resistance curve approaches */
-  --pull-settle:  520ms;  /* unhurried on purpose: a snappy return feels like a bounce */
-  --pull-ease:    cubic-bezier(0.25, 0.9, 0.30, 1);
+  --pull-settle:  420ms;  /* roughly how long the spring takes to get home;
+                             lower is snappier, higher is lazier. It never
+                             overshoots, so it cannot bounce at any value. */
 
   /* Portrait framing. A reposition is stored as an offset in PERCENT OF THE
      FRAME plus a zoom, never as cropped pixels — so one setting frames the
