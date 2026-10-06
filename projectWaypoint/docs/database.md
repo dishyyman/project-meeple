@@ -93,7 +93,7 @@ Every stored or imported value is **checked, not trusted**. A corrupt value degr
 - **Content ids:** must resolve against the compendium; unresolvable ids are dropped.
 - **Spent resources:** clamped to the character's current maximums (e.g. health ≤ max health, patches ≤ Patch maximum).
 - **Ability cost:** only `ap`, `rp`, `mana` are kept; an unknown `kind` becomes `"ability"`.
-- **Files:** a `schemaVersion` higher than the app understands is refused; lower is accepted. The wrong kind of file is refused with a message naming it.
+- **Files:** a `schemaVersion` higher than the app understands is refused; lower is accepted. The wrong kind of file is refused with a message naming it. Files over 10 MB are refused before they are read (`security.md` Gap 1).
 
 ## A7. Deletion
 

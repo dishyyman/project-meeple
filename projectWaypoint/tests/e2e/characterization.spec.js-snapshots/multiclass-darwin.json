@@ -1,0 +1,63 @@
+{
+  "steps": [
+    {
+      "step": "opened",
+      "text": "Add a Portrait Library, camera, or a file Grimm Oathbreaker 3 Oakheart · 1 Spellblade · 1 The Jugg Health 10 / 14 − + Mana 6 / 17 − + Wounds Patches 7 Evasion +3 Armor 9 Fortitude 3 Speed ✦ Boons & Conditions ✦ Clear all Protection +1 Armor. Lost after you next take damage − 1 + Chill -1 Evasion − 2 + ✦ Gear ✦ 2H Melee Threat 1 To-Hit +2 Damage 2d8+1 ✦ Actions ✦ Abilities Cleave 2 AP To-Hit+2Damage2d6+1 Spells Mend 1 AP · 3 Mana Healing1d6+1 No abilities or spells yet. ✦ Traits ✦ Fighter Tier 0 Fighter Rules text not yet written. Spellblade Tier 0 Spellblade Rules text not yet written. The Jugg Tier 0 The Jugg Rules text not yet written. Barbarian Tier 0 Barbarian Rules text not yet written. Oakheart Tier 0 Oakheart Rules text not yet written. ✦ Passives ✦ Nothing written yet. Passives you add by hand appear here. Character ✦ Attributes ✦ Power 1 Base 2 Lucky Charm -1 Precision 1 Base 1 Lethality 1 Base 1 Constitution 2 Base 2 Dexterity 1 Base 0 Lucky Charm +1 Fortune 1 Base 1 ✦ Skills ✦ 3 / 9 6 points left to spend. Character creation puts its first four points on four separate skills. Gymnast +4 You jump and climb, and you keep doing it long after everyone else has stopped. Walls, cliffs, rooftops, rigging, open water, it's all just terrain that hasn't been crossed yet. You might be afraid of heights but that doesn't mean you can't get around quickly, whether that's threading a packed market at a dead sprint or crossing grassland ahead of raiders who know it better than you do. You never tire. You never stop. Never back down, never what? Body Rank 2 Gentle Giant +2 There’s strong and then there’s you. You’ve learned that sometimes the answer isn’t to pick the lock, it’s to remove the door. Perhaps even the best way through a door is to throw something heavy at it. Feats of raw power such as holding a door closed with a horde of zombies on the other side, lifting and moving objects of absurd weight, and even juggling your friends all fall within the wheelhouse of someone who treats boulders like a pebble. Body Rank 1 Add Skill Gear ✦ Gear ✦ 2 / 2 2H Melee Add Gear ✦ Armor ✦ Heavy Armor Add Armor ✦ Equipment ✦ 0 / 5 Add Equipment ✦ Inventory ✦ Lucky Charm +1 Dexterity · -1 Power Notes Title Note optional A note needs a title. Cancel Save No notes yet — tap + to write one. Action Character Gear",
+      "rolls": [
+        "tohit 2H Melee = d20+2",
+        "damage 2H Melee = 2d8+1",
+        "tohit Cleave = d20+2",
+        "damage Cleave = 2d6+1",
+        "heal Mend = 1d6+1"
+      ],
+      "woundsFilled": 1,
+      "view": "closed"
+    },
+    {
+      "step": "+ Strength ×2",
+      "text": "Add a Portrait Library, camera, or a file Grimm Oathbreaker 3 Oakheart · 1 Spellblade · 1 The Jugg Health 10 / 14 − + Mana 6 / 17 − + Wounds Patches 7 Evasion +3 Armor 9 Fortitude 3 Speed ✦ Boons & Conditions ✦ Clear all Protection +1 Armor. Lost after you next take damage − 1 + Chill -1 Evasion − 2 + Strength +1 Power − 2 + ✦ Gear ✦ 2H Melee Threat 1 To-Hit +2 Damage 2d8+3 ✦ Actions ✦ Abilities Cleave 2 AP To-Hit+2Damage2d6+3 Spells Mend 1 AP · 3 Mana Healing1d6+1 No abilities or spells yet. ✦ Traits ✦ Fighter Tier 0 Fighter Rules text not yet written. Spellblade Tier 0 Spellblade Rules text not yet written. The Jugg Tier 0 The Jugg Rules text not yet written. Barbarian Tier 0 Barbarian Rules text not yet written. Oakheart Tier 0 Oakheart Rules text not yet written. ✦ Passives ✦ Nothing written yet. Passives you add by hand appear here. Character ✦ Attributes ✦ Power 3 Base 2 Lucky Charm -1 Strength ×2 +2 Precision 1 Base 1 Lethality 1 Base 1 Constitution 2 Base 2 Dexterity 1 Base 0 Lucky Charm +1 Fortune 1 Base 1 ✦ Skills ✦ 3 / 9 6 points left to spend. Character creation puts its first four points on four separate skills. Gymnast +4 You jump and climb, and you keep doing it long after everyone else has stopped. Walls, cliffs, rooftops, rigging, open water, it's all just terrain that hasn't been crossed yet. You might be afraid of heights but that doesn't mean you can't get around quickly, whether that's threading a packed market at a dead sprint or crossing grassland ahead of raiders who know it better than you do. You never tire. You never stop. Never back down, never what? Body Rank 2 Gentle Giant +2 There’s strong and then there’s you. You’ve learned that sometimes the answer isn’t to pick the lock, it’s to remove the door. Perhaps even the best way through a door is to throw something heavy at it. Feats of raw power such as holding a door closed with a horde of zombies on the other side, lifting and moving objects of absurd weight, and even juggling your friends all fall within the wheelhouse of someone who treats boulders like a pebble. Body Rank 1 Add Skill Gear ✦ Gear ✦ 2 / 2 2H Melee Add Gear ✦ Armor ✦ Heavy Armor Add Armor ✦ Equipment ✦ 0 / 5 Add Equipment ✦ Inventory ✦ Lucky Charm +1 Dexterity · -1 Power Notes Title Note optional A note needs a title. Cancel Save No notes yet — tap + to write one. Action Character Gear",
+      "rolls": [
+        "tohit 2H Melee = d20+2",
+        "damage 2H Melee = 2d8+3",
+        "tohit Cleave = d20+2",
+        "damage Cleave = 2d6+3",
+        "heal Mend = 1d6+1"
+      ],
+      "woundsFilled": 1,
+      "view": "closed"
+    },
+    {
+      "step": "25 damage",
+      "text": "Add a Portrait Library, camera, or a file Grimm Oathbreaker 3 Oakheart · 1 Spellblade · 1 The Jugg Health 13 / 14 − + Mana 6 / 17 − + Wounds Patches 7 Evasion -2 Armor 9 Fortitude 1 Speed ✦ Boons & Conditions ✦ Clear all Chill -1 Evasion − 2 + ✦ Gear ✦ 2H Melee Threat 1 To-Hit +2 Damage 2d8+1 ✦ Actions ✦ Abilities Cleave 2 AP To-Hit+2Damage2d6+1 Spells Mend 1 AP · 3 Mana Healing1d6+1 No abilities or spells yet. ✦ Traits ✦ Fighter Tier 0 Fighter Rules text not yet written. Spellblade Tier 0 Spellblade Rules text not yet written. The Jugg Tier 0 The Jugg Rules text not yet written. Barbarian Tier 0 Barbarian Rules text not yet written. Oakheart Tier 0 Oakheart Rules text not yet written. ✦ Passives ✦ Nothing written yet. Passives you add by hand appear here. Character ✦ Attributes ✦ Power 1 Base 2 Lucky Charm -1 Precision 1 Base 1 Lethality 1 Base 1 Constitution 2 Base 2 Dexterity 1 Base 0 Lucky Charm +1 Fortune 1 Base 1 ✦ Skills ✦ 3 / 9 6 points left to spend. Character creation puts its first four points on four separate skills. Gymnast +4 You jump and climb, and you keep doing it long after everyone else has stopped. Walls, cliffs, rooftops, rigging, open water, it's all just terrain that hasn't been crossed yet. You might be afraid of heights but that doesn't mean you can't get around quickly, whether that's threading a packed market at a dead sprint or crossing grassland ahead of raiders who know it better than you do. You never tire. You never stop. Never back down, never what? Body Rank 2 Gentle Giant +2 There’s strong and then there’s you. You’ve learned that sometimes the answer isn’t to pick the lock, it’s to remove the door. Perhaps even the best way through a door is to throw something heavy at it. Feats of raw power such as holding a door closed with a horde of zombies on the other side, lifting and moving objects of absurd weight, and even juggling your friends all fall within the wheelhouse of someone who treats boulders like a pebble. Body Rank 1 Add Skill Gear ✦ Gear ✦ 2 / 2 2H Melee Add Gear ✦ Armor ✦ Heavy Armor Add Armor ✦ Equipment ✦ 0 / 5 Add Equipment ✦ Inventory ✦ Lucky Charm +1 Dexterity · -1 Power Notes Title Note optional A note needs a title. Cancel Save No notes yet — tap + to write one. Action Character Gear",
+      "rolls": [
+        "tohit 2H Melee = d20+2",
+        "damage 2H Melee = 2d8+1",
+        "tohit Cleave = d20+2",
+        "damage Cleave = 2d6+1",
+        "heal Mend = 1d6+1"
+      ],
+      "woundsFilled": 3,
+      "view": "closed"
+    },
+    {
+      "step": "short rest",
+      "text": "Add a Portrait Library, camera, or a file Grimm Oathbreaker 3 Oakheart · 1 Spellblade · 1 The Jugg Health 14 / 14 − + Mana 14 / 17 − + Wounds Patches 9 Evasion -2 Armor 9 Fortitude 1 Speed ✦ Boons & Conditions ✦ Clear all ✦ Gear ✦ 2H Melee Threat 1 To-Hit +2 Damage 2d8+1 ✦ Actions ✦ Abilities Cleave 2 AP To-Hit+2Damage2d6+1 Spells Mend 1 AP · 3 Mana Healing1d6+1 No abilities or spells yet. ✦ Traits ✦ Fighter Tier 0 Fighter Rules text not yet written. Spellblade Tier 0 Spellblade Rules text not yet written. The Jugg Tier 0 The Jugg Rules text not yet written. Barbarian Tier 0 Barbarian Rules text not yet written. Oakheart Tier 0 Oakheart Rules text not yet written. ✦ Passives ✦ Nothing written yet. Passives you add by hand appear here. Character ✦ Attributes ✦ Power 1 Base 2 Lucky Charm -1 Precision 1 Base 1 Lethality 1 Base 1 Constitution 2 Base 2 Dexterity 1 Base 0 Lucky Charm +1 Fortune 1 Base 1 ✦ Skills ✦ 3 / 9 6 points left to spend. Character creation puts its first four points on four separate skills. Gymnast +4 You jump and climb, and you keep doing it long after everyone else has stopped. Walls, cliffs, rooftops, rigging, open water, it's all just terrain that hasn't been crossed yet. You might be afraid of heights but that doesn't mean you can't get around quickly, whether that's threading a packed market at a dead sprint or crossing grassland ahead of raiders who know it better than you do. You never tire. You never stop. Never back down, never what? Body Rank 2 Gentle Giant +2 There’s strong and then there’s you. You’ve learned that sometimes the answer isn’t to pick the lock, it’s to remove the door. Perhaps even the best way through a door is to throw something heavy at it. Feats of raw power such as holding a door closed with a horde of zombies on the other side, lifting and moving objects of absurd weight, and even juggling your friends all fall within the wheelhouse of someone who treats boulders like a pebble. Body Rank 1 Add Skill Gear ✦ Gear ✦ 2 / 2 2H Melee Add Gear ✦ Armor ✦ Heavy Armor Add Armor ✦ Equipment ✦ 0 / 5 Add Equipment ✦ Inventory ✦ Lucky Charm +1 Dexterity · -1 Power Notes Title Note optional A note needs a title. Cancel Save No notes yet — tap + to write one. Action Character Gear",
+      "rolls": [
+        "tohit 2H Melee = d20+2",
+        "damage 2H Melee = 2d8+1",
+        "tohit Cleave = d20+2",
+        "damage Cleave = 2d6+1",
+        "heal Mend = 1d6+1"
+      ],
+      "woundsFilled": 3,
+      "view": "closed"
+    }
+  ],
+  "rolls": [
+    "2H Melee To-Hit Critical Strike Lethality 1 · crits on 19–20 Half 17 Double (15)+2 d20+2 Reroll",
+    "2H Melee Damage Critical Strike Lethality 1 · crits on 19–20 Half 4 Double (1+2)+1 2d8+1 Reroll",
+    "Cleave To-Hit Critical Strike Lethality 1 · crits on 19–20 Half 20 Double (18)+2 d20+2 Reroll",
+    "Cleave Damage Critical Strike Lethality 1 · crits on 19–20 Half 8 Double (3+4)+1 2d6+1 Reroll",
+    "Mend Healing Critical Strike Lethality 1 · crits on 19–20 Half 5 Double (4)+1 1d6+1 Reroll"
+  ]
+}

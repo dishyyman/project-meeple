@@ -1,0 +1,342 @@
+{
+  "waypointCharacter": {
+    "schemaVersion": 1,
+    "exported": "2026-10-06",
+    "library": {
+      "title": "Waypoint Core Compendium",
+      "version": "0.1.0",
+      "schemaVersion": 1
+    }
+  },
+  "characters": [
+    {
+      "name": "Mallory <img src=x onerror=\"window.__pwned=(window.__pwned||0)+1\">",
+      "bio": {
+        "age": "<img src=x onerror=\"window.__pwned=(window.__pwned||0)+1\">",
+        "height": "\"><svg onload=\"window.__pwned=1\">",
+        "weight": "'><img src=x onerror=window.__pwned=1>",
+        "eyes": "<script>window.__pwned=1</script>",
+        "hair": "<img src=x onerror=\"window.__pwned=(window.__pwned||0)+1\">"
+      },
+      "portraitView": {
+        "x": 50,
+        "y": 0,
+        "zoom": 1
+      },
+      "health": 7,
+      "mana": 4,
+      "wounds": 1,
+      "patches": 2,
+      "notes": [
+        {
+          "id": "note-1",
+          "title": "Plan \"><svg onload=\"window.__pwned=1\">",
+          "body": "<img src=x onerror=\"window.__pwned=(window.__pwned||0)+1\"> and <script>window.__pwned=1</script>",
+          "created": 1
+        }
+      ],
+      "build": {
+        "origin": "subclass.hunter",
+        "levels": [
+          "subclass.hunter",
+          "subclass.hunter",
+          "subclass.hunter",
+          "subclass.hunter",
+          "subclass.hunter"
+        ],
+        "hpFrom": null
+      },
+      "stats": [
+        {
+          "name": "Power",
+          "value": 2
+        },
+        {
+          "name": "Precision",
+          "value": 3
+        },
+        {
+          "name": "Lethality",
+          "value": 1
+        },
+        {
+          "name": "Constitution",
+          "value": 1
+        },
+        {
+          "name": "Dexterity",
+          "value": 2
+        },
+        {
+          "name": "Fortune",
+          "value": 0
+        }
+      ],
+      "abilities": [
+        {
+          "id": "ab1",
+          "kind": "ability",
+          "title": "Strike <img src=x onerror=\"window.__pwned=(window.__pwned||0)+1\">",
+          "dmg": "1d6",
+          "toHit": true,
+          "cost": {
+            "ap": 1,
+            "rp": 0,
+            "mana": 0
+          },
+          "desc": "\"><svg onload=\"window.__pwned=1\">"
+        },
+        {
+          "id": "sp1",
+          "kind": "\"><svg onload=\"window.__pwned=1\">",
+          "title": "Hex <script>window.__pwned=1</script>",
+          "heal": "1d4",
+          "desc": "'><img src=x onerror=window.__pwned=1>"
+        }
+      ],
+      "passives": [
+        {
+          "id": "ps1",
+          "title": "Aura '><img src=x onerror=window.__pwned=1>",
+          "desc": "<img src=x onerror=\"window.__pwned=(window.__pwned||0)+1\">"
+        }
+      ],
+      "armorWorn": "armor.light",
+      "hands": [
+        {
+          "id": "weapon.1h-melee",
+          "tag": "Reach"
+        },
+        {
+          "id": "shield.armor"
+        }
+      ],
+      "equipment": [
+        "gear.grappling-hook",
+        "consumable.health-potion",
+        "gear.climbing-rope",
+        "gear.everburning-sprite",
+        "gear.evil"
+      ],
+      "inventory": [
+        {
+          "id": "inv-1",
+          "title": "Trinket '><img src=x onerror=window.__pwned=1>",
+          "desc": "<img src=x onerror=\"window.__pwned=(window.__pwned||0)+1\">",
+          "mods": []
+        }
+      ],
+      "effects": [
+        {
+          "id": "boon.protection",
+          "stacks": 2
+        },
+        {
+          "id": "condition.bleed",
+          "stacks": 1
+        }
+      ],
+      "skills": [
+        {
+          "id": "skill.gymnast",
+          "rank": 2
+        },
+        {
+          "id": "skill.path-less-taken",
+          "rank": 2
+        },
+        {
+          "id": "skill.keep-an-eye-out",
+          "rank": 2
+        },
+        {
+          "id": "skill.field-guide",
+          "rank": 2
+        },
+        {
+          "id": "skill.move-unseen",
+          "rank": 1
+        }
+      ],
+      "id": "aurelia",
+      "portrait": "javascript:window.__pwned=1"
+    }
+  ],
+  "entries": {
+    "subclass.hunter": {
+      "hp": 8,
+      "wounds": 4,
+      "patches": 6,
+      "evasion": 8,
+      "armor": 0,
+      "fortitude": 8,
+      "speed": 5,
+      "startingMana": 10,
+      "manaPerLevel": 1,
+      "manaModel": "pool",
+      "name": "Hunter",
+      "armorTypes": [
+        "Light",
+        "Medium",
+        "Heavy",
+        "Shields"
+      ],
+      "weaponTypes": [
+        "1H Melee",
+        "1H Range",
+        "2H Range"
+      ],
+      "desc": "The Hunter remains unseen across the battlefield to find the perfect time to strike, even if it takes all night.",
+      "id": "subclass.hunter",
+      "roles": [
+        "Burst Damage",
+        "Sustained Damage",
+        "Mobility"
+      ],
+      "classId": "class.ranger"
+    },
+    "class.ranger": {
+      "id": "class.ranger",
+      "name": "Ranger"
+    },
+    "trait.hunter-tier-0": {
+      "name": "Hunter Tier 0",
+      "tier": 0,
+      "grantedBy": "subclass.hunter",
+      "desc": "Placeholder \u2014 the Tier 0 Trait a Ranger receives on choosing Hunter has not been written yet.",
+      "id": "trait.hunter-tier-0"
+    },
+    "trait.ranger-tier-0": {
+      "name": "Ranger Tier 0",
+      "tier": 0,
+      "grantedBy": "class.ranger",
+      "desc": "Placeholder \u2014 the Tier 0 Trait every Ranger receives on choosing the class has not been written yet.",
+      "id": "trait.ranger-tier-0"
+    },
+    "skill.gymnast": {
+      "id": "skill.gymnast",
+      "name": "Gymnast",
+      "category": "Body",
+      "desc": "You jump and climb, and you keep doing it long after everyone else has stopped. Walls, cliffs, rooftops, rigging, open water, it's all just terrain that hasn't been crossed yet. You might be afraid of heights but that doesn't mean you can't get around quickly, whether that's threading a packed market at a dead sprint or crossing grassland ahead of raiders who know it better than you do. You never tire. You never stop. Never back down, never what?"
+    },
+    "skill.path-less-taken": {
+      "id": "skill.path-less-taken",
+      "name": "Path Less Taken",
+      "category": "Study",
+      "desc": "You are good at navigating through the wilderness and surviving for weeks with only a yard of twine and two smooth stones. Paths you\u2019ve walked once feel like your daily route. Retracing your steps and avoiding getting lost are your bread and butter. Maybe it was all those maps you memorized as a kid when you sat alone in the schoolyard, regardless, you know the land."
+    },
+    "skill.keep-an-eye-out": {
+      "id": "skill.keep-an-eye-out",
+      "name": "Keep an Eye Out",
+      "category": "Instinct",
+      "desc": "You\u2019ve developed an instinct for the physical lay of the land, out in the wilderness and within the walls of the city. Entrances, exits, the guy near the door who\u2019s a little too still, the table that\u2019s bolted to the floor for no good reason, you\u2019re particularly good at picking it up. It might even be to find a hidden passageway because of the dust formation on a frame or the covered tracks in the mud. What it means is up to you."
+    },
+    "skill.field-guide": {
+      "id": "skill.field-guide",
+      "name": "Field Guide",
+      "category": "Study",
+      "desc": "You know what's out there, what it eats, and whether it's supposed to be here. Creatures of all kinds, their habits, their nests, their anatomy, and which parts are worth cutting out afterward. The same goes for anything that grows: which mushroom is dinner, which one is a very bad afternoon. Sometimes the useful thing isn't knowing what something is, it's knowing that nothing like it has ever lived within a hundred miles of here."
+    },
+    "skill.move-unseen": {
+      "id": "skill.move-unseen",
+      "name": "Move Unseen",
+      "category": "Sleight",
+      "desc": "Get somewhere in an extraordinarily sneaky manner as you\u2019ve learned to cover your tracks and avoid all kinds of patrols."
+    },
+    "weapon.1h-melee": {
+      "id": "weapon.1h-melee",
+      "name": "1H Melee",
+      "type": "Weapon",
+      "hands": 1,
+      "prof": "1H Melee",
+      "threat": 1,
+      "damage": "1d6",
+      "damageType": "Physical",
+      "weaponTags": [
+        "Super Heavy",
+        "Light",
+        "Loading",
+        "Reach"
+      ],
+      "examples": [
+        "Dagger",
+        "Shortsword",
+        "Axe",
+        "Mace",
+        "Flail",
+        "Spear"
+      ],
+      "desc": "A one-handed arm for close work. Every weapon of this class shares the same base damage, so the name is flavour and the stat line is the rule.",
+      "source": "core"
+    },
+    "shield.armor": {
+      "id": "shield.armor",
+      "name": "Shield (Armor)",
+      "type": "Shield",
+      "hands": 1,
+      "prof": "Shields",
+      "armorMod": 2,
+      "evasionMod": 0,
+      "desc": "A heavy shield braced to turn blows aside rather than avoid them.",
+      "source": "core"
+    },
+    "gear.grappling-hook": {
+      "id": "gear.grappling-hook",
+      "name": "Grappling Hook",
+      "type": "Gear",
+      "desc": "Spend 1 AP to throw the grappling hook at an unoccupied space up to 4 spaces high and quickly pull yourself to that space.",
+      "tags": [
+        "climbing"
+      ],
+      "source": "core"
+    },
+    "consumable.health-potion": {
+      "id": "consumable.health-potion",
+      "name": "Health Potion",
+      "type": "Consumable",
+      "refill": "long-rest",
+      "desc": "Spend 1 AP and reset the HP of yourself or an adjacent creature.",
+      "source": "core"
+    },
+    "gear.climbing-rope": {
+      "id": "gear.climbing-rope",
+      "name": "Climbing Rope (50 ft)",
+      "type": "Gear",
+      "desc": "Climbable without a check on most surfaces; can bind, lower, or rig a pulley.",
+      "tags": [
+        "climbing"
+      ],
+      "source": "core"
+    },
+    "gear.everburning-sprite": {
+      "id": "gear.everburning-sprite",
+      "name": "Everburning Sprite",
+      "type": "Gear",
+      "desc": "Spend 1 AP to activate this ethereal sprite to float over your head and move with you, shedding light in an area of Burst 10. It is never consumed, but its glow can't be hidden while active. Spend 1 AP to diminish the flame and put the sprite away.",
+      "tags": [
+        "light"
+      ],
+      "source": "core"
+    },
+    "armor.light": {
+      "id": "armor.light",
+      "name": "Light Armor",
+      "type": "Armor",
+      "prof": "Light",
+      "armorMod": 0,
+      "evasionMod": 4,
+      "speedMod": 1,
+      "desc": "Boiled leather and quilted cloth. Trades protection for freedom of movement \u2014 the fastest and most evasive of the three.",
+      "source": "core"
+    },
+    "gear.evil": {
+      "id": "gear.evil",
+      "name": "Cursed <img src=x onerror=\"window.__pwned=(window.__pwned||0)+1\">",
+      "type": "Gear",
+      "desc": "\"><svg onload=\"window.__pwned=1\">",
+      "tags": [
+        "'><img src=x onerror=window.__pwned=1>"
+      ]
+    }
+  }
+}

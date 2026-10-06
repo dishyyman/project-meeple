@@ -36,9 +36,9 @@ every number either of them states.
 
 **The numbers never change.** §2.1, §2.2 and §2.4 keep their original section
 numbers after moving to §7, which is why §2 now runs 2.3, 2.5, 2.6 … with gaps.
-They are **identifiers, not an ordering**: `main.js` cites `rules-gaps.md §2.2`
-and `§2.9` in its own comments, and a renumbering would quietly turn every one of
-those into a pointer at the wrong rule. Never reuse a retired number either — a
+They are **identifiers, not an ordering**: the code cites them in its own
+comments (`mechanics.js` cites §2.2 and §3.1, `main.js` §2.5, §3.1 and §3.3), and a
+renumbering would quietly turn every one of those into a pointer at the wrong rule. Never reuse a retired number either — a
 future item is 2.10, not a recycled 2.4.
 
 ---
@@ -118,7 +118,7 @@ and abilities are both granted *by* a level-up, so neither can be built first.
 - [x] **§1** — empty. The guide and the app agree on every number either states.
 - [x] **§5** — GM-facing rulings. The Rules screen shows them; the app does not
       model them.
-- [x] **§6** — 17 entries verified as matching the guide.
+- [x] **§6** — 17 entries verified as matching the guide, each now a unit test.
 
 **Where it stands: §2 is CLOSED.** Every core-mechanics entry is resolved —
 shipped, decided against, or in §2.1's case built and then removed. **§3
@@ -286,6 +286,13 @@ only needs to *show* them, which the Rules screen now does.
 ## 6. Verified as matching
 
 Checked and correct, so they need no work:
+
+**Now enforced by tests (2026-10-05).** Each rule below is a unit test: the
+arithmetic in `tests/unit/mechanics.test.js` (against `resources/js/mechanics.js`,
+where the rules now live), and the content rows — weapons, shields, armour, the
+base block — in `tests/unit/content.test.js` (against the real compendium). A
+change that breaks one fails `npm test`. When a rule here changes on purpose,
+change its test in the same edit.
 
 - Precision **+2 to hit** (`PRECISION_TO_HIT`), applied to weapons and spells alike
 - Constitution **+1 HP**, Dexterity **+1 Evasion**, Fortune **+1 Fortitude**

@@ -286,17 +286,19 @@
 /* ---- the slots ----
    Hands sit side by side because two hands are a pair; adventuring gear
    stacks because three slots in a row would each be too narrow to name
-   what is in them. --slot-span is how many hands a thing takes, so a
+   what is in them. data-span is how many hands a thing takes, so a
    two-handed weapon is one slot across both columns — which is what
    holding a greatsword actually looks like. */
 .slot-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-2); }
 .slot-stack { display: grid; gap: var(--space-2); }
+/* Hands are the only thing that spans, and HAND_CAPACITY is 2. */
+.gear-slot[data-span="2"] { grid-column: span 2; }
 /* A slot is a BOX holding a button, not a button itself: a filled one carries
    its own remove control, and that cannot be nested inside the button that
    opens the picker. */
 .gear-slot {
   position: relative;
-  grid-column: span var(--slot-span, 1);
+  grid-column: span 1;
   min-height: 74px;
   border: 1px solid var(--line-hair); border-radius: var(--r-sm);
   background: var(--bg-parchment2);

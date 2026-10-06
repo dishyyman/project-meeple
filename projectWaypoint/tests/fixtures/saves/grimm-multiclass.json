@@ -1,0 +1,30 @@
+{
+  "name": "Grimm Oathbreaker",
+  "bio": { "age": "41", "height": "6'2\"", "weight": "220 lb", "eyes": "grey", "hair": "black" },
+  "portraitView": { "x": 50, "y": 0, "zoom": 1 },
+  "health": 10, "mana": 6, "wounds": 1, "patches": 1,
+  "notes": [],
+  "build": {
+    "origin": "subclass.spellblade",
+    "levels": ["subclass.spellblade", "subclass.the-jugg", "subclass.oakheart", "subclass.oakheart", "subclass.oakheart"],
+    "hpFrom": null
+  },
+  "stats": [
+    { "name": "Power", "value": 2 }, { "name": "Precision", "value": 1 },
+    { "name": "Lethality", "value": 1 }, { "name": "Constitution", "value": 2 },
+    { "name": "Dexterity", "value": 0 }, { "name": "Fortune", "value": 1 }
+  ],
+  "abilities": [
+    { "id": "ab1", "kind": "ability", "title": "Cleave", "dmg": "2d6", "toHit": true, "cost": { "ap": 2, "rp": 0, "mana": 0 }, "desc": "" },
+    { "id": "sp1", "kind": "spell", "title": "Mend", "heal": "1d6", "cost": { "ap": 1, "rp": 0, "mana": 3 }, "desc": "" }
+  ],
+  "passives": [],
+  "armorWorn": "armor.heavy",
+  "hands": [{ "id": "weapon.2h-melee" }],
+  "equipment": [],
+  "inventory": [
+    { "id": "inv-1", "title": "Lucky Charm", "desc": "", "mods": [{ "stat": "Dexterity", "value": 1 }, { "stat": "Power", "value": -1 }] }
+  ],
+  "effects": [{ "id": "boon.protection", "stacks": 1 }, { "id": "condition.chill", "stacks": 2 }],
+  "skills": [{ "id": "skill.gymnast", "rank": 2 }, { "id": "skill.gentle-giant", "rank": 1 }]
+}

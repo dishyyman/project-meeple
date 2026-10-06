@@ -3,6 +3,23 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <!-- Content Security Policy — the backstop behind esc() (docs/security.md).
+       If an escaping bug ever let markup from an imported file onto the page,
+       this is what stops it from RUNNING: scripts load only from this site,
+       and inline <script>, inline handlers (onclick="…") and eval() are all
+       refused. The app uses none of them, which is what makes a policy this
+       strict possible.
+         style-src  this site + the Google Fonts stylesheet. No inline style
+                    attributes — JS sets custom properties through the CSSOM
+                    (el.style.setProperty), which this does not block.
+         font-src   the font files Google Fonts serves.
+         img-src    data: for portraits (stored as data URLs) and the CSS
+                    status glyphs; blob: for photos being cropped.
+         connect-src this site only — boot.js fetching pages/.
+       Changing a source here is a security decision: record it in
+       docs/security.md. -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'">
   <title>Waypoint — Character</title>
 
   <!-- Fonts -->
@@ -72,11 +89,13 @@
 </button>
 
 <!-- boot.js first: it defines WAYPOINT_READY, which main.js waits on
-     instead of DOMContentLoaded. Generated game content still loads before
-     main.js, which reads the global it declares.
-     Regenerate with: node tools/csv-to-json.mjs -->
+     instead of DOMContentLoaded. The two engines (dice, mechanics) and the
+     generated game content all load before main.js, which reads the
+     globals they declare.
+     Regenerate content with: node tools/csv-to-json.mjs -->
 <script src="resources/js/boot.js"></script>
 <script src="resources/js/dice.js"></script>
+<script src="resources/js/mechanics.js"></script>
 <script src="resources/js/portrait.js"></script>
 <script src="resources/js/library.js"></script>
 <script src="resources/js/rules.js"></script>

@@ -54,6 +54,8 @@ A server, accounts, and cloud sync are on the roadmap (`prd.md` §8, Nice to Hav
 | **Fonts** | Google Fonts: Marcellus, Spectral, JetBrains Mono (and MedievalSharp, unused) | Current — the only third-party request the app makes |
 | **Icons** | Lucide, inlined as SVG (not a dependency) | Current |
 | **Content tooling** | Node.js scripts: `tools/csv-to-json.mjs` (Google Sheets CSV → library), `tools/rtf-to-rules.mjs` (Player's Guide RTF → rules; **Mac only**, uses macOS `textutil`) | Current. Moving the rules source to a Google Docs HTML export is planned (§13) |
+| **Testing (dev only)** | Node's built-in test runner (unit); Playwright driving the installed Chrome (browser). Declared in a dev-only `package.json` — nothing ships to players (Decision 10) | Current |
+| **Security headers** | Content Security Policy as a `<meta>` tag in `index.html` (`security.md` §5) | Current |
 | **Other services** | Discord (feedback link — stub) | **Open** |
 
 ---
@@ -70,6 +72,7 @@ A server, accounts, and cloud sync are on the roadmap (`prd.md` §8, Nice to Hav
 | **Styles** | `resources/css/` — `style.css` (import index), `tokens.css` (all design values), one file per screen | All appearance. Import order is the cascade. |
 | **Frame toggle** | `resources/js/frame.js` | Phone-frame / full-window preview toggle. Touches nothing inside `.app`. |
 | **Dice engine** | `resources/js/dice.js` | The only dice parser (`evaluateDice()`). Shared by the app and the content converter. Never uses `eval()`. |
+| **Mechanics engine** | `resources/js/mechanics.js` | The only implementation of the game's arithmetic: every derived stat and every play rule (heal, damage, Wound cascade, rests, Patches, effects). No DOM, no storage. Shared by the app and the unit tests (Decision 11). |
 | **Portrait engine** | `resources/js/portrait.js` | The only image pipeline (`compress()`): decodes, resizes, and re-encodes photos so they fit in `localStorage`. |
 | **Game content** | `resources/js/library.js` *(generated)* | The built-in compendium, as `window.WAYPOINT_LIBRARY`. |
 | **Rules text** | `resources/js/rules.js` *(generated)* | The Player's Guide, as data for the Rules screen. |
@@ -81,9 +84,9 @@ A server, accounts, and cloud sync are on the roadmap (`prd.md` §8, Nice to Hav
 |---|---|---|
 | **Model** | Character data model, the roster, library loading, Boon & Condition catalog | What a character *is*, and the content it references by id |
 | **State** | Transient UI state | View, open tab, open modal, wizard draft — never persisted |
-| **Derived stats** | Derived stats | Every computed number (Evasion, Power, to-hit…) from the build. Single source of truth. |
+| **Derived stats** | Derived stats — through the mechanics engine | The gear catalog, display helpers, and one-line wrappers that apply `mechanics.js` to the open character |
 | **Persistence** | Persistence, roster, export & import | Reading and writing `localStorage`; character and compendium files |
-| **Rules** | Rules — game logic, no DOM | Heal, damage, the Wound cascade, rests, patches. No DOM access. |
+| **Rules** | Rules — through the mechanics engine | Wrappers for the play rules; also mirrors "Boons lost to a Wound" into UI state for the notice |
 | **Render** | DOM helpers, markup builders, render, and each feature's render functions | Paint data into the DOM using class names and `data-*` only |
 | **Features** | Inventory, notes, portrait, edit character, skills, dice roller, quick roll, settings, create-character wizard, toast | Feature-specific behavior built on the layers above |
 | **Wiring** | `wire()` | One delegated click handler for the whole app, plus a few pointer/keyboard listeners |
@@ -132,11 +135,11 @@ Server-side database: **Open** — see `database.md` when it exists.
                                                                  ▼
  Player ──► Browser ──► index.html ──► boot.js ──fetch──► pages/*.html  (injected into .app)
                             │
-                            ├── dice.js · portrait.js · library.js · rules.js   (globals)
+                            ├── dice.js · mechanics.js · portrait.js · library.js · rules.js   (globals)
                             └── main.js
                                   │  wire()  ◄── clicks (one delegated handler)
                                   ▼
-                            rules / derived stats ──► render ──► DOM (classes + data-*) ──► CSS
+                            mechanics (rules + derived stats) ──► render ──► DOM (classes + data-*) ──► CSS
                                   │
                                   ▼
                             localStorage  ◄──►  JSON files (export / import, share sheet)
@@ -155,12 +158,12 @@ Server-side database: **Open** — see `database.md` when it exists.
 **Loading the app**
 1. Browser loads `index.html` over `http://` and runs `frame.js` (applies the stored frame mode before first paint).
 2. `boot.js` fetches all screen fragments in parallel and inserts them in order, then resolves `WAYPOINT_READY`.
-3. `dice.js`, `portrait.js`, `library.js`, and `rules.js` define their globals.
+3. `dice.js`, `mechanics.js`, `portrait.js`, `library.js`, and `rules.js` define their globals.
 4. `main.js` waits on `WAYPOINT_READY`, then `init()` loads imported entries, the roster (opening a character), and the account flag; renders everything; wires the click handler; and lands on Home.
 
 **A change during play** (e.g. taking damage)
 1. Player taps a control; the single delegated handler in `wire()` matches it by its `data-*` attribute.
-2. A rules function updates the `character` model (e.g. `damage()` runs the Wound cascade).
+2. A rules wrapper in `main.js` hands the open `character` to the mechanics engine, which updates it (e.g. `damage()` runs the Wound cascade).
 3. Derived stats are recomputed from the model — never stored.
 4. Render functions repaint the affected parts using class names and `data-*` attributes.
 5. `save()` writes the character to `localStorage`. If storage is unavailable, play continues in memory.
@@ -194,16 +197,24 @@ project-waypoint/
     │   │   ├── boot.js          # fetches and injects pages/
     │   │   ├── frame.js         # preview frame toggle
     │   │   ├── dice.js          # the one dice engine (also used by tools/)
+    │   │   ├── mechanics.js     # the one game-mechanics engine (also used by tests/)
     │   │   ├── portrait.js      # the one image pipeline
     │   │   ├── library.js       # GENERATED — game content
     │   │   ├── rules.js         # GENERATED — Player's Guide
-    │   │   └── main.js          # model, rules, render, wiring
+    │   │   └── main.js          # model, content indexes, render, wiring
     │   └── images/              # portrait assets
     ├── tools/
     │   ├── csv/                 # exported Google Sheets tabs (source of content)
     │   ├── out/library.json     # converter output, readable JSON
     │   ├── csv-to-json.mjs      # content converter
     │   └── rtf-to-rules.mjs     # Player's Guide converter
+    ├── tests/                   # DEV ONLY — see testing.md
+    │   ├── unit/                # node --test: dice, mechanics, content
+    │   ├── e2e/                 # Playwright: flows, characterization, security
+    │   ├── fixtures/            # real exported files + hostile ones; seeded saves
+    │   └── serve.mjs            # tiny static server the browser tests start
+    ├── package.json             # DEV ONLY — test tooling; the app has no dependencies
+    ├── playwright.config.js     # DEV ONLY
     ├── docs/                    # this documentation set + the Player's Guide RTF
     └── design/                  # archived design prototypes — reference, never shipped
 ```
@@ -216,12 +227,13 @@ project-waypoint/
 - **`index.html` holds no screen markup.** Screens live in `pages/`; adding one means a new file plus one entry in `boot.js`'s `PAGES` list.
 - **Rules functions don't touch the DOM.** Game logic takes and returns data; render functions paint it.
 - **Derived numbers are computed, never stored.** Only things a player *spends or chooses* (health, mana, wounds, patches, build choices) are saved.
-- **One engine per job.** All rolls go through `evaluateDice()`; all images go through `compress()`. Never write a second.
+- **One engine per job.** All rolls go through `evaluateDice()`; all game arithmetic through `mechanics.js`; all images through `compress()`. Never write a second.
+- **The mechanics engine stays pure.** No DOM, no storage, no UI state; content arrives through `create()`. That is what keeps it testable.
 - **Generated files are never edited by hand.** `library.js` and `rules.js` are rebuilt from their sources.
 - **Characters reference content by id.** A character never copies content into its save — except the snapshot inside an exported file, which exists so the file survives a different compendium.
 - **Content and characters are stored apart.** Replacing a compendium never touches characters.
 - **`main.js` runs after `WAYPOINT_READY`**, never on `DOMContentLoaded`.
-- **No runtime dependencies.** Anything third-party (fonts aside) needs a decision recorded in §9.
+- **No runtime dependencies.** Anything third-party (fonts aside) needs a decision recorded in §9. Dev-only test tooling lives in `package.json` and never loads in the app (Decision 10).
 
 ---
 
@@ -271,6 +283,18 @@ project-waypoint/
 ### Decision 9 — Backend, accounts, and sync
 **Status:** **Open.** To decide when account sync or the GM hub is picked up: hosting, auth provider, database, how a local character and its cloud copy are reconciled, and how this fits the budget and no-dependencies constraints. Will need `security.md` and `database.md`.
 
+### Decision 10 — Dev-only test tooling (2026-10-05)
+**Context:** the app needed automated tests, and browser tests need a browser driver.
+**Alternatives:** manual testing only; a test framework that runs inside the app.
+**Reason:** Node's built-in runner for unit tests (no install) and Playwright for browser tests, declared in a **dev-only** `package.json`. Playwright drives the Chrome already installed (`channel: 'chrome'`), so no browser download. Nothing in `package.json` loads in the app, so "no runtime dependencies" still holds.
+**Constraint:** `package.json` must **not** declare `"type": "module"` — `dice.js` and `mechanics.js` are loaded by Node as CommonJS.
+
+### Decision 11 — Game mechanics extracted into `mechanics.js` (2026-10-05)
+**Context:** the rules lived inside `main.js`'s closure, reading a shared `character` — impossible to unit-test without a browser page.
+**Alternatives:** test only through the browser; split all of `main.js` into ES modules.
+**Reason:** the same move that made dice testable. Every rule takes the character as its first argument and gets content through `create()`. `main.js` keeps one-line wrappers under the old names, so no call site changed. Proven safe by characterization tests recorded *before* the move (`testing.md`).
+**Kept as before:** rules change the character they're handed in place, matching how all of `main.js` works.
+
 ---
 
 ## 10. Performance Considerations
@@ -280,7 +304,7 @@ project-waypoint/
 - **Small writes.** Saving play state never rewrites a portrait; portraits are compressed before storage.
 - **Parallel boot.** Screen fragments are fetched in parallel and inserted in order.
 - **Respect reduced motion.** Animations are turned off or slowed under `prefers-reduced-motion`.
-- **`main.js` is ~8,800 lines in one file.** Fine for now; **Open** — whether to split it into modules (which would also change how scripts load).
+- **`main.js` is ~8,200 lines in one file** (down from ~8,800 after the mechanics extraction). Fine for now; **Open** — whether to split it further or move to modules.
 - **Open:** performance budgets (load time on a mid-range phone, storage per character).
 
 ---
@@ -305,7 +329,7 @@ project-waypoint/
 | **Authentication fails** | Re-attempt with an error message. | **Open** — no real auth yet. |
 | **The app is opened from `file://`** | Explain how to serve it. | Built — `boot.js` shows an explanation on screen. |
 | **A screen fragment fails to load** | Explain, don't half-render. | Built — `boot.js` shows which file failed; `init()` never runs. |
-| **An imported file is wrong or too new** | Refuse it with a message naming the problem. | Built — wrong type, unreadable JSON, and newer schema versions are refused with explanations. |
+| **An imported file is wrong, too new, or too large** | Refuse it with a message naming the problem. | Built — wrong type, unreadable JSON, newer schema versions, and files over 10 MB are refused with explanations. Covered by `tests/e2e/security.spec.js`. |
 | **A character references content the compendium lacks** | Drop the missing reference rather than show it broken; warn before an import causes it. | Built. |
 
 ---
@@ -315,7 +339,9 @@ project-waypoint/
 - [ ] Backend, auth, database, hosting, and sync design (Decision 9).
 - [ ] Production hosting for the static app.
 - [ ] Whether to move from `localStorage` to IndexedDB as rosters and portraits grow.
-- [ ] Whether to split `main.js` into modules. Since `boot.js` requires `http://`, ES modules are now an option; every script is a classic `<script>` today.
+- [ ] Whether to split `main.js` further, or into modules. Since `boot.js` requires `http://`, ES modules are now an option; every script is a classic `<script>` today. The next natural extraction is the save/load validation (`applySave()` and the file parsers), the same way mechanics was, so it can be unit-tested.
+- [ ] No favicon — the browser's automatic `/favicon.ico` request 404s on every load. Waits on the logo (`design-system.md` §2).
+- [ ] `tools/csv-to-json.mjs` stamps today's date into `library.js` on every run, so re-running it with no content change still produces a diff.
 - [x] ~~Stale comments giving "the app opens from `file://`" as the reason scripts are plain globals, and `main.js` naming the stylesheet `waypoint.css`~~ — corrected 2026-10-05 in the scripts and both converters; `library.js` and `rules.js` regenerated (header and date only).
 - [ ] Performance budgets (§10).
 - [ ] Analytics and email services, if wanted.

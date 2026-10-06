@@ -323,7 +323,7 @@ The feature/product is considered complete when:
 
 - [ ] Requirements are implemented
 - [ ] Critical user flows work
-- [ ] Tests pass
+- [ ] Tests pass (`npm test` — see `testing.md`)
 - [ ] Build succeeds
 - [ ] Security requirements are satisfied
 - [ ] Documentation is updated

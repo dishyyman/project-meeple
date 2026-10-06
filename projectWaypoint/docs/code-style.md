@@ -75,8 +75,9 @@ projectWaypoint/
 
 There are no JS imports — every script is a classic `<script>` in `index.html`.
 
-- **Load order matters and is deliberate:** `frame.js` (head) → `boot.js` → `dice.js` → `portrait.js` → `library.js` → `rules.js` → `main.js`.
-- **Shared engines expose one global** (`WAYPOINT_DICE`, `WAYPOINT_PORTRAIT`; generated content as `WAYPOINT_LIBRARY`, `WAYPOINT_RULES`) and nothing else. `dice.js` also exports for Node so the converter uses the same parser.
+- **Load order matters and is deliberate:** `frame.js` (head) → `boot.js` → `dice.js` → `mechanics.js` → `portrait.js` → `library.js` → `rules.js` → `main.js`.
+- **Shared engines expose one global** (`WAYPOINT_DICE`, `WAYPOINT_MECHANICS`, `WAYPOINT_PORTRAIT`; generated content as `WAYPOINT_LIBRARY`, `WAYPOINT_RULES`) and nothing else. `dice.js` and `mechanics.js` also export for Node (CommonJS), so the converter and the unit tests use the same code the app does.
+- **Naming trap:** `rules.js` is the Player's Guide *text*; `mechanics.js` is the game's *arithmetic*.
 - **`main.js` is one IIFE** with `'use strict'`; nothing inside leaks to `window`.
 - **`init()` waits on `window.WAYPOINT_READY`**, never `DOMContentLoaded`.
 - **CSS:** `style.css` contains only `@import`s. **The import order is the cascade** — new screen files are appended in the order the app presents them.
@@ -102,6 +103,7 @@ Components should:
 **CSS rules:**
 - **Every value from a token:** colors (`--ink-*`, `--accent*`…), font sizes (`--fs-*`), spacing (`--space-*`), radii (`--r-*`), shadows. Raw px only for the exceptions in `design-system.md` §6.1.
 - **Visibility is CSS's job:** JS sets `data-*` or `is-*`; CSS decides what shows.
+- **No `style="…"` attributes, even in JS template strings.** The Content Security Policy refuses them. To pass a value to CSS, use a `data-*` attribute and a selector (`.gear-slot[data-span="2"]`), or `el.style.setProperty('--x', …)` for a continuous value.
 - **`[hidden]` must still win** — a component that sets `display` needs a `.thing[hidden] { display: none; }` rule.
 - **Respect `prefers-reduced-motion`** for any animation.
 
@@ -131,7 +133,8 @@ Functions should:
 - **Avoid unnecessary complexity** — a flat early-return beats nested conditionals.
 
 **Project patterns:**
-- **Layers stay apart in `main.js`:** model → derived stats → rules (no DOM) → render (no game logic) → wiring. A rules function takes and changes data; a render function paints it.
+- **Game arithmetic lives in `mechanics.js`, not `main.js`.** Every engine function takes the character (or a build) as its first argument, touches no DOM, storage or UI state, and gets content through `create()`. `main.js` calls it through one-line wrappers that pass the open `character` (`const healthMax = () => M.healthMax(character);`).
+- **Layers stay apart in `main.js`:** model → derived-stat and rules wrappers → render (no game logic) → wiring. A render function paints; it never computes a rule.
 - **Function declarations** for named operations (`function saveNote()`); **arrow functions** for small helpers and callbacks (`const heldLabel = (h) => …`).
 - **One delegated click handler** (`wire()`). A new control gets a `data-*` hook, is added to the handler's selector list, and gets a branch — never its own `addEventListener`, unless it needs pointer or keyboard events the click handler can't express.
 - **Markup builders return strings** of class-only HTML; every piece of data in them goes through **`esc()`**, and attribute values are **always double-quoted** (`security.md` §5).
@@ -143,13 +146,14 @@ Functions should:
 | `esc(s)` | Escape text for HTML |
 | `setText(bind, value)` | Fill every `[data-bind="…"]` with text |
 | `evaluateDice(expr)` | The one dice engine |
+| `M.<rule>(character, …)` | The one mechanics engine — usually reached through its wrapper (`healthMax()`, `damage()`, `rest()`) |
 | `WAYPOINT_PORTRAIT.compress(file)` | The one image pipeline |
 | `save()` / `saveRoster()` | Persist the open character / the roster |
 | `closeModal()` | Close whatever modal is open |
 | `showToast(text, variant)` | Transient confirmation |
 | `byLibraryId(id)` | Look up any content entry |
 
-- **Game rules are named constants**, defined once (`PRECISION_TO_HIT`). Change the rule in one place and every readout follows.
+- **Game rules are named constants**, defined once in `RULES` in `mechanics.js` (`PRECISION_TO_HIT`). Change the rule in one place and every readout follows.
 - **Data-driven over hard-coded.** Lists that might grow (`ATTRIBUTES`, `BIO_FIELDS`, `COST_KEYS`, `APPEARANCE_THEMES`) are arrays the UI and loader both read, so adding one is a one-line change.
 
 ---
@@ -238,14 +242,16 @@ Avoid comments that repeat the code. **Update comments when the code changes** �
 - Follow project conventions — including the ones in `CLAUDE.md`.
 - Remove dead code (it stays in git history).
 - Keep docs current: tick `rules-gaps.md` when a rule ships; update `design-system.md` for visual changes; log decisions in `architecture.md`.
-- Test in the browser over `http://` (Live Server) before calling something done.
+- Run `npm test` before calling something done, and add a test with the change: a unit test in `tests/unit/` for a rule, a browser test in `tests/e2e/` for a flow (`testing.md`).
+- Test in the browser over `http://` (Live Server) too — tests don't replace looking at it.
 - Check contrast (WCAG AA) for any new color pair, and keyboard access for any new control.
 
 ---
 
 ## 12. Don't
 
-- Create duplicate utilities — especially a second dice parser or image pipeline.
+- Create duplicate utilities — especially a second dice parser, mechanics implementation, or image pipeline.
+- Put game arithmetic in `main.js` — it belongs in `mechanics.js`, where it can be tested.
 - Introduce dependencies without a recorded decision.
 - Ignore the existing architecture (layers, one click handler, `data-*` state).
 - Change unrelated files.
@@ -265,7 +271,7 @@ Avoid comments that repeat the code. **Update comments when the code changes** �
 | **A modal** | Markup in `pages/modals/<owner>.html` with `.modal.modal--<name>` → a `.app[data-modal="<name>"] .modal--<name> { display: flex; }` rule → open by setting `data-modal`, close with `closeModal()` |
 | **A control** | Button with a `data-<action>` hook → add the hook to `wire()`'s selector list → add a branch that calls a named function |
 | **A design value** | Token in `tokens.css` with a comment on its job → use it → document in `design-system.md` |
-| **A game rule** | Named constant → a rules function (no DOM) → readouts derive from it → record in `rules-gaps.md` if it reconciles the guide |
+| **A game rule** | Constant in `RULES` and a function in `mechanics.js` (takes `ch`, no DOM) → export it from `create()` → a one-line wrapper in `main.js` if the UI calls it → a unit test in `tests/unit/mechanics.test.js` → record in `rules-gaps.md` if it reconciles the guide. If the sheet's numbers change on purpose, re-record the characterization snapshots (`testing.md` §4) |
 | **A saved field** | Add to `save()` → validate and clamp it in `applySave()` → add to the character file docs (`character-file.md` §3; optional fields don't bump `schemaVersion`) → `database.md` A3 |
 | **A storage key** | `waypoint.<dotted.path>` → wrap reads/writes in `try/catch` → list it in `architecture.md` §4 and `database.md` A2 |
 | **A content field** | Column in the Google Sheet → `library-schema.md` → rerun `node tools/csv-to-json.mjs` |
@@ -287,6 +293,9 @@ New or changed conventions, newest first. Add a row whenever this doc changes.
 
 | Date | Convention | Notes |
 |---|---|---|
+| 2026-10-05 | Game arithmetic lives in `mechanics.js`; `main.js` wraps it | Extracted so rules can be unit-tested. Older history shows them in `main.js` |
+| 2026-10-05 | Tests: `npm test`; unit `*.test.js`, browser `*.spec.js` | Dev-only `package.json`; never add `"type": "module"` |
+| 2026-10-05 | No `style="…"` attributes anywhere, enforced by the CSP | Gear slots moved from `style="--slot-span"` to `data-span` |
 | 2026-10-05 | `.gitignore` added at repo root | `.DS_Store` files untracked (they stay on disk) |
 | 2026-10-05 | Type and spacing scales (`--fs-*`, `--space-*`) are mandatory | Older raw px values were migrated; `frame.css` device chrome is exempt |
 | 2026-10-05 | Feedback uses `.status` variants and `showToast()` | Replaced one-off warning styles (`.confirm__text--warn`, `.import__note--warn`) |

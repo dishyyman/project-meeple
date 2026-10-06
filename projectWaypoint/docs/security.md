@@ -100,7 +100,22 @@ With no server, nothing can be stolen from *us*. What can go wrong happens on th
 
 - **Text is escaped before it becomes markup.** Every render that builds HTML from data passes text through `esc()` (escapes `& < > "`). This is what stops a malicious name or note from running script.
 - **Rule:** attribute values in generated markup are always **double-quoted** — `esc()` doesn't escape `'`, so a single-quoted attribute would be unsafe.
-- **Rule:** no `eval()`, `new Function()`, `document.write()`, inline event handlers (`onclick="…"`), or inline `<script>` — none exist today; keep it that way.
+- **Rule:** no `eval()`, `new Function()`, `document.write()`, inline event handlers (`onclick="…"`), inline `<script>`, or inline `style="…"` attributes — none exist; keep it that way. The Content Security Policy now **enforces** this: any of them would be refused by the browser.
+
+### Content Security Policy — built 2026-10-05
+
+A `<meta http-equiv="Content-Security-Policy">` tag in `index.html` is the backstop behind `esc()`: if an escaping bug ever let markup onto the page, the browser still refuses to run it.
+
+```text
+default-src 'self'; script-src 'self';
+style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com;
+img-src 'self' data: blob:; connect-src 'self';
+object-src 'none'; base-uri 'self'; form-action 'none'
+```
+
+- No `'unsafe-inline'` and no `'unsafe-eval'` anywhere. JS may still set CSS custom properties through `el.style.setProperty()`, which a CSP does not block.
+- **Changing a source is a security decision** — record why here. Self-hosting the fonts (Gap 4) would let the two Google entries go.
+- A `<meta>` CSP can't set `frame-ancestors` (clickjacking protection); that needs a real HTTP header from the host. **Open** — with hosting.
 
 ### Rate limiting, CORS, authentication, authorization — Open
 
@@ -165,7 +180,7 @@ Log:
 | | Portraits | Character / backup files | Compendium files |
 |---|---|---|---|
 | **Allowed types** | Any image the browser can decode (`accept="image/*"`); must report an `image/` type | `.json` | `.json` |
-| **Maximum size** | 25 MB input; re-encoded to JPEG, ≤ ~400 KB stored | **No limit — gap** | **No limit — gap** |
+| **Maximum size** | 25 MB input; re-encoded to JPEG, ≤ ~400 KB stored | **10 MB**, checked before reading | **10 MB**, checked before reading |
 | **Validation** | Decoded and re-drawn to a canvas, then re-encoded — the stored image is newly made pixels, not the original file | Envelope, schema version, field-by-field clamping (§5) | Envelope, schema version, id whitelist (§5) |
 | **Storage** | Device storage, own key per character | Device storage | Device storage |
 
@@ -179,9 +194,9 @@ Log:
 
 | # | Gap | Risk | Proposed fix |
 |---|---|---|---|
-| 1 | **No size limit on imported JSON files** | A very large file is read fully into memory and could freeze the tab or fill storage | Refuse files over a sane cap (e.g. 10 MB — a full backup with portraits is roughly 0.5 MB per character) before reading |
-| 2 | **No Content Security Policy** | If an escaping bug ever slipped in, nothing would stop injected script from running | Add a CSP `<meta>` tag: scripts from self only, styles from self + Google Fonts, fonts from Google, images from self / `data:` / `blob:`. Feasible now: the app has no inline scripts or inline handlers |
-| 3 | **Escaping not audited end to end** | ~140 `esc()` calls and 10 `innerHTML` writes; one missed field from an imported file would be an XSS hole | One-time audit: trace every imported string to the point it's rendered. Ideally a test that imports a file full of `<img onerror>` payloads and checks nothing executes (`testing.md`) |
+| 1 | ~~No size limit on imported JSON files~~ | — | **Closed 2026-10-05.** `MAX_IMPORT_BYTES` (10 MB) in `main.js`, checked in `readWaypointFile()` before the file is read. 10 MB is safely above anything the app can write, since all its data must fit in ~5 MB of storage. Tested in `security.spec.js`. |
+| 2 | ~~No Content Security Policy~~ | — | **Closed 2026-10-05.** See §5. Required removing the app's last inline `style` attributes (gear slots now use `data-span`). Tested: an injected inline script and inline handler are refused. |
+| 3 | **Escaping audit — mostly closed** | One missed field from an imported file would be an XSS hole (the CSP would still stop it running) | **2026-10-05:** `security.spec.js` imports `malicious.waypoint.json` — payloads in the name, every bio field, notes, inventory, abilities, passives, an ability's `kind`, a fake portrait and a restored content entry — visits the roster, all sheet tabs with every row expanded, and Edit, then checks that no element gained a handler, no payload ran, there were no CSP violations, and the text shows literally. Proven to catch a removed `esc()`. **Remaining:** screens the test doesn't open yet — the backpack and item-detail modals, the notes search highlight, the share window. |
 | 4 | **Google Fonts is a third-party request** | Shares the player's IP with Google; a privacy disclosure item | Self-host the font files (they're open-licensed) |
 | 5 | **Share flow may not say the file includes the photo and notes** | Players could share more than they mean to | Review the share window's copy |
 | 6 | **Production hosting unknown** | Must be HTTPS | Decide with hosting (`architecture.md`) |
@@ -197,9 +212,9 @@ Log:
 - [x] Portraits re-encoded, size-limited, metadata stripped
 - [x] Errors shown to players are plain-language and expose nothing sensitive
 - [x] Dependencies reviewed — there are none (fonts aside)
-- [ ] Import file size limit (Gap 1)
-- [ ] Content Security Policy (Gap 2)
-- [ ] Escaping audit + malicious-file test (Gap 3)
+- [x] Import file size limit (Gap 1)
+- [x] Content Security Policy (Gap 2)
+- [x] Malicious-file test (Gap 3) — remaining screens listed in §9
 - [ ] Self-hosted fonts (Gap 4)
 - [ ] Served over HTTPS in production (Gap 6)
 

@@ -2,7 +2,7 @@
 
 > **What this doc is for:** how the app is validated. "The code looks correct" is not done — the change has to be **run and checked**.
 >
-> **Status:** there is **no automated test suite yet**. Today, verification is manual in the browser, plus the content converter's own checks. This doc sets out what to test, the tools that fit the project's no-build, no-runtime-dependency rules, and the order to build the suite in. Items not yet built are marked **Open**.
+> **Status (2026-10-05):** an automated suite exists — **80 unit tests** and **18 browser tests**, all passing. Run everything with `npm test` (§7). What each file covers is in §4; what's still to build is in §9. Items not yet built are marked **Open**.
 >
 > **Related docs:** [`prd.md`](prd.md) (features and acceptance criteria) · [`architecture.md`](architecture.md) · [`security.md`](security.md) (Gap 3 — malicious-file test) · [`code-style.md`](code-style.md) · [`rules-gaps.md`](rules-gaps.md) (rules the app must match)
 
@@ -29,8 +29,9 @@ Test small pieces with no browser:
 
 - **The dice engine** (`dice.js`) — arithmetic, precedence, dice limits, invalid input, never `eval()`.
 - **Content converters** — `csv-to-json.mjs` refuses bad rows (it already exits with errors and writes nothing); id derivation; `formerIds`.
-- **Game rules** — derived stats, the Wound cascade, heal/damage, rests, multiclass rules. **Blocked today:** these live inside `main.js`'s closure and can't be imported. **Open:** extract the pure rules into their own file (the way `dice.js` was extracted) so Node can test them.
-- **Validation and clamping** — the loaders that check stored and imported data (`database.md` A6). Same blocker as above.
+- **Game rules** — derived stats, the Wound cascade, heal/damage, rests, multiclass rules. **Built:** these live in `resources/js/mechanics.js` (extracted from `main.js` for exactly this reason) and are tested against a small hand-written compendium.
+- **Content** — the real compendium states the numbers the guide states (weapons, shields, armour, base block), ids are unique, dice columns parse.
+- **Validation and clamping** — the loaders that check stored and imported data (`database.md` A6). **Blocked:** still inside `main.js` (`applySave()`, the file parsers). Covered end to end by the browser tests for now; **Open:** extract them the same way.
 
 ### Integration Testing
 
@@ -71,36 +72,61 @@ Chosen to keep the app itself dependency-free. **Test tools are development-only
 |---|---|---|
 | **Unit** | **Node's built-in test runner** (`node --test`, `node:assert`) | Zero dependencies; Node 24 is already installed; `dice.js` already loads in Node |
 | **Integration** | Node test runner for file-format logic once extracted; **Playwright** for anything that needs the browser (storage, files, rendering) | |
-| **E2E** | **Playwright** (`playwright-core` driving the installed Chrome) | Already proven on this project: used on 2026-10-05 to screenshot every screen and verify the toast and status lines |
+| **E2E** | **Playwright** (`@playwright/test`, driving the installed Chrome via `channel: 'chrome'`) | No browser download; one `npm install` and it runs |
 | **Accessibility** | Manual keyboard pass; **Open:** automated checks (e.g. axe-core via Playwright) | |
 | **Visual** | Playwright screenshots, compared before/after | |
 
-**Open — decision needed:** Playwright is a dev dependency, which means adding a `package.json` (dev-only). Record it in `architecture.md` §9 when adopted.
+**Decided 2026-10-05** (`architecture.md` Decision 10): Playwright is a **dev-only** dependency in `projectWaypoint/package.json`. The app never loads it.
+
+**Do not add `"type": "module"` to `package.json`.** Node would then treat `dice.js` and `mechanics.js` as ES modules and the converter and unit tests would break.
+
+**Setup on a new machine:** Node 20+ and Google Chrome, then `npm install` in `projectWaypoint/`.
 
 ---
 
 ## 4. Test File Structure
 
-**Proposed** (nothing exists yet):
-
 ```text
 projectWaypoint/
+├── package.json             # dev-only scripts and devDependencies
+├── playwright.config.js     # starts tests/serve.mjs, drives installed Chrome
 └── tests/
-    ├── unit/            # node --test — dice, converters, extracted rules
-    │   └── dice.test.js
-    ├── integration/     # file formats, save/load round-trips
-    ├── e2e/             # Playwright — critical flows in §5
-    │   └── helpers/     # start a local server, open the app, seed storage
-    ├── security/        # malicious and malformed file imports
-    └── fixtures/        # sample character files, backups, compendiums
-        ├── characters/  # valid v1, older-shape, too-new, malicious, malformed
-        └── compendiums/
+    ├── serve.mjs            # tiny static server (Node's http, no dependency)
+    ├── unit/                # node --test
+    │   ├── dice.test.js       # 17 — arithmetic, limits, refusals, never eval
+    │   ├── mechanics.test.js  # 56 — every rules-gaps §6 rule + §7 rulings
+    │   └── content.test.js    #  7 — the real compendium vs the guide
+    ├── e2e/                 # Playwright
+    │   ├── helpers/app.js     # openApp, press, seed storage, files, downloads
+    │   ├── characterization.spec.js  # 2 — the whole sheet, step by step
+    │   ├── characterization.spec.js-snapshots/   # the recorded baselines
+    │   ├── smoke.spec.js      # 2 — Flows 1, 2
+    │   ├── data-safety.spec.js # 5 — Flows 6, 7, 7b, 8, 11
+    │   └── security.spec.js   # 9 — Flow 12, CSP, size limit
+    └── fixtures/
+        ├── files/             # real exports + hostile/malformed files
+        └── saves/             # raw saves seeded straight into storage
 ```
 
 **Rules:**
-- Test files are named `<thing>.test.js`.
-- **Fixtures are real files** in the formats players actually exchange — they double as compatibility tests: once a character file is in `fixtures/`, every future version must still import it.
-- Tests never touch a real player's storage — E2E runs use a fresh browser profile.
+- Unit tests are `<thing>.test.js`; browser tests are `<thing>.spec.js`.
+- **Fixtures are real files** in the formats players actually exchange — they double as compatibility tests: once a character file is in `fixtures/files/`, every future version must still import it. **Never edit or delete one to make a test pass.**
+- `elara.waypoint.json`, `backup.waypoint.json` and `compendium.library.json` were exported by the app itself. The hostile and malformed ones were made from `elara.waypoint.json`; `malicious.waypoint.json` puts script payloads in every player-authored string and in a restored content entry.
+- Tests never touch a real player's storage — every browser test gets a fresh context.
+- **Randomness is pinned.** Browser tests replace `Math.random` with a seeded generator (`openApp(page, { seed })`), so rolls are exact; unit tests pin dice faces directly.
+- **`press(page, selector)`** clicks through the app's own handler regardless of visibility; use Playwright's `click()` when the test is about what a player can reach.
+
+### Characterization tests
+
+`characterization.spec.js` records **everything the sheet displays** after each step of a fixed session — effects, damage through the Wound cascade to Downed, healing, rests, ticks, every roll — for the seed character and for a multiclass fixture. They were recorded *before* the mechanics extraction and proved it changed nothing.
+
+When a rules change is **deliberate**, the record will differ. Read the diff, confirm it's the change you meant, then re-record:
+
+```bash
+npx playwright test characterization --update-snapshots
+```
+
+**Never re-record to make an unexplained failure go away.** The snapshot files are named `-darwin`, because Playwright names them per OS; a non-Mac machine would record its own the first time.
 
 ---
 
@@ -160,7 +186,20 @@ Each flow lists the steps and the result that must hold. These are the E2E suite
 
 ## 6. Coverage
 
-**Target:** practical, not a percentage. **Every critical flow in §5 has an E2E test**, and **every rule in `rules-gaps.md` §6 ("Verified as matching") has a unit test** once the rules are extractable.
+**Target:** practical, not a percentage. **Every critical flow in §5 has an E2E test**, and **every rule in `rules-gaps.md` §6 ("Verified as matching") has a unit test** — the second is met.
+
+**Covered today:**
+
+| Area | Where |
+|---|---|
+| Dice engine | `unit/dice.test.js` |
+| Every rules-gaps §6 rule and §7 ruling | `unit/mechanics.test.js` |
+| Compendium content vs the guide | `unit/content.test.js` |
+| Flows 1, 2 (first run, creation) | `e2e/smoke.spec.js` |
+| Flows 3, 4, 5 (damage, rolls, effects) | `e2e/characterization.spec.js` (as recorded output, not readable assertions) |
+| Flows 6, 7, 8, 11 (edit, export/import, backup, delete) | `e2e/data-safety.spec.js` |
+| Flow 12 (hostile files), CSP, import size limit | `e2e/security.spec.js` |
+| **Not yet:** Flow 9 (compendium Add/Replace/Restore), Flow 10 (rules lookup — waits on the back-button fix), accessibility | §9 |
 
 **Prioritize:**
 1. **Data mutations** — save, load, delete, import, export, backup. Losing a character is the worst failure this app can have.
@@ -177,8 +216,12 @@ Each flow lists the steps and the result that must hold. These are the E2E suite
 | | Command | Status |
 |---|---|---|
 | **Run the app** | VS Code → right-click `index.html` → Open with Live Server (or any static server, e.g. `python3 -m http.server`) | Works today |
-| **Unit tests** | `node --test tests/unit` | **Open** — no tests yet |
-| **E2E tests** | `npx playwright test` | **Open** — needs the dev-dependency decision (§3) |
+| **Everything** | `npm test` | Works — unit, then browser |
+| **Unit tests** | `npm run test:unit` | Works — 80 tests, under a second |
+| **Browser tests** | `npm run test:e2e` (or `npx playwright test <file>`) | Works — 18 tests, ~7 seconds; starts its own server |
+| **One browser test** | `npx playwright test security -g malicious` | |
+| **A failed browser test** | `npx playwright show-trace test-results/<test>/trace.zip` | Step-by-step replay, kept on failure |
+| **Serve for tests** | `npm run serve` | `http://localhost:4173` |
 | **Content check** | `node tools/csv-to-json.mjs` | Works today — exits with errors and writes nothing if the content is invalid |
 | **Rules regenerate** | `node tools/rtf-to-rules.mjs` | Works today (Mac only — `architecture.md` §13) |
 | **Lint** | — | **Open** — no linter (`code-style.md` §10) |
@@ -191,7 +234,7 @@ Each flow lists the steps and the result that must hold. These are the E2E suite
 
 A change is done when:
 
-- [ ] **Tests pass** — once a suite exists; until then, the relevant flows in §5 were run by hand.
+- [ ] **`npm test` passes.** A changed rule gets a unit test in `mechanics.test.js`; a changed flow gets a browser test.
 - [ ] **It was run in the browser** over `http://`, not just read.
 - [ ] **No console errors** on load or during the changed flow.
 - [ ] **Critical flow verified** — every §5 flow the change touches.
@@ -206,12 +249,15 @@ A change is done when:
 
 ## 9. Roadmap — building the suite
 
-In order, smallest and highest-value first. Each step is **Open** until done.
-
-1. **Dice unit tests** with `node --test` — no setup needed; `dice.js` already runs in Node.
-2. **Fixtures** — export real character files, backups, and compendiums into `tests/fixtures/`, plus hand-made malicious and malformed versions.
-3. **Playwright setup** (dev-only `package.json`) and a helper that serves the app and opens it with clean storage.
-4. **E2E for data safety first:** Flows 7, 8, 11, 12 (export/import, backup, delete, hostile files).
-5. **E2E for play:** Flows 3, 4, 5.
-6. **Extract pure rules** from `main.js` into a testable file, then unit-test everything in `rules-gaps.md` §6.
-7. **Remaining flows** and an automated accessibility pass.
+1. ~~**Dice unit tests**~~ — done 2026-10-05.
+2. ~~**Fixtures**~~ — done: real exports plus hostile and malformed files.
+3. ~~**Playwright setup**~~ — done: dev-only `package.json`, `tests/serve.mjs`, helpers.
+4. ~~**Characterization baseline**~~ — done, recorded before the extraction.
+5. ~~**Extract the mechanics**~~ into `mechanics.js` — done; baselines unchanged.
+6. ~~**Unit-test every rules-gaps §6 rule**~~ — done.
+7. ~~**E2E for data safety and hostile files**~~ (Flows 6, 7, 8, 11, 12) — done, along with `security.md` Gaps 1–3.
+8. **Open — Flow 9:** compendium Add, Replace (reloads) and Restore Built-in.
+9. **Open — readable play tests:** Flows 3, 4, 5 as plain assertions ("health reads 4 / 9"), so a failure names the rule rather than a snapshot diff.
+10. **Open — extract save/load validation** (`applySave()`, file parsers) from `main.js` and unit-test the clamping in `database.md` A6.
+11. **Open — Flow 10** once the Rules back button returns to the right screen (`prd.md` Feature 2).
+12. **Open — automated accessibility:** keyboard reachability of every control and an axe-core pass.

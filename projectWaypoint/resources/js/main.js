@@ -594,349 +594,25 @@
   };
 
   /* ------------------------------------------------------------------ */
-  /* DERIVED STATS                                                      */
-  /* Single source of truth for numbers computed from the character's   */
-  /* core stats. Change the formula here and every readout follows.     */
+  /* DERIVED STATS — through the mechanics engine                       */
+  /* The arithmetic lives in resources/js/mechanics.js, with the rules   */
+  /* text that explains it. What stays here is the content the engine is */
+  /* handed (the gear catalog), the display helpers, and one wrapper per */
+  /* rule that passes the OPEN character — so every call site in this    */
+  /* file still reads healthMax(), statValue('Power'), evasion() and     */
+  /* never had to learn the engine exists.                               */
   /* ------------------------------------------------------------------ */
   const MOD_MIN = -20;
   const MOD_MAX = 20;
   const clampMod = (n) => Math.min(MOD_MAX, Math.max(MOD_MIN, Math.round(Number(n)) || 0));
+  const formatMod = (n) => (n >= 0 ? `+${n}` : `${n}`);
   const modLabel = (v) => (v === 0 ? '0' : formatMod(v));
 
-  // A core attribute as written on the character, before anything carried.
-  const statBase = (name) => {
-    const s = character.stats.find((x) => x.name === name);
-    return s ? s.value : 0;
-  };
-
-  // Everything the character is carrying, summed for one attribute. Nothing is
-  // ever written back into character.stats: the total is rebuilt on each render,
-  // so dropping the item that granted a bonus removes the bonus by itself —
-  // there is no stored number left behind to go stale.
-  const statMod = (name) => character.inventory.reduce(
-    (total, item) => total + (item.mods || []).reduce(
-      (n, mod) => n + (mod.stat === name ? mod.value : 0), 0), 0);
-
-  /* Everything currently ON the character, summed for one attribute — the
-     boon half of the idea statMod() covers for carried items.
-
-     Multiplied by the stack count, because an effect's text is stated PER
-     STACK everywhere else in this file ("the tracker counts stacks, it never
-     does the multiplication for you"), so two stacks of Strength is +2 Power.
-     Neither Strength nor Focus declares a maxStacks, so that is a state the
-     sheet can actually reach.
-
-     Like statMod(), nothing is written back into character.stats: the total is
-     rebuilt on every render, so clearing the boon removes the bonus by itself
-     and there is no stored number left to go stale. */
-  const statFromEffects = (name) => character.effects.reduce((total, e) => {
-    const m = effectById(e.id)?.mod;
-    return total + (m && m.stat === name ? m.value * e.stacks : 0);
-  }, 0);
-
-  // Everything a stat is NOT written as: carried items plus active boons.
-  // Its own helper because three callers need "is this stat modified at all" —
-  // the card's colour, the popover, and statValue() itself.
-  const statBonus = (name) => statMod(name) + statFromEffects(name);
-
-  // The number every readout should use. toHitBonus() below reads through this,
-  // so a +2 Precision trinket moves the To-Hit box with nothing wiring them
-  // together — that is the whole point of deriving rather than storing. The
-  // same now goes for a boon: taking Strength widens every damage box on the
-  // sheet, because damageBonus() reads Power through here and nowhere else.
-  const statValue = (name) => statBase(name) + statBonus(name);
-  // Waypoint rule: 1 point of Precision = +2 to hit (weapons and spells alike).
-  const PRECISION_TO_HIT = 2;
-  const toHitBonus = () => statValue('Precision') * PRECISION_TO_HIT;
-
-  /* The damage half of the same idea, and deliberately written to look like
-     it: "Roll damage — weapon or spell dice + Power" (guide, Ch.1), so one
-     point of Power is one point of damage on every attack a character makes.
-
-     Kept as its own named constant rather than folded into valBox() for the
-     reason PRECISION_TO_HIT is: Power's worth is a RULE, and a rule that
-     lives in one place can be re-tuned in one place. Every damage box in the
-     app reads through this, so changing the 1 changes weapons, abilities and
-     spells together and none of them can drift from the others.
-
-     Not yet modelled, and this is the function that will have to know about
-     it: a dual-wielded OFFHAND attack takes no Power bonus (Ch.4). When the
-     second attack exists it needs to opt OUT of this, rather than valBox()
-     guessing which of two damage boxes is the offhand one. */
-  const POWER_TO_DAMAGE = 1;
-  const damageBonus = () => statValue('Power') * POWER_TO_DAMAGE;
-
-  /* ---- healing, which has TWO sides ----------------------------------
-
-     This is the one number in the game that is modified at both ends, and
-     keeping the two apart is the whole of getting it right.
-
-     FORTUNE IS OUTPUT. It makes the healing YOU produce more effective —
-     your spells and abilities heal for more, whether they land on an ally or
-     on yourself. It belongs to the caster, so it is folded into the healing
-     EXPRESSION exactly as Power is folded into a damage one: a Fortune 2
-     character's `1d6` heal reads and rolls `1d6+2`. (Fortune also gives +1
-     Fortitude, which fortitude() has always read.)
-
-     POISON IS INTAKE. "−1 healing received per stack" belongs to whoever is
-     being healed, and reduces the amount that actually arrives.
-
-     The two meet only when you heal YOURSELF, and then they net off — which
-     is the case the app cannot decide for you, because nothing on this sheet
-     knows who you targeted. So Fortune is applied always (it is yours) and
-     Poison is offered as a toggle (it is the target's). See openRoll's
-     Poison control.
-
-     Deliberately NOT applied to Mana. Mana is spent and restored, not damaged
-     and healed — the calculator switches its own verbs for that reason — and
-     Fortune boosts healing, not resource recovery. Structurally this is why
-     the bonus lives in healExpr() rather than in heal(): only an ability's
-     healing expression ever passes through here. */
-  const FORTUNE_TO_HEAL = 1;
-  const healBonus = () => statValue('Fortune') * FORTUNE_TO_HEAL;
-
-  // What Poison takes off healing RECEIVED. Its own name rather than a bare
-  // stacksOf() at the call sites, so the rule is stated once and the two
-  // surfaces that offer it — the roll card and the heal calculator — cannot
-  // disagree about what a stack is worth.
-  const POISON_TO_HEAL = -1;
-  const poisonHealPenalty = () => stacksOf('condition.poison') * POISON_TO_HEAL;
-
-  const formatMod = (n) => (n >= 0 ? `+${n}` : `${n}`);
-
-  /* ---- critical strikes ----------------------------------------------
-
-     GAME RULE (guide, Ch.1). A natural roll inside your Critical Strike
-     threshold doubles the damage. The threshold is 20 by default and is
-     LOWERED by Lethality — so Lethality 0 crits on 20, Lethality 1 on 19-20,
-     Lethality 2 on 18-20, and so on. This is the third attribute to be given
-     a named constant of its own, and it reads like the other two on purpose:
-     Precision buys to-hit, Power buys damage, Lethality buys crit range.
-
-     THE NATURAL DIE IS THE WHOLE RULE. What counts is the number printed on
-     the d20, never the total — "Precision can never push you into a crit."
-     A character with +6 to hit rolling a 3 has a 9 on the card and has not
-     critted, and every caller of isCrit() passes a FACE for that reason.
-
-     The step is negative because Lethality lowers the number you have to
-     beat. Written as a signed step rather than a subtraction so it reads like
-     PRECISION_TO_HIT and POWER_TO_DAMAGE — one point of the attribute is
-     worth this much — and so a rebalance that makes each point worth two
-     numbers of range is a single edit here. */
-  const CRIT_BASE = 20;
-  const LETHALITY_TO_CRIT = -1;
-
-  /* The lowest face that crits, right now. Both clamps are rules rather than
-     defensive padding, and removing either one breaks something the guide
-     states outright:
-
-       · FLOOR at 2 — "a natural 1 always fails". No amount of Lethality may
-         put 1 inside the threshold, so the range can widen to 2-20 and stop.
-       · CEILING at CRIT_BASE — "a natural 20 always hits and always crits".
-         Lethality can go NEGATIVE through an effect or a cursed item, which
-         would otherwise push the threshold to 21 and make a natural 20 a
-         plain hit. It cannot; 20 is the floor of the ceiling, so to speak. */
-  const CRIT_MIN_FACE = 2;
-  const critThreshold = () => Math.min(
-    CRIT_BASE,
-    Math.max(CRIT_MIN_FACE, CRIT_BASE + LETHALITY_TO_CRIT * statValue('Lethality')),
-  );
-
-  // Face in, verdict out. Takes the number on the die, never a total — see
-  // the note above, and note that every call site is responsible for handing
-  // over a natural face.
-  const isCrit = (face) => face >= critThreshold();
-
-  /* ---- skills --------------------------------------------------------
-     Read the line above, then read this one, because they are the two halves
-     of a distinction that is easy to erase by accident:
-
-       To-hit  IS derived  — Precision feeds it through PRECISION_TO_HIT.
-       A skill IS NOT      — its bonus is the rank the player bought, and no
-                             core attribute touches it. Ever.
-
-     So skillMod() scales the RANK and reads nothing else. One point is worth
-     +2 (guide, step 4: "4 (each +2) Skill Points"), so rank 1 shows +2 and
-     rank 3 shows +6. Rank and bonus are deliberately kept as different
-     numbers: rank is what the player PAID, the bonus is what they ROLL, and
-     collapsing them would mean the budget readout and the sheet disagreed by
-     a factor of two the moment this rule changed again.
-
-     Keeping it a named function is the point — every readout asks the same
-     question in the same place, and this comment sits where someone would go
-     looking before "fixing" skills to read through an attribute the way
-     to-hit does. They don't. Ever.
-
-     Nor does a skill name a check the way d20 games do — there is no "make an
-     Athletics check" in Waypoint. A skill's text describes the KIND of action
-     it covers, and the table decides whether what a player is attempting is
-     one of them; the bonus is then added to that roll. That is why the app
-     shows the prose in full and never tries to match it to anything. */
-  const SKILL_POINT_BONUS = 2;
-  const skillMod = (rank) => rank * SKILL_POINT_BONUS;
-
-  // The points budget: 4 at creation, then 1 per level-up (guide, ch.2) — the
-  // same shape as the attribute budget. It reads through level(), which is
-  // build.levels.length, so a level-up flow that pushes one entry there grants
-  // the point on its own with nothing wiring the two together.
-  const SKILL_POINTS_AT_CREATION = 4;
-  const SKILL_POINTS_PER_LEVEL   = 1;
-  const skillPointsMax   = () => SKILL_POINTS_AT_CREATION + level() * SKILL_POINTS_PER_LEVEL;
-  const skillPointsSpent = () => character.skills.reduce((n, k) => n + k.rank, 0);
-
-  /* The attribute budget — the same shape, and the comment above describes it
-     just as well: 4 at creation, 1 per level (guide, ch.2).
-
-     It lives HERE, beside its twin, rather than with the creation wizard's own
-     numbers where ATTR_POINTS_AT_CREATION used to sit. That filing was right
-     while creation was the only screen that could spend these points; now that
-     Edit Character can too, the figure is a rule about the character rather
-     than a rule about the wizard, and the per-level half has nowhere else to
-     go anyway. */
-  const ATTR_POINTS_AT_CREATION = 4;
-  const ATTR_POINTS_PER_LEVEL   = 1;
-  const attrPointsMax   = () => ATTR_POINTS_AT_CREATION + level() * ATTR_POINTS_PER_LEVEL;
-  const attrPointsSpent = () => character.stats.reduce((n, s) => n + s.value, 0);
-
-  /* Creation spends its 4 points on four SEPARATE skills, one each. That is
-     checkable without storing the order points were spent in: however many
-     points a character has spent, the first four of them had to land on four
-     different skills, so the distinct count can never trail the spend below 4.
-     Order-free, therefore still derived rather than stored.
-
-     Note what the Math.min does. A character with only two points placed needs
-     only two skills — they have not reached the fourth point yet, and a
-     half-finished spread is not an illegal one. What it forbids is the state
-     the rule exists to forbid: four points on fewer than four skills. So a
-     level 0 character, whose budget is exactly four, cannot pile them onto one
-     skill however they get there.
-
-     Takes a LIST rather than reading the character, so the sheet's note and the
-     editor's save guard are the same rule and not two spellings of it. */
-  const spreadOk = (skills) => {
-    const spent = skills.reduce((n, k) => n + k.rank, 0);
-    return skills.length >= Math.min(SKILL_POINTS_AT_CREATION, spent);
-  };
-  const skillSpreadOk = () => spreadOk(character.skills);
-
-  /* On the SHEET both budget rules are flagged and never enforced — the app
-     follows the same split it already draws for gear: hand capacity is
-     physical so it is blocked, training is a rules permission so it is only
-     marked. Skill points are a permission. A GM handing out a bonus point must
-     not be fought by the tool, and an imported character has to be drawn
-     honestly whatever state it arrives in.
-
-     The EDITOR is the one place they bind, because it is the one place the app
-     is being asked to author a spread rather than report one. See
-     saveSkillEdit(). */
-
-  /* ---- class identity -----------------------------------------------
-     Two different questions get asked of a character's build, and they want
-     different answers — which is the reason `origin` and `levels` are kept
-     apart rather than collapsed into one list:
-
-       "what IS this character?"     → origin plus everything levelled into.
-                                        Drives HP pool, wounds, proficiencies.
-       "what have they GAINED?"      → the level-ups alone. Drives mana growth
-                                        and trait tier access.
-
-     Creation is level 0, so a brand new character has an origin and an empty
-     `levels` — and correctly gets its subclass's starting mana and nothing more.
-
-     These take the build as an argument, defaulting to the open character's.
-     Two callers need to ask about a build that is NOT the open character:
-     the Personae list, which labels every character in the roster, and the
-     creation wizard, which previews a build nobody has committed to yet.
-     Neither is a reason for a second implementation of the rules. */
-  const level = (build = character.build) => build.levels.length;
-  const subclassIds = (build = character.build) => [build.origin, ...build.levels]
-    .filter(Boolean);   // a build with no class yet contributes no subclasses
-
-  // "Your health pool is determined by whichever class you have the majority of
-  // levels in. On a tie, you choose." Creation is not a level, so the tally runs
-  // over level-ups only; `build.hpFrom` is how the player expresses the tie
-  // choice. A single-class character never reaches any of that.
-  function primarySubclass(build = character.build) {
-    const { origin, levels, hpFrom } = build;
-    if (!levels.length) return subclassOf(origin);
-    if (hpFrom && levels.includes(hpFrom)) return subclassOf(hpFrom);
-    const tally = new Map();
-    for (const id of levels) tally.set(id, (tally.get(id) || 0) + 1);
-    // Walking `levels` in order means an unbroken tie resolves to whichever
-    // subclass was taken first, which is deterministic rather than arbitrary.
-    let best = levels[0];
-    for (const id of levels) if (tally.get(id) > tally.get(best)) best = id;
-    return subclassOf(best);
-  }
-
-  // Constitution is +1 HP per point, read through statValue() — so a +2
-  // Constitution trinket widens the bar with nothing wiring the two together.
-  const healthMax  = () => (primarySubclass()?.hp ?? 0) + statValue('Constitution');
-  const woundsMax  = () => primarySubclass()?.wounds ?? 0;
-  const patchesMax = () => primarySubclass()?.patches ?? 0;
-
-  // DOWNED — derived, never stored. A Wound is taken each time the health bar
-  // empties, so a character at the Wound cap has been through the whole bar as
-  // many times as their subclass allows: the last Wound is the one they do not
-  // get up from. Reaching the cap is therefore the whole condition, by whatever
-  // route — the damage cascade, or a pip tapped by hand — and an empty bar is a
-  // CONSEQUENCE of it rather than half of the test (see setWounds). The cap
-  // guard keeps a sheet with no subclass yet (0 wounds, 0 cap) from reading as
-  // downed before the character exists.
-  const isDowned = () => woundsMax() > 0 && character.wounds >= woundsMax();
-
-  // "Choose the least restrictive option — the class with more Mana — but Mana
-  // pools do not combine." The starting pool is therefore a MAX across the
-  // character's subclasses, never a sum. Growth then comes from the subclass
-  // chosen AT each level-up, which is precisely why the source sheet's
-  // level-0..10 columns had to go: a fixed column per level cannot describe a
-  // character who levelled Berserker twice and Ice three times.
-  const manaMax = () => {
-    const starts = subclassIds().map((id) => subclassOf(id)?.startingMana ?? 0);
-    return (starts.length ? Math.max(...starts) : 0)
-      + character.build.levels.reduce((n, id) => n + (subclassOf(id)?.manaPerLevel ?? 0), 0);
-  };
-
-  // "If two or more of your classes have weapon or armor restrictions that
-  // conflict, you follow the least restrictive option" — a union, not an
-  // intersection. An empty result is a real answer (a subclass authored with
-  // `none` trains in nothing at all), never a missing one — and so is the
-  // empty result from a build with no class chosen yet, which is what the
-  // creation wizard shows before step 1 is answered.
-  const proficiencies = (key, build = character.build) => {
-    const out = [];
-    for (const id of subclassIds(build)) {
-      for (const p of (subclassOf(id)?.[key] || [])) if (!out.includes(p)) out.push(p);
-    }
-    return out;
-  };
-
-  /* ---- defensive stats ----------------------------------------------
-     The base block is CONTENT now: every subclass states its own evasion,
-     armor, fortitude and speed in tools/csv/subclasses.csv. Today all 27 rows
-     say the same 8 / 0 / 8 / 5, but they are authored per subclass precisely
-     so they can diverge — when one does, the sheet is the only thing that
-     changes.
-
-     BASE_STATS stays as the fallback for a character who has no subclass to
-     read (an unfinished build, or one whose subclass left the compendium),
-     and as the profile a downed character drops to. It is the same
-     "derive, don't store" rule the rest of the sheet follows: the number is
-     looked up on every render, never copied onto the character. */
-  const BASE_STATS = { evasion: 8, armor: 0, fortitude: 8, speed: 5 };
-
-  // The base value of one defensive stat for THIS character — their subclass's
-  // if they have one, the shared block if they do not. Every formula below
-  // starts here rather than at a literal, so re-tuning a subclass moves its
-  // armour, shield and condition maths with it and nothing else has to know.
-  const baseStat = (key) => primarySubclass()?.[key] ?? BASE_STATS[key];
-
   /* ---- the gear catalog, from the library ----------------------------
-     Armour, weapons, shields and equipment are all CONTENT now: they live in
+     Armour, weapons, shields and equipment are all CONTENT: they live in
      tools/csv/items.csv, are converted into WAYPOINT_LIBRARY, and are looked
-     up here by id. Nothing about a suit of armour or a shield is written in
-     this file any more, so rebalancing one is a spreadsheet edit and a
-     re-run of the converter rather than a code change.
+     up here by id. Rebalancing one is a spreadsheet edit and a re-run of the
+     converter rather than a code change.
 
      A weapon IS its category (guide ch.4: "all weapons of the same class deal
      the same base damage"), so Shortsword and Axe are `examples` on one entry
@@ -961,150 +637,71 @@
   const ITEMS = new Map([...ARMOR, ...WEAPONS, ...EQUIPMENT].map((e) => [e.id, e]));
   const itemOf = (id) => ITEMS.get(id) || null;
 
+  /* The engine, bound to this device's compendium. Handed lookups rather
+     than the library itself, so it can be tested against a small fixture
+     (tests/unit/mechanics.test.js). The lookups are read lazily, on each
+     rule's call, so entries merged in later by an import are seen too. */
+  if (!window.WAYPOINT_MECHANICS) console.error('[waypoint] mechanics.js did not load.');
+  const M = window.WAYPOINT_MECHANICS.create({ subclassOf, itemOf, effectById });
+
+  // The rule constants, under the names this file has always used. Read
+  // from the engine so a rebalance in mechanics.js reaches every readout.
+  const {
+    PRECISION_TO_HIT, CRIT_BASE, SKILL_POINTS_AT_CREATION, ATTR_POINTS_AT_CREATION, HAND_CAPACITY,
+  } = window.WAYPOINT_MECHANICS.RULES;
+  const { skillMod, spreadOk } = window.WAYPOINT_MECHANICS;
+
   // Every armour value is a MODIFIER on the wearer's base block — evasion
-  // included. That was not always true (armour used to state Evasion
-  // absolutely), so if you are comparing against an older build, this is the
-  // line that changed. The base it modifies is now the subclass's, not a
-  // single shared constant.
+  // included. The base it modifies is the subclass's (see baseStat()).
   const armorSummary = (a) =>
     `Evasion ${modLabel(a.evasionMod)} · Armor ${modLabel(a.armorMod)} · Speed ${modLabel(a.speedMod)}`;
 
-  /* ---- what a hand is holding ----------------------------------------
-     A hand entry is { id, tag } rather than a bare id, because a weapon may
-     carry AT MOST ONE of its category's weaponTags and that choice belongs to
-     this character's weapon, not to the category every character shares.
-     `tag` is absent when no tag has been chosen — a perfectly ordinary state,
-     not an unfinished one. */
-  const handEntries = () => character.hands
-    .map((h, i) => ({ ...h, index: i, item: itemOf(h.id) }))
-    .filter((h) => h.item);
+  /* ---- the wrappers ---------------------------------------------------
+     One line each: the engine's rule, applied to `character`. Functions
+     that take a build still default to the open character's, so the roster
+     and the creation wizard can keep asking about builds that are not. */
+  const statBase          = (name) => M.statBase(character, name);
+  const statBonus         = (name) => M.statBonus(character, name);
+  const statValue         = (name) => M.statValue(character, name);
+  const toHitBonus        = () => M.toHitBonus(character);
+  const damageBonus       = () => M.damageBonus(character);
+  const healBonus         = () => M.healBonus(character);
+  const poisonHealPenalty = () => M.poisonHealPenalty(character);
+  const critThreshold     = () => M.critThreshold(character);
+  const isCrit            = (face) => M.isCrit(character, face);
 
-  const heldGear = () => handEntries().map((h) => h.item);
+  const skillPointsMax   = () => M.skillPointsMax(character);
+  const skillPointsSpent = () => M.skillPointsSpent(character);
+  const attrPointsMax    = () => M.attrPointsMax(character);
+  const attrPointsSpent  = () => M.attrPointsSpent(character);
+  const skillSpreadOk    = () => M.skillSpreadOk(character);
 
-  /* ---- hands: the shared budget -------------------------------------
-     What an item COSTS and what it DOES are separate questions, and a shield
-     is only confusing if you try to answer both with one category:
+  const level         = (build = character.build) => M.level(build);
+  const subclassIds   = (build = character.build) => M.subclassIds(build);
+  function primarySubclass(build = character.build) { return M.primarySubclass(build); }
+  const proficiencies = (key, build = character.build) => M.proficiencies(key, build);
+  const isTrained     = (g, build = character.build) => M.isTrained(g, build);
 
-       greatsword  2 hands, offensive
-       shortsword  1 hand,  offensive
-       shield      1 hand,  DEFENSIVE     <- the only unusual pairing
-       armour      0 hands, defensive     <- its own slot, competes with nothing
+  const healthMax  = () => M.healthMax(character);
+  const woundsMax  = () => M.woundsMax(character);
+  const patchesMax = () => M.patchesMax(character);
+  const manaMax    = () => M.manaMax(character);
+  const isDowned   = () => M.isDowned(character);
 
-     So hands are a budget that weapons and shields share, while defensive
-     numbers are a contribution that shields and armour share. Neither concept
-     has to know about the other. (Guide ch.4: "2 hands worth total", shield
-     "Included in the 2 hands worth of gear".) */
-  const HAND_CAPACITY = 2;
-  const handsUsed = () => heldGear().reduce((n, g) => n + (g.hands || 0), 0);
-  const handsFree = () => HAND_CAPACITY - handsUsed();
+  const baseStat     = (key) => M.baseStat(character, key);
+  const handEntries  = () => M.handEntries(character);
+  const heldGear     = () => M.heldGear(character);
+  const handsUsed    = () => M.handsUsed(character);
+  const handsFree    = () => M.handsFree(character);
+  function canEquip(id, swapIndex = null) { return M.canEquip(character, id, swapIndex); }
+  const woundPenalty = (key) => M.woundPenalty(character, key);
+  const stacksOf     = (id) => M.stacksOf(character, id);
+  const wornArmor    = () => M.wornArmor(character);
 
-  // Capacity is PHYSICAL, so it is enforced — unlike training, which is a rules
-  // permission the app only flags. `swapIndex` is the slot being replaced: its
-  // hands are already free for the purposes of what can go back into it, which
-  // is what makes changing a 2H weapon for another 2H weapon legal.
-  function canEquip(id, swapIndex = null) {
-    const g = itemOf(id);
-    if (!g) return false;
-    const held = swapIndex === null ? null : character.hands[swapIndex];
-    const freed = held ? (itemOf(held.id)?.hands || 0) : 0;
-    return (g.hands || 0) <= handsFree() + freed;
-  }
-
-  // Training is checked against whichever list the rules file it under. A
-  // shield's proficiency is "Shields", which subclasses grant in armorTypes
-  // alongside Light/Medium/Heavy — so a shield is trained like armour even
-  // though it is HELD like a weapon. Takes a build so the creation wizard can
-  // ask about a class nobody has committed to yet.
-  const isTrained = (g, build = character.build) =>
-    proficiencies(g.type === 'Shield' ? 'armorTypes' : 'weaponTypes', build).includes(g.prof);
-
-  // Every Wound costs the same: -2 Armor AND -1 Speed, both cumulative. At 3
-  // Wounds that is -6 Armor and -3 Speed.
-  //
-  // Flat per-Wound arithmetic rather than the per-Wound table this used to be.
-  // No step differs from any other now, so a table would be five copies of one
-  // rule with five chances to fall out of step — and it would have to be
-  // re-pitched for every wound cap in the library (most subclasses cap at 4,
-  // The Beast at 5). Multiplying by the Wound count fits any cap for free.
-  const WOUND_ARMOR_STEP = -2;
-  const WOUND_SPEED_STEP = -1;
-
-  const woundPenalty = (key) => {
-    const steps = { armor: WOUND_ARMOR_STEP, speed: WOUND_SPEED_STEP }[key] || 0;
-    return character.wounds * steps;
-  };
-
-  const stacksOf = (id) => {
-    const e = character.effects.find((x) => x.id === id);
-    return e ? e.stacks : 0;
-  };
-
-  const wornArmor = () => {
-    const a = itemOf(character.armorWorn);
-    return a && a.type === 'Armor' ? a : null;
-  };
-  // Summed rather than "the shield", because the hands budget is the only thing
-  // limiting how many you carry — two shields is unusual, not impossible.
-  const shieldBonus = (key) => heldGear()
-    .filter((g) => g.type === 'Shield')
-    .reduce((n, g) => n + (g[key] || 0), 0);
-
-  /* ---- downed ------------------------------------------------------
-     A downed character is helpless: not dodging, not resisting, not moving. So
-     Evasion and Fortitude fall back to their base values — every bonus that
-     belongs to someone still on their feet (Dexterity, Fortune, armour,
-     shields) stops applying — and Speed goes to zero outright, which is below
-     any base and so has to be stated rather than derived.
-
-     Evasion and Fortitude are written as baseStat() calls rather than literal
-     8s so the rule stays "you lose your bonuses", not "you become an 8":
-     re-tune a subclass's base block and its downed profile follows it.
-
-     Armor and Speed are stated zeros instead, because neither is a bonus being
-     stripped. Speed 0 is below the base 5 — being downed is not moving at all.
-     And Armor stops meaning anything once a character is down: Armor exists to
-     reduce incoming damage numbers, and damage numbers no longer matter to
-     someone already at the bottom of their Wound track. That is a flat zero by
-     intent, not a coincidence of every subclass's base armor also being 0
-     today, so it is written as its own constant and will hold when one of
-     them is re-tuned. */
-  const DOWNED_ARMOR = 0;
-  const DOWNED_SPEED = 0;
-
-  function evasion() {
-    if (isDowned()) return baseStat('evasion');
-    // Armour's Evasion is a MODIFIER on the base, exactly like its Armor and
-    // Speed. It used to REPLACE the base (Light Armor *was* Evasion 12); the
-    // item sheet now states +4 and the base stays underneath, which is the
-    // same 12 arrived at honestly and one fewer special case.
-    return baseStat('evasion')
-      + (wornArmor()?.evasionMod || 0)
-      + statValue('Dexterity')
-      + shieldBonus('evasionMod')
-      - stacksOf('condition.chill');
-  }
-
-  function armor() {
-    if (isDowned()) return DOWNED_ARMOR;
-    // Wounds reduce Armor directly now (see WOUND_ARMOR_STEP), so Vulnerable is
-    // purely a condition again — the last Wound used to apply 2 Vulnerable
-    // instead of Armor, and that special case is gone.
-    const vulnerable = stacksOf('condition.vulnerable');
-    return baseStat('armor')
-      + (wornArmor()?.armorMod || 0)
-      + shieldBonus('armorMod')
-      + stacksOf('boon.protection')
-      - vulnerable
-      + woundPenalty('armor');
-  }
-
-  const fortitude = () => (isDowned() ? baseStat('fortitude')
-                                     : baseStat('fortitude') + statValue('Fortune'));
-
-  const speed = () => (isDowned() ? DOWNED_SPEED : baseStat('speed')
-    + (wornArmor()?.speedMod || 0)
-    - stacksOf('condition.slow')
-    + woundPenalty('speed'));
+  function evasion() { return M.evasion(character); }
+  function armor()   { return M.armor(character); }
+  const fortitude = () => M.fortitude(character);
+  const speed     = () => M.speed(character);
 
   // The four defensive readouts, rebuilt on every render rather than stored —
   // so a wound, a Chill stack or a swapped shield moves them with nothing
@@ -1800,268 +1397,46 @@
   }
 
   /* ------------------------------------------------------------------ */
-  /* RULES — game logic, no DOM                                         */
+  /* RULES — through the mechanics engine                               */
+  /* heal, damage, the Wound cascade, rests, Patches and effects live in  */
+  /* resources/js/mechanics.js. These wrappers apply them to the open     */
+  /* character and do the ONE thing the engine must not: mirror how many  */
+  /* Boons a Wound took into UI state, for the notice that reports it.    */
   /* ------------------------------------------------------------------ */
-  const clampInt = (n) => Math.max(0, Math.floor(Number(n)) || 0);
+  const { clampInt, clampStacks } = window.WAYPOINT_MECHANICS;
+  const stackCap = (id) => M.stackCap(id);
 
-  function heal(resource, amt) {
-    amt = clampInt(amt);
-    if (!amt) return;
-    if (resource === 'mana') character.mana = Math.min(manaMax(), character.mana + amt);
-    else                     character.health = Math.min(healthMax(), character.health + amt);
-  }
-
-  // Returns true only when THIS damage is what downed the character, so the
-  // caller can announce it once. A hit that lands on someone already downed
-  // returns false — they are no worse off, and the popup would be noise.
-  // The one way Wounds are set outside the damage cascade's own bookkeeping.
-  // Reaching the cap empties the health bar no matter how the Wound arrived, so
-  // that consequence lives here rather than being restated at each call site —
-  // otherwise the pips could seat a character at max Wounds still showing a
-  // full bar, which is a state the rules do not have.
-  // Returns true when this is the move that downed them, so the caller can
-  // announce it exactly once.
-  function setWounds(n) {
-    const wasDowned = isDowned();
-    const before = character.wounds;
-    character.wounds = Math.min(woundsMax(), clampInt(n));
-    if (isDowned()) character.health = 0;
-    /* TAKING a Wound loses every Boon. Only on the way UP: clearing a Wound
-       with a Patch, or correcting a miscount downward, is not "taking" one.
-
-       This fires for the Wound pips as well as for the damage cascade, which
-       is deliberate. The pips are documented as bookkeeping, but they are not
-       only that — tapping the last one already downs the character and empties
-       the bar. They are how a Wound is recorded when the damage happened at
-       the table rather than in the app, and a Wound recorded is a Wound taken.
-
-       Counted rather than just cleared so the caller can say so: losing three
-       Boons silently while the health bar refills is the sheet changing under
-       the player. */
-    state.boonsLost = character.wounds > before ? clearBoons() : 0;
-    return !wasDowned && isDowned();
-  }
-
-  /* ---- rest ----------------------------------------------------------
-
-     GAME RULE. A long rest is a full reset: Health, Mana and Wounds all come
-     back. A short rest is a breather — Health full, Mana part-way, Wounds
-     untouched.
-
-     The Mana a short rest returns is HALF THE POOL, rounded down, and it is
-     half of the MAXIMUM rather than half of what is missing or half of what is
-     left. So a 10-Mana character always gets 5 back and a 15-Mana character
-     always gets 7, whatever they are standing at; the only thing their current
-     Mana decides is whether the ceiling swallows part of it. At 2 of 10 that
-     is 7, at 5 of 10 it is 10, and at 8 of 10 it is still 10 because the pool
-     does not go past its own maximum.
-
-     Stated as a divisor rather than a hardcoded 2 for the reason every rule in
-     this file is named: a rebalance that makes a short rest restore a third
-     is one edit here, and every readout — including the sentence on the Rest
-     button, which asks this same function — follows it. */
-  const SHORT_REST_MANA_DIVISOR = 2;
-
-  const shortRestMana = () => Math.floor(manaMax() / SHORT_REST_MANA_DIVISOR);
-
-  function rest(kind) {
-    const long = kind === 'long';
-    character.health = healthMax();
-    character.mana = long
-      ? manaMax()
-      : Math.min(manaMax(), character.mana + shortRestMana());
-    /* Wounds clear on a long rest and are LEFT ALONE by a short one — they are
-       restored by hand, which is what Patches are for.
-
-       Passing the wounds straight back through setWounds() on a short rest is
-       not the no-op it looks like: setWounds() owns the rule that a character
-       at the Wound cap has an empty bar, so this re-applies it to the health
-       we just refilled. A downed character who takes a breather is still
-       downed — a short rest does not touch the Wound that put them there, so
-       it cannot be the thing that stands them up. A long rest clears the
-       Wounds first and therefore does. */
-    setWounds(long ? 0 : character.wounds);
-    // Patches come back on a LONG rest only (guide, Ch.1 — "Patches are only
-    // restored on a Long Rest"). A short rest deliberately leaves them where
-    // they are, which is the same restraint that leaves Wounds alone: the
-    // breather refills what you burned, it does not restock your kit.
-    if (long) character.patches = patchesMax();
-    /* BOTH rests clear every Boon and Condition (guide, Ch.1 — effects last a
-       skirmish). A rest is the end of a skirmish by definition: you do not
-       take a breather mid-fight, so nothing you were carrying survives it.
-       Short as well as long, because the rule is about the fight ending, not
-       about how long you sat down for. */
-    clearEffects();
-  }
-
-  /* ---- patches -------------------------------------------------------
-
-     GAME RULE (Ch.1, Resting & Recovery). Spending one Patch resets HP to
-     full AND removes one Wound — one Patch, one Wound, which is why there is
-     no amount to choose here. Out of combat the guide lets HP reset for free
-     and Patches clear Wounds freely; in combat the same action costs 2 AP on
-     top of the Patch.
-
-     THE AP IS NOT DEDUCTED HERE, and that is a ruling rather than a debt. The
-     price is conditional on being in combat, and this app has no in-combat
-     state — nor should it acquire one just to charge two points, since a
-     skirmish is a thing the table knows it is in and the app would only be
-     guessing at. So the dialog STATES the cost (see openPatch) and the player
-     applies it. The app tracks the numbers; the table applies the rules.
-
-     Order matters and is the whole subtlety of this function. The Wound comes
-     off FIRST, then health is refilled, because setWounds() owns the rule that
-     a character at the Wound cap has an empty bar: refilling first would have
-     that rule immediately zero the bar again for anyone sitting at the cap.
-     Clearing the Wound drops them below the cap, and only then is a full bar
-     something they are allowed to hold.
-
-     (Today that ordering is belt-and-braces — canSpendPatch() refuses while
-     Downed, so the cap case cannot arrive here. It is written this way anyway
-     so the function stays correct on its own terms rather than depending on
-     its only caller to have checked.) */
-  function spendPatch() {
-    if (!canSpendPatch()) return;
-    character.patches = Math.max(0, character.patches - 1);
-    if (character.wounds > 0) setWounds(character.wounds - 1);
-    character.health = healthMax();
-  }
-
-  /* What a Patch would actually DO right now, as the two independent halves
-     the dialog lists. Returned as flags rather than a sentence so the counter
-     and the dialog ask the same question and cannot disagree about whether
-     there is anything to gain. */
-  const patchGain = () => ({
-    heals:  character.health < healthMax(),
-    wound:  character.wounds > 0,
-  });
-
-  /* Three ways there is nothing to spend:
-
-       · no Patches left;
-       · nothing to gain — already at full health with no Wounds, where
-         spending one would burn a limited resource for no effect;
-       · Downed. A Downed character cannot act, and the guide prices the Patch
-         action at 2 AP, which they have no way to pay. Coming back up is a
-         Long Rest, not a Patch. This is a deliberate ruling — see
-         docs/rules-gaps.md §2.2 — and it is the reason spendPatch()'s
-         wound-before-heal ordering never actually gets exercised. */
-  function canSpendPatch() {
-    if (character.patches <= 0 || isDowned()) return false;
-    const gain = patchGain();
-    return gain.heals || gain.wound;
-  }
-
-  /* Bookkeeping, not the rule. Setting the count by hand changes NOTHING else
-     — no health, no Wounds — which is exactly why it can be a bare tap while
-     the rule itself sits behind a hold: a player fixing a miscount is not
-     asking to be healed, and a counter that quietly heals you when you correct
-     it is a counter you stop trusting.
-
-     It is the Wound pips' toggle, mirrored. Tapping box i means "I have i+1
-     left", except when that is already the count, which reads as tapping the
-     last filled box to turn it off and means i. So the row can be walked down
-     one at a time and back up again from either end. */
-  function setPatches(n) {
-    character.patches = Math.max(0, Math.min(patchesMax(), clampInt(n)));
-  }
-
-  /* Every Boon gone, Conditions untouched — the Wound rule (guide, Ch.1:
-     "When you take a Wound, you lose all Boons currently on you unless a
-     trait specifically notes it").
-
-     THE EXCEPTION IS NOT MODELLED. No trait can note anything yet, because
-     trait selection does not exist (rules-gaps §3.1). When it does, this is
-     the function that has to start asking. Logged rather than hidden: a rule
-     applied without its exception is a rule that will surprise somebody. */
-  function clearBoons() {
-    const before = character.effects.length;
-    character.effects = character.effects.filter(
-      (e) => (effectById(e.id) || {}).kind !== 'boon',
-    );
-    return before - character.effects.length;
-  }
-
-  // Everything off, both kinds. The end of a skirmish, by whichever route —
-  // the Clear control or either rest.
-  function clearEffects() {
-    const n = character.effects.length;
-    character.effects = [];
-    return n;
-  }
-
-  /* What one press of a tick button does, for every stack at once. The effect
-     texts are written per stack ("take 1 Bleed damage"), so three stacks of
-     Bleed is 3 — the multiplication is the whole reason the button is worth
-     having over the calculator.
-
-     Damage goes through damage(), so the Wound cascade applies and a tick can
-     down a character exactly as a hit can. It returns that, so the caller can
-     announce it once. */
-  function applyTick(id) {
-    const def = effectById(id);
-    const stacks = stacksOf(id);
-    if (!def || !def.tick || !stacks) return { amount: 0, downed: false };
-    const per = def.tick.heal || def.tick.damage || 0;
-    const amount = per * stacks;
-    if (def.tick.heal) { heal('health', amount); return { amount, downed: false }; }
-    return { amount, downed: damage('health', amount) };
-  }
-
-  function damage(resource, amt) {
-    amt = clampInt(amt);
-    if (!amt) return false;
-    if (resource === 'mana') { character.mana = Math.max(0, character.mana - amt); return false; }
-    // Health cascade: each time damage empties the bar, take a Wound and refill.
-    // The refill is what makes a Wound survivable — you come back up with a full
-    // bar and one more mark against you.
-    //
-    // The LAST Wound is the exception, and it is the whole point of the cap: at
-    // that Wound there is nothing left to refill from, so the bar stays empty
-    // and the character is downed. Spillover past it is discarded rather than
-    // carried — you cannot be more downed than downed.
-    let h = character.health, w = character.wounds, max = healthMax(), d = amt;
-    const cap = woundsMax();
-    while (d >= h && w < cap) {
-      d -= h;
-      w += 1;
-      if (w >= cap) { h = 0; d = 0; break; }   // downed — no refill
-      h = max;
-    }
-    character.health = Math.max(0, h - d);
-    // Through setWounds so the cap clamp and the empty-bar consequence have one
-    // owner. It re-zeroes a bar the loop above already emptied, which is a no-op
-    // — the loop states it outright so this function reads correctly on its own.
-    return setWounds(w);
-  }
-
-  /* ---- boons & conditions -----------------------------------------
-     A stack count of zero is not a state worth tracking: an effect with no
-     stacks simply isn't on the character, so decrementing the last stack
-     removes the entry outright rather than leaving a "0" row behind. */
-  const MAX_STACKS = 99;   // a guard against a stuck finger, not a game rule
-  // An effect the rules say does not stack declares its own ceiling.
-  const stackCap = (id) => {
-    const def = effectById(id);
-    return (def && def.maxStacks) || MAX_STACKS;
+  /* The engine reports boonsLost whenever a rule passed through its
+     setWounds() — and leaves it undefined when none did (no damage dealt, a
+     Mana change, a heal). Mirroring only the defined case keeps
+     state.boonsLost exactly as it behaved before the engine was extracted. */
+  const noteBoonLoss = (out) => {
+    if (out && out.boonsLost !== undefined) state.boonsLost = out.boonsLost;
+    return out;
   };
-  const clampStacks = (n, cap = MAX_STACKS) =>
-    Math.min(cap, Math.max(0, Math.floor(Number(n)) || 0));
 
-  function addEffect(id) {
-    if (!effectById(id)) return;                     // unknown id — ignore
-    const cur = character.effects.find((e) => e.id === id);
-    // Picking an effect already on the sheet deepens it instead of duplicating.
-    if (cur) cur.stacks = clampStacks(cur.stacks + 1, stackCap(id));
-    else character.effects.push({ id, stacks: 1 });
-  }
+  function heal(resource, amt) { M.heal(character, resource, amt); }
 
-  function bumpEffect(id, delta) {
-    const cur = character.effects.find((e) => e.id === id);
-    if (!cur) return;
-    const next = clampStacks(cur.stacks + delta, stackCap(id));
-    if (next === 0) character.effects = character.effects.filter((e) => e.id !== id);
-    else cur.stacks = next;
+  // True only when THIS move downed the character — see the engine.
+  function setWounds(n) { return noteBoonLoss(M.setWounds(character, n)).downed; }
+  function damage(resource, amt) { return noteBoonLoss(M.damage(character, resource, amt)).downed; }
+
+  const shortRestMana = () => M.shortRestMana(character);
+  function rest(kind) { noteBoonLoss(M.rest(character, kind)); }
+
+  const patchGain = () => M.patchGain(character);
+  function canSpendPatch() { return M.canSpendPatch(character); }
+  function spendPatch() { noteBoonLoss(M.spendPatch(character)); }
+  function setPatches(n) { M.setPatches(character, n); }
+
+  function clearEffects() { return M.clearEffects(character); }
+  function addEffect(id) { M.addEffect(character, id); }
+  function bumpEffect(id, delta) { M.bumpEffect(character, id, delta); }
+
+  // { amount, downed } for the caller, as before.
+  function applyTick(id) {
+    const out = noteBoonLoss(M.applyTick(character, id));
+    return { amount: out.amount, downed: out.downed };
   }
 
   /* ------------------------------------------------------------------ */
@@ -6030,13 +5405,38 @@
     input.click();
   }
 
+  /* The most a Waypoint file can sensibly weigh. Checked BEFORE the file is
+     read, because reading is the cost: a mis-picked video or a hostile file
+     several hundred megabytes long would otherwise be pulled whole into
+     memory and could freeze the tab (docs/security.md, Gap 1).
+
+     10 MB is generous on purpose. Everything the app holds lives in
+     localStorage, which caps the whole site at about 5 MB, so a full backup
+     — every character and every portrait — cannot outgrow it; a compendium
+     is a few hundred kilobytes. Anything bigger is not a file this app
+     wrote. */
+  const MAX_IMPORT_BYTES = 10 * 1024 * 1024;
+
+  /* Both import pickers read through here, so the size limit and the
+     unreadable-file message are stated once. Hands the text to `onText`
+     only when there is text worth parsing. */
+  function readWaypointFile(file, onText) {
+    if (file.size > MAX_IMPORT_BYTES) {
+      showImportResult({ ok: false, title: 'That file is too large',
+        text: `${file.name} is over 10 MB. Waypoint character, backup and compendium files are far smaller than that — check you picked the right one.` });
+      return;
+    }
+    const reader = new FileReader();
+    reader.onerror = () => showImportResult({ ok: false, title: 'Could not read that file',
+      text: 'The file could not be opened. It may have been moved, or the browser was denied access to it.' });
+    reader.onload = () => onText(reader.result);
+    reader.readAsText(file);
+  }
+
   function readImportFile(input) {
     const file = input.files && input.files[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onerror = () => showImportResult({ ok: false, title: 'Could not read that file', text: 'The file could not be opened. It may have been moved, or the browser was denied access to it.' });
-    reader.onload = () => importCharacterFile(reader.result, file.name);
-    reader.readAsText(file);
+    readWaypointFile(file, (text) => importCharacterFile(text, file.name));
   }
 
   /* Read a file and say whether it is one of ours, WITHOUT changing anything.
@@ -6613,11 +6013,7 @@
     const kind = state.filePick;
     const file = input.files && input.files[0];
     if (!file || !kind) return;
-    const reader = new FileReader();
-    reader.onerror = () => showImportResult({ ok: false, title: 'Could not read that file',
-      text: 'The file could not be opened. It may have been moved, or the browser was denied access to it.' });
-    reader.onload = () => offerImport(kind, reader.result, file.name);
-    reader.readAsText(file);
+    readWaypointFile(file, (text) => offerImport(kind, text, file.name));
   }
 
   /* Validated, then put as a question. Nothing has been written at this point
@@ -7653,10 +7049,12 @@
   }
 
   /* A filled slot: tap it to change what is in it, or the × to empty it.
-     --slot-span is how many hands it takes; the stylesheet turns that into
-     grid columns, so a two-hander looks like what it is. */
+     data-span is how many hands it takes; the stylesheet turns that into
+     grid columns, so a two-hander looks like what it is. An attribute, not
+     an inline style — JS states, CSS decides, and the Content Security
+     Policy in index.html refuses style attributes outright. */
   const gearSlot = (pick, name, metaParts, span) => `
-    <div class="gear-slot" style="--slot-span:${span}">
+    <div class="gear-slot" data-span="${span}">
       <button class="gear-slot__open" data-wiz-slot="${esc(pick)}">
         <span class="gear-slot__name">${esc(name)}</span>
         <span class="gear-slot__meta">${esc(metaParts.filter(Boolean).join(' · '))}</span>
@@ -7671,7 +7069,7 @@
      hand free, and nothing should make them choose "unarmed" from a list to
      say so. Filling it is optional; the slot just sits there until it is used. */
   const gearSlotEmpty = (pick, label, span) => `
-    <div class="gear-slot gear-slot--empty" style="--slot-span:${span}">
+    <div class="gear-slot gear-slot--empty" data-span="${span}">
       <button class="gear-slot__open" data-wiz-slot="${esc(pick)}">
         <span class="gear-slot__plus" aria-hidden="true"></span>
         <span class="gear-slot__name">${esc(label)}</span>

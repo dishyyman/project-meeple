@@ -13,3 +13,7 @@ node_modules/
 # private should ever be committable by accident once it does.
 .env
 .env.*
+
+# Playwright run output — regenerated on every test run
+test-results/
+playwright-report/

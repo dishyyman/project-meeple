@@ -1,9 +1,13 @@
 # Project Waypoint
 
 Companion app for players/GMs of **Waypoint**, an in-progress tabletop RPG.
-Framework-free web app (vanilla HTML/CSS/JS) — no build step, no dependencies.
+Framework-free web app (vanilla HTML/CSS/JS) — no build step, no runtime dependencies. (`package.json` holds **dev-only** test tooling; nothing in it loads in the app.)
 
 **Previewing: serve the folder over `http://`** — in VS Code, right-click `index.html` → **Open with Live Server**. Opening the file directly no longer works: the screens are assembled from `pages/` with `fetch()`, which browsers block on `file://`. The app will tell you so on screen if you forget.
+
+**Testing: `npm test`** in this folder (unit + browser; one-time `npm install` first). Run it before calling a change done, and add a test with the change — see `docs/testing.md`. If the characterization snapshots fail after a *deliberate* rules change, read the diff before re-recording; never re-record to silence an unexplained failure.
+
+**Docs:** `docs/` holds the PRD, design system, architecture, database, security, code style and testing docs. Read the relevant one before scoping work; `docs/code-style.md` §13 has recipes for adding common things.
 
 ## Working style (how I want you to work)
 
@@ -23,7 +27,9 @@ The app deliberately keeps behavior, structure, and appearance apart. Preserve t
 - **`resources/css/style.css`** — an index of `@import`s and nothing else. The import order IS the cascade; it follows the original §1–§25 numbering deliberately.
 - **`resources/css/tokens.css`** — ALL design tokens. To re-skin, edit here — never hardcode colors/sizes elsewhere. The remaining CSS files are one per screen, mirroring `pages/`.
 - **`resources/js/frame.js`** — the phone-frame/full-window toggle. Shell chrome only; it sets `data-frame` on the root element and touches nothing inside `.app`.
-- **`resources/js/main.js`** — behavior only: a `character` data model, transient `state`, game `rules`, class-only render, and one delegated click handler. Persists health/mana/wounds/notes to localStorage.
+- **`resources/js/mechanics.js`** — THE game arithmetic: every derived stat and play rule (heal, damage, Wound cascade, rests, Patches, effects). Pure — no DOM, no storage, no UI state; takes the character as its first argument and gets content through `create()`. Loaded by the app and by the unit tests.
+- **`resources/js/main.js`** — behavior: a `character` data model, transient `state`, one-line wrappers that apply `mechanics.js` to the open character, class-only render, and one delegated click handler. Persists characters to localStorage.
+- **`tests/`** — dev-only: unit tests (`node --test`), Playwright browser tests, fixtures. Not shipped.
 - **`resources/images/`** — portrait assets (currently a CSS pattern placeholder).
 - **`design/`** — archived Claude design-doc prototypes. Ideation source of truth for the look (direction **1a "Field Journal"**). Reference, don't ship from.
 
@@ -33,7 +39,9 @@ The app deliberately keeps behavior, structure, and appearance apart. Preserve t
 - Views/tabs/modals switch via `data-view` / `data-tab` / `data-modal` on `.app`.
 - **One dice engine.** All rolls (calculator, quick to-hit/damage) go through `evaluateDice()`. Don't write a second implementation.
 - **Never use `eval()`.** Dice expressions are parsed by the hand-written recursive-descent parser. Keep the limits (1–100 dice, 2–1000 sides, `floor()` the total).
-- **Derive, don't store, computed stats.** Game rules live as named constants (e.g. `PRECISION_TO_HIT`). Change the rule in one place and every readout follows.
+- **One mechanics engine.** Game arithmetic goes in `mechanics.js` (with a unit test), never in `main.js` or a render function. `rules.js` is the Player's Guide *text*; `mechanics.js` is the *math*.
+- **Derive, don't store, computed stats.** Game rules live as named constants in `RULES` in `mechanics.js` (e.g. `PRECISION_TO_HIT`). Change the rule in one place and every readout follows.
+- **The Content Security Policy in `index.html` stays strict.** No inline `<script>`, inline handlers, `eval()`, or `style="…"` attributes (not even in JS template strings) — the browser would refuse them. Loosening it is a security decision for `docs/security.md`.
 - **No selector is defined in two CSS files.** That invariant is what makes the `@import` order in `style.css` safe to reason about. To change a primitive from a screen file, override it with a more specific selector — never copy the rule.
 - **Sizes come from the scales.** Every `font-size` is a `--fs-*` token and every `padding` / `margin` / `gap` a `--space-*` token (or a named layout constant like `--statusbar-clear`). Raw px only for 1px border compensation, negative optical nudges, or a size written as its derivation. See `docs/design-system.md` §5.1 / §6.1.
 - **Feedback uses the shared patterns.** Inline errors and warnings are `.status` + `--error` / `--warn` / `--ok` (glyph + words, never colour alone). A confirmation for an action with no other visible result is `showToast()`. Don't invent a one-off warning style.
