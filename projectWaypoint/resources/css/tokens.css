@@ -3,7 +3,7 @@
    Loaded first by style.css, so every other part can read these. Change a
    value here and it cascades everywhere; that is the point of the file.
 
-   THEME: "Ember Journal" — the field journal after dark. The parchment is
+   THEME: "Field Journal" (dark) — the field journal after dark. The parchment is
    gone; what is left is the desk it sat on, the lamp over it, and the coal
    in the brazier. Built on a 60/30/10 split:
 
@@ -128,6 +128,17 @@
   --danger-bright: #f0685c;   /* danger as TEXT, an icon or an outline */
   --danger-wash:   rgba(240, 104, 92, 0.12);
 
+  /* Warning and success — TEXT-weight colors only (there is no warning or
+     success button to fill). Warning is amber, which sits between the gold and
+     the ember and so is close to both: a warning is therefore NEVER shown by
+     colour alone — .status always draws its triangle, and says it in words.
+     Both clear AA on the page and on a card (amber 7.7 / 7.1, green 7.4 / 6.8).
+     Errors stay --danger-bright; there is no third red. */
+  --warning-bright: #f2a541;
+  --warning-wash:   rgba(242, 165, 65, 0.12);
+  --success-bright: #8fbf6a;
+  --success-wash:   rgba(143, 191, 106, 0.12);
+
   /* ---- health / mana / wounds ----
      Health keeps the brighter orange it had when it WAS the accent, now that
      the accent has moved deeper into palette-4. The two are a deliberate pair
@@ -160,6 +171,10 @@
   --damage:       #a33232;
   --damage-border:#7a2222;
   --damage-text:  #fbeae4;
+  /* --heal and --damage are FILLS, like --accent. --damage as text is 2.3:1
+     on the page and fails AA, so red text, icons and outlines on the page —
+     an error line, a minimum die, a pressed Poison toggle — take
+     --danger-bright instead. */
 
   /* ---- washes & overlays ----
      On parchment, depth came from ink bleeding into the page. On a dark page
@@ -176,6 +191,28 @@
   /* The hatch that fills an empty portrait. Inverted from ink-on-parchment to
      light-on-dark, and kept very faint — it is a texture, not a pattern. */
   --hatch:      rgba(255,255,255,0.045);
+
+  /* ---- focus & disabled ----
+     --focus is the keyboard-focus edge. Deliberately --accent-bright and not
+     --accent: a focus indicator must clear 3:1 against what it sits on, and
+     the ember fill only manages 2.4:1 on the page. The ring is a soft glow
+     beside it, never the only cue. */
+  --focus:      var(--accent-bright);
+  --focus-ring: 0 0 0 3px var(--accent-wash);
+  /* One dimming for every disabled control, so "unavailable" looks the same
+     on every screen. Controls with a richer disabled look (an empty Save)
+     still use their own rule. */
+  --disabled-opacity: 0.45;
+
+  /* ---- status glyphs ----
+     Lucide's triangle-alert, circle-alert and circle-check, as CSS masks so
+     .status can draw them from a class alone (see primitives.css). The stroke
+     colour here is irrelevant — a mask only reads alpha — and the glyph takes
+     its colour from the text it sits beside. Stroke 2.5: drawn at ~1em (11–
+     14px), that renders at the app's usual ~1.5px line. */
+  --icon-warn:  url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3'/%3E%3Cpath d='M12 9v4'/%3E%3Cpath d='M12 17h.01'/%3E%3C/svg%3E");
+  --icon-error: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='10'/%3E%3Cpath d='M12 8v4'/%3E%3Cpath d='M12 16h.01'/%3E%3C/svg%3E");
+  --icon-ok:    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='10'/%3E%3Cpath d='m9 12 2 2 4-4'/%3E%3C/svg%3E");
 
   /* ---- shadows ----
      The hard offset shadows are the theme's woodcut signature and they stay,
@@ -216,6 +253,10 @@
      of stretching rows that were never designed to stretch. Raise it
      only alongside real work on the layouts it releases. */
   --frame-max: 520px;
+  /* Layout constants. Not spacing — each is the size of something else, so
+     they are named for what they clear rather than taken from the scale. */
+  --statusbar-clear: 54px;   /* top of a screen clears the phone's status bar */
+  --home-clear:      30px;   /* foot of the tab bar clears the home indicator */
 
   /* Radii */
   --r-lg: 14px;
@@ -223,7 +264,7 @@
      sits evenly in the frame. The TOP is deliberately larger and lives with
      the .modal rule, because it is not a matter of taste — it has to clear
      the 54px status bar. */
-  --modal-gutter: 26px;
+  --modal-gutter: 24px;
   /* Larger than --r-lg: a card this wide needs a softer corner to read as one
      rounded shape rather than a rectangle with the corners clipped. The
      card's inset gold rule follows the same curve, so both move together. */
@@ -242,4 +283,48 @@
   --font-label:   'Marcellus', serif;       /* labels, numbers, uppercase */
   --font-body:    'Spectral', serif;        /* descriptions, italics */
   --font-mono:    'JetBrains Mono', monospace;
+
+  /* Type scale. Every font-size in the screen CSS is one of these — never a
+     raw px value. Anchored on 14px body text; no text in the app is smaller
+     than --fs-caption (10px), because the app is built for people still
+     learning the game. --fs-input is 16px on purpose: iOS Safari zooms the
+     whole page when a field set smaller than 16px takes focus.
+     See docs/design-system.md §5.1. */
+  --fs-caption: 10px;   /* tab labels, value-box labels, field labels */
+  --fs-label:   11px;   /* small uppercase labels */
+  --fs-small:   12px;   /* eyebrows, counts, add buttons */
+  --fs-note:    13px;   /* hints, empty states, italic notes */
+  --fs-body:    14px;   /* body and rules text */
+  --fs-input:   16px;   /* form inputs, ✦ section rules, compact row titles */
+  --fs-row:     18px;   /* row titles, value boxes */
+  --fs-title:   21px;   /* screen and modal titles */
+  --fs-display: 24px;   /* large headings and readouts */
+  --fs-stat:    28px;   /* stat and combat values */
+  --fs-hero:    31px;   /* hero character name, calculator readout */
+  /* One-off display sizes: a wordmark and two dice totals. Numbers to be seen
+     across a table, not text to be read. */
+  --fs-wordmark:   36px;
+  --fs-numeral-md: 38px;
+  --fs-numeral-lg: 68px;
+
+  /* Spacing scale. A 4px grid with 2px half-steps up to 16px: the half-steps
+     keep 10px and 14px, the app's two most common gaps, on the scale. Every
+     padding, margin and gap uses one of these. Literal px is allowed only for
+     1px border compensation, negative optical nudges, and sizes derived from
+     something else (the layout constants above, a picker cell's height).
+     See docs/design-system.md §6.1. */
+  --space-0-5: 2px;
+  --space-1:   4px;
+  --space-1-5: 6px;
+  --space-2:   8px;
+  --space-2-5: 10px;
+  --space-3:   12px;
+  --space-3-5: 14px;
+  --space-4:   16px;
+  --space-5:   20px;
+  --space-6:   24px;
+  --space-8:   32px;
+  --space-10:  40px;
+  --space-12:  48px;
+  --space-16:  64px;
 }

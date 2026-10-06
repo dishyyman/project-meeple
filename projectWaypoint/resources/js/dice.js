@@ -8,8 +8,10 @@
    It lives apart from main.js because two callers need it and they load
    very differently:
 
-     · the app    — a classic <script> off file://, where module imports
-                    and fetch() are both blocked. Must be a plain global.
+     · the app    — a classic <script>, like every script the app loads.
+                    Must be a plain global. (The app is served over
+                    http:// now, so modules would work; whether to move to
+                    them is an open question — docs/architecture.md §13.)
      · the tools  — tools/csv-to-json.mjs, so a malformed `2d8` in a
                     spreadsheet fails at conversion time rather than in
                     the middle of somebody's session.

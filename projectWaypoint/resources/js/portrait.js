@@ -11,9 +11,10 @@
    inflates bytes by a further ~33%. So a portrait has to be re-encoded
    before it is stored, not merely stored carefully.
 
-   Declared as a plain global rather than a module because index.html is
-   opened straight off the filesystem, where the browser blocks module
-   imports and fetch() alike — same arrangement as dice.js and library.js.
+   Declared as a plain global rather than a module because every script
+   the app loads is a classic <script> — same arrangement as dice.js and
+   library.js. Modules are possible now that the app is served over
+   http://; see docs/architecture.md §13.
    ===================================================================== */
 
 (() => {

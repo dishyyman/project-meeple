@@ -1,6 +1,6 @@
 /* =====================================================================
    WAYPOINT — Character Companion · Stylesheet
-   Design theme: "Ember Journal" — the field journal after dark. Built on a
+   Design theme: "Field Journal" (dark) — the field journal after dark. Built on a
    60/30/10 split: #232323 surfaces, dark gold rules and labels, ember orange
    reserved for the one standout per screen. See the note atop tokens.css.
 
@@ -40,3 +40,4 @@
 @import url("edit.css");        /* §20 edit character  §21 portrait cropper */
 @import url("create.css");      /* §22 creation wizard §24 loadout          */
 @import url("settings.css");    /* §25                                      */
+@import url("toast.css");       /* §26 transient confirmation               */

@@ -40,7 +40,8 @@
     'pages/menu.html',
     'pages/modals/dice.html',
     'pages/modals/inventory.html',
-    'pages/modals/character.html'
+    'pages/modals/character.html',
+    'pages/toast.html'
   ];
 
   const mount = document.querySelector('.app');

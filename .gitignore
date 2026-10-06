@@ -1,0 +1,15 @@
+# macOS folder metadata — Finder writes one of these into every folder it
+# opens. Never project content.
+.DS_Store
+
+# Editor and OS clutter
+Thumbs.db
+*.swp
+
+# Node, if a tools/ or test setup ever installs packages locally
+node_modules/
+
+# Secrets — the app has none today (docs/security.md §3), but nothing
+# private should ever be committable by accident once it does.
+.env
+.env.*

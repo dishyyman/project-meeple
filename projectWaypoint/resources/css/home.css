@@ -18,13 +18,13 @@
 .home {
   height: 100%;
   display: flex; flex-direction: column;
-  padding: 64px 22px 44px;
+  padding: var(--space-16) var(--space-6) var(--space-12);
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
 }
 .home__title {
-  font-family: var(--font-display); font-size: 36px; color: var(--heading);
-  line-height: 1.02; margin-bottom: 22px;
+  font-family: var(--font-display); font-size: var(--fs-wordmark); color: var(--heading);
+  line-height: 1.02; margin-bottom: var(--space-6);
   flex-shrink: 0;
 }
 
@@ -38,9 +38,9 @@
    destination you aim at. Flat, no shadow, warm hairline. */
 .account {
   flex-shrink: 0;
-  display: flex; align-items: center; gap: 13px;
-  padding: 14px;
-  margin-bottom: 26px;
+  display: flex; align-items: center; gap: var(--space-3);
+  padding: var(--space-3-5);
+  margin-bottom: var(--space-6);
   border: 1.5px solid var(--line-warm); border-radius: var(--r-md);
   background: var(--bg-parchment2);
 }
@@ -53,24 +53,24 @@
 }
 .account__avatar svg { width: 24px; height: 24px; }
 /* Takes the middle so the Sign in button is pushed to the far edge. */
-.account__body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.account__body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: var(--space-1); }
 .account__name {
-  font-family: var(--font-display); font-size: 17px; color: var(--ink);
+  font-family: var(--font-display); font-size: var(--fs-row); color: var(--ink);
   line-height: 1.15;
   /* A real account name is not length-checked by this app, so it truncates
      rather than pushing the button off the card. */
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .account__note {
-  font-family: var(--font-body); font-size: 12px; color: var(--ink-muted);
+  font-family: var(--font-body); font-size: var(--fs-small); color: var(--ink-muted);
   line-height: 1.35;
 }
 /* The status line, under the name. Green rather than the app's rust: rust is
    the accent every pressable thing already uses, and a confirmation should
    not read as something to press. */
 .account__status {
-  display: flex; align-items: center; gap: 5px;
-  font-family: var(--font-label); font-size: 12px;
+  display: flex; align-items: center; gap: var(--space-1);
+  font-family: var(--font-label); font-size: var(--fs-small);
   letter-spacing: 0.04em; text-transform: uppercase;
   color: var(--heal-border);
 }
@@ -88,15 +88,15 @@
 .navlist {
   flex-shrink: 0;
   display: flex; flex-direction: column;
-  gap: 12px;
+  gap: var(--space-3);
 }
 .navcard {
   /* Icon, label, chevron — the same three-part row the Settings screen uses,
      so Home introduces no new idiom. */
   display: flex; flex-direction: row; align-items: center;
-  gap: 14px; width: 100%; text-align: left;
+  gap: var(--space-3-5); width: 100%; text-align: left;
   border: 1px solid var(--line-hair); border-radius: var(--r-md);
-  background: var(--bg-card); padding: 15px 16px;
+  background: var(--bg-card); padding: var(--space-4) var(--space-4);
   box-shadow: var(--shadow-hair);
 }
 /* The press, matching every other pressable card in the app. */
@@ -121,7 +121,7 @@
 /* 19px now rather than 21px: in a row the label sits beside the badge instead
    of under it, so it no longer has a tile's width to itself — and every label
    still has to clear the chevron on one line. */
-.navcard__name { font-family: var(--font-display); font-size: 19px; color: var(--ink); line-height: 1.15; }
+.navcard__name { font-family: var(--font-display); font-size: var(--fs-row); color: var(--ink); line-height: 1.15; }
 /* Faint on purpose: it says "this goes somewhere", which the row already
    implies. Loud enough to notice, quiet enough not to be the target. */
 .navcard__go { flex-shrink: 0; display: flex; align-items: center; color: var(--ink-faint); }

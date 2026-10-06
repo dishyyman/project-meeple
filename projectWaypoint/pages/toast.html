@@ -1,0 +1,20 @@
+    <!-- ================= TOAST ================= -->
+    <!-- A short confirmation after an action that has no other visible result
+         — a save that leaves you on the same screen, a file sent to downloads.
+         Never carries a decision: anything that needs one is a modal.
+
+         The live region is ALWAYS in the tree, and only its text and the
+         data-toast attribute on .app change. A region that is inserted or
+         unhidden at the same moment its text arrives is announced unreliably,
+         so this one sits here empty and silent until showToast() fills it.
+         role="status" is polite: it is read when the reader is free, and it
+         never takes focus away from what the player was doing.
+
+         The card is a button so a tap dismisses it early; it times out on its
+         own regardless (see showToast() in main.js). Last in PAGES so it
+         paints above the screens without a z-index fight. -->
+    <div class="toast" role="status" aria-live="polite">
+      <button class="toast__card" type="button" data-toast-dismiss tabindex="-1">
+        <span class="toast__text" data-toast-text></span>
+      </button>
+    </div>

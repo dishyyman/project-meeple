@@ -4,16 +4,15 @@
    GENERATED FILE — DO NOT EDIT BY HAND.
 
    Source:    docs/Waypoint Player's Guide.rtf
-   Generated: 2026-09-15
+   Generated: 2026-10-05
    Regenerate: node tools/rtf-to-rules.mjs
 
    Every edit belongs in the RTF, which is the rulebook. Editing this file
    means the app and the document disagree, and the document wins next time
    anyone runs the converter.
 
-   Declared as a plain global rather than a module because index.html is
-   opened straight off the filesystem, where the browser blocks module
-   imports and fetch() alike — same arrangement as dice.js and library.js.
+   Declared as a plain global, like every script the app loads — same
+   arrangement as dice.js and library.js.
    ===================================================================== */
 
 window.WAYPOINT_RULES = {
@@ -2339,5 +2338,5 @@ window.WAYPOINT_RULES = {
       ]
     }
   ],
-  "generated": "2026-09-15"
+  "generated": "2026-10-05"
 };

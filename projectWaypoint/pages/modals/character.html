@@ -61,7 +61,7 @@
         </div>
         <p class="confirm__text"><strong data-bind="charDelName"></strong> will be deleted from this device
           &mdash; the sheet, the portrait and every journal note.</p>
-        <p class="confirm__text confirm__text--warn">This is permanent and cannot be undone. If you may want
+        <p class="confirm__text status status--warn">This is permanent and cannot be undone. If you may want
           this character back, cancel and export them first.</p>
         <div class="form-actions">
           <button class="btn-ghost" data-modal="close">Cancel</button>
@@ -83,7 +83,7 @@
           <div class="modal__title">You are downed!</div>
           <button class="modal__close" data-modal="close" aria-label="Close"></button>
         </div>
-        <p class="confirm__text confirm__text--warn">Your <strong data-bind="downedWounds"></strong> Wound is
+        <p class="confirm__text status status--warn">Your <strong data-bind="downedWounds"></strong> Wound is
           taken and there is no Health left to come back on.</p>
         <p class="confirm__text">While you are down, your Evasion and Fortitude fall back to their base and
           your Armor and Speed are zero. Further damage cannot take you lower &mdash; clearing a Wound is
@@ -91,7 +91,7 @@
         <!-- Only when the Wound actually took some. Empty otherwise, and the
              rule collapses it, so a character carrying no Boons sees no line
              about Boons. -->
-        <p class="confirm__text confirm__text--warn" data-bind="downedBoons"></p>
+        <p class="confirm__text status status--warn" data-bind="downedBoons"></p>
         <div class="form-actions">
           <button class="btn-save btn-save--danger" data-modal="close">Understood</button>
         </div>
@@ -290,7 +290,7 @@
           <div class="modal__title">Boons lost</div>
           <button class="modal__close" data-modal="close" aria-label="Close"></button>
         </div>
-        <p class="confirm__text confirm__text--warn" data-bind="boonLossText"></p>
+        <p class="confirm__text status status--warn" data-bind="boonLossText"></p>
         <p class="confirm__text">Taking a Wound clears every Boon on you. Conditions are unaffected.</p>
         <div class="form-actions">
           <button class="btn-save" data-modal="close">Understood</button>

@@ -26,8 +26,8 @@
    inventing one here would put the gutter in two places at once. */
 .edit-tabs {
   flex-shrink: 0;
-  display: flex; gap: 6px;
-  padding: 10px 18px 12px;
+  display: flex; gap: var(--space-1-5);
+  padding: var(--space-2-5) var(--space-4) var(--space-3);
   border-bottom: 1px solid var(--line-hair);
 }
 /* Equal thirds. The picker's chips are content-width because its set follows
@@ -48,7 +48,7 @@
    step in the left edge. */
 .attr-list {
   border: 1px solid var(--line-hair); border-radius: var(--r-xs);
-  background: var(--bg-card); padding: 2px 10px; margin-bottom: 18px;
+  background: var(--bg-card); padding: var(--space-0-5) var(--space-2-5); margin-bottom: var(--space-4);
 }
 
 /* ---- skills, as dossier rows ----
@@ -68,7 +68,7 @@
    controls is more air than an already flush-right group needs. */
 .dossier-row { border-bottom: 1px solid var(--line-hair); }
 .dossier-row:last-child { border-bottom: 0; }
-.dossier-row .attr-row { width: 100%; border-bottom: 0; text-align: left; gap: 8px; }
+.dossier-row .attr-row { width: 100%; border-bottom: 0; text-align: left; gap: var(--space-2); }
 
 /* The name, its category chip and the caret are one press; the steppers
    beside them are their own. flex:1 pushes the stepper group to the right
@@ -77,7 +77,7 @@
    min-width:0 lets a long name shrink rather than shoving them off. */
 .dossier-row__title {
   flex: 1; min-width: 0;
-  display: flex; align-items: baseline; gap: 7px;
+  display: flex; align-items: baseline; gap: var(--space-2);
   text-align: left;
 }
 /* A point down from the attributes' 17px, and the chip tightened with it.
@@ -86,8 +86,8 @@
    longest pair the library holds — "Keep an Eye Out" under INSTINCT — is what
    the row has to fit. Only the skill side moves, so the numbers opposite still
    line up with the attributes above. */
-.dossier-row .attr-row__name { font-size: 16px; }
-.dossier-row__tag { letter-spacing: 0.06em; padding: 3px 5px; }
+.dossier-row .attr-row__name { font-size: var(--fs-input); }
+.dossier-row__tag { letter-spacing: 0.06em; padding: var(--space-1) var(--space-1); }
 /* Hugs the name rather than being pushed to the far edge: it says "this name
    opens", and parked against the stepper it would read as part of it. */
 .dossier-row__title .collapse__caret { align-self: center; flex-shrink: 0; }
@@ -100,12 +100,12 @@
    difference between every name fitting and three of them breaking.
    The buttons stay .step-btn — the attributes' control, unchanged, because
    the two blocks are meant to read as one column. */
-.dossier-row .skill-step { gap: 5px; }
+.dossier-row .skill-step { gap: var(--space-1); }
 /* Narrower than the 46px a value box takes elsewhere, which lands it on the
    40px the attribute values opposite already occupy — so the two blocks share
    a right-hand column instead of merely resembling one. The saved width goes
    to the name. */
-.dossier-row .val-box { min-width: 40px; padding: 0 6px; }
+.dossier-row .val-box { min-width: 40px; padding: 0 var(--space-1-5); }
 /* The caret is the shared primitive; only the turn is restated, because
    .collapse.is-open is a class this row deliberately does not carry — the
    same arrangement .note-row and .skill-pick already use. */
@@ -122,17 +122,17 @@
    sits above the line, what it DOES sits below it. */
 .dossier-row__body {
   display: none;
-  padding: 0 2px 13px;
+  padding: 0 var(--space-0-5) var(--space-3);
   border-top: 1px solid var(--line-soft);
 }
 .dossier-row.is-open .dossier-row__body { display: block; }
 /* The category/rank line LEADS the body here, where on the sheet it trails the
    prose — so its own top rule and the space above it would double the divider
    this band already has. */
-.dossier-row .skill-rank { margin-top: 0; padding-top: 10px; border-top: 0; }
+.dossier-row .skill-rank { margin-top: 0; padding-top: var(--space-2-5); border-top: 0; }
 .dossier-row__desc {
-  margin-top: 10px;
-  font-family: var(--font-body); font-size: 13.5px; line-height: 1.55;
+  margin-top: var(--space-2-5);
+  font-family: var(--font-body); font-size: var(--fs-note); line-height: 1.55;
   color: var(--ink-soft);
 }
 
@@ -141,7 +141,7 @@
    the pen — both pieces of furniture are positioned into `right`, so they
    cannot share it. The background gap flips with the text, masking the
    hairline on the side it now breaks. */
-.rule__count--lead { right: auto; left: 2px; padding-left: 0; padding-right: 9px; }
+.rule__count--lead { right: auto; left: 2px; padding-left: 0; padding-right: var(--space-2); }
 
 /* ---- gear rows ----
    The pen that marks a filled slot as openable. Greyed rather than gold: the
@@ -156,12 +156,12 @@
    and reading them together is how you check you are editing the right one.
    The name takes the remaining width rather than a fixed one, so the frame can
    be resized here without the field needing to be told about it. */
-.bio__head { display: flex; gap: 14px; align-items: center; margin-bottom: 14px; }
+.bio__head { display: flex; gap: var(--space-3-5); align-items: center; margin-bottom: var(--space-3-5); }
 .bio__name { flex: 1; min-width: 0; margin-bottom: 0; }
 /* Optional descriptive fields, two to a row so five of them cost one screen
    of scroll rather than five. Collapses to one column where a phone is too
    narrow to keep both legible. */
-.bio__grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 12px; }
+.bio__grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 var(--space-3); }
 @media (max-width: 340px) { .bio__grid { grid-template-columns: 1fr; } }
 /* A button, not a div: the portrait menu has to be reachable from the
    keyboard, and "click the picture" is the affordance asked for. */
@@ -179,8 +179,8 @@
    to reposition — with none, the same button opens the picker instead. */
 .portrait-edit__hint {
   position: absolute; left: 0; right: 0; bottom: 0; display: none;
-  font-family: var(--font-label); font-size: 8.5px; letter-spacing: 0.12em;
-  text-transform: uppercase; text-align: center; padding: 3px 0;
+  font-family: var(--font-label); font-size: var(--fs-caption); letter-spacing: 0.12em;
+  text-transform: uppercase; text-align: center; padding: var(--space-1) 0;
   color: var(--on-dark); background: var(--scrim);
 }
 .app[data-portrait="set"] .portrait-edit__hint { display: block; }
@@ -255,7 +255,7 @@
   background-size: 100% 1px;
 }
 
-.crop__zoom { display: block; margin: 14px 0 4px; }
+.crop__zoom { display: block; margin: var(--space-3-5) 0 var(--space-1); }
 /* Range inputs cannot be restyled through the cascade alone — the track and
    thumb are separate shadow pseudo-elements per engine, so each is painted
    here from the same tokens the rest of the app uses. */
@@ -282,6 +282,6 @@
   border-radius: 50%; background: var(--accent);
   border: 1.5px solid var(--accent-deep); box-shadow: var(--shadow-soft);
 }
-.crop__slider:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
-.crop__frame:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.crop__slider:focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; }
+.crop__frame:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 

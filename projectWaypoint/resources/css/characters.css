@@ -6,11 +6,11 @@
 /* ----------------------------------------------------------------- */
 /* 7. CHARACTERS LIST                                                 */
 /* ----------------------------------------------------------------- */
-.topbar { display: flex; align-items: center; gap: 14px; padding: 54px 16px 12px; }
+.topbar { display: flex; align-items: center; gap: var(--space-3-5); padding: var(--statusbar-clear) var(--space-4) var(--space-3); }
 .topbar--between { justify-content: space-between; }
 .icon-btn--back svg { color: var(--ink-muted); }
 
-.section-pad { padding: 22px 18px 40px; }
+.section-pad { padding: var(--space-6) var(--space-4) var(--space-10); }
 /* The card is a DIV holding several buttons, not one big button: edit mode
    puts a delete, an export and a drag grip on it, and none of those may be
    nested inside the button that opens the character. `__main` is the row that
@@ -18,13 +18,13 @@
 .persona-card {
   display: block; width: 100%; text-align: left;
   border: 1px solid var(--line-hair); border-radius: var(--r-md);
-  background: var(--bg-card); padding: 14px; box-shadow: var(--shadow-hair);
+  background: var(--bg-card); padding: var(--space-3-5); box-shadow: var(--shadow-hair);
 }
-.persona-card__main { display: flex; align-items: center; gap: 15px; width: 100%; }
+.persona-card__main { display: flex; align-items: center; gap: var(--space-4); width: 100%; }
 /* Opening the character. Stretches to fill the row so the tap target stays
    the whole card, minus whatever edit mode has added beside it. */
 .persona-card__open {
-  flex: 1; min-width: 0; display: flex; align-items: center; gap: 15px;
+  flex: 1; min-width: 0; display: flex; align-items: center; gap: var(--space-4);
   background: transparent; border: 0; padding: 0; text-align: left;
 }
 /* In edit mode the row is something you act ON, not navigation — so the open
@@ -45,12 +45,12 @@
    happened to overrun the row, so the row's shape depended on how long the
    character was called. Blocks make it name-then-caption every time. */
 .persona-card__name {
-  display: block; font-family: var(--font-display); font-size: 21px;
+  display: block; font-family: var(--font-display); font-size: var(--fs-title);
   color: var(--ink); line-height: 1.1; overflow-wrap: anywhere;
 }
 .persona-card__meta {
   display: block; font-family: var(--font-body); font-style: italic;
-  font-size: 13px; color: var(--ink-faint); margin-top: 3px;
+  font-size: var(--fs-note); color: var(--ink-faint); margin-top: var(--space-1);
 }
 /* The SVG strokes with currentColor, so the token here paints it. */
 .persona-card__chevron { color: var(--line-warm); }
@@ -66,11 +66,11 @@
 /* The Edit / Done affordance. A text button, because that is what a list
    edit toggle is everywhere else — an icon here would be a puzzle. */
 .text-btn {
-  background: transparent; border: 0; padding: 6px 2px;
-  font-family: var(--font-label); font-size: 12px;
+  background: transparent; border: 0; padding: var(--space-1-5) var(--space-0-5);
+  font-family: var(--font-label); font-size: var(--fs-small);
   letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent-bright);
 }
-.text-btn:disabled { opacity: 0.35; }
+.text-btn:disabled { opacity: var(--disabled-opacity); }
 
 /* Off-screen but focusable and clickable — the file input has to stay in
    the accessibility tree, so it cannot be display:none. */
@@ -92,11 +92,11 @@
 }
 .persona-card__del {
   display: flex; align-items: center; justify-content: center;
-  height: 30px; border-radius: 50%; color: var(--damage);
+  height: 30px; border-radius: 50%; color: var(--danger-bright);
 }
 .persona-card__grip {
   display: flex; flex-direction: column; align-items: center; justify-content: center;
-  gap: 3px; height: 30px; color: var(--line-warm);
+  gap: var(--space-1); height: 30px; color: var(--line-warm);
   /* The grip is the only draggable surface, so it also has to be the only
      one that suppresses the browser's own touch scrolling and text
      selection — doing that on the whole row would make the list unscrollable. */
@@ -147,8 +147,8 @@
    introducing them: no border, aligned with the body text it is, and carrying
    no affordance of its own. */
 .roster-lead {
-  margin: 2px 0 16px;
-  font-family: var(--font-body); font-style: italic; font-size: 14px;
+  margin: var(--space-0-5) 0 var(--space-4);
+  font-family: var(--font-body); font-style: italic; font-size: var(--fs-body);
   color: var(--ink-muted); line-height: 1.55;
 }
 /* The block is hidden with [hidden] by renderRoster(), and .roster-lead sets
@@ -172,14 +172,15 @@
 }
 
 /* ---- confirm + import modals ---- */
-.confirm__text--warn { color: var(--damage); }
+/* Consequence warnings in a confirmation are .status--warn (amber +
+   triangle). The danger button below them is the one red thing. */
 
 /* Removal inside an equipment row's body. Right-aligned and quiet: it is the
    least likely thing you opened the row to do. */
 /* A row's own actions, pushed to the trailing edge — the trash under an
    Equipment row's description, and the one in the gear detail window. Shared
    so the gesture sits in the same place in both. */
-.row-actions { display: flex; justify-content: flex-end; margin-top: 10px; }
+.row-actions { display: flex; justify-content: flex-end; margin-top: var(--space-2-5); }
 /* ---- import result -------------------------------------------------
    A result dialog, so it is centred on its own outcome: a mark, what
    happened, then one way out. Success and failure differ only by
@@ -191,11 +192,11 @@
    rule. `currentColor` throughout, which is why only the colour below has to
    change between the two states. */
 .import__mark {
-  width: 46px; height: 46px; margin: 4px auto 14px;
+  width: 46px; height: 46px; margin: var(--space-1) auto var(--space-3-5);
   border: 2px solid currentColor; border-radius: 50%; position: relative;
 }
-.modal__card[data-import-state="ok"] .import__mark { color: var(--heal); }
-.modal__card[data-import-state="error"] .import__mark { color: var(--damage); }
+.modal__card[data-import-state="ok"] .import__mark { color: var(--success-bright); }
+.modal__card[data-import-state="error"] .import__mark { color: var(--danger-bright); }
 
 .modal__card[data-import-state="ok"] .import__mark::before {
   content: ""; position: absolute; left: 16px; top: 10px; width: 11px; height: 19px;
@@ -214,13 +215,13 @@
 /* Carries .modal__title's face but not its head row: there is no close button
    to sit beside, so it centres under the mark instead. */
 .import__title {
-  font-family: var(--font-display); font-size: 21px; color: var(--heading);
-  text-align: center; margin-bottom: 8px;
+  font-family: var(--font-display); font-size: var(--fs-title); color: var(--heading);
+  text-align: center; margin-bottom: var(--space-2);
 }
 /* Scoped, so the confirmations that share .confirm__text stay left-aligned. */
 .modal--import .confirm__text { text-align: center; }
 /* One button, so it spans rather than sharing the row with a partner. */
-.modal--import .form-actions { margin-top: 16px; }
+.modal--import .form-actions { margin-top: var(--space-4); }
 
 /* The notes stay LEFT-aligned inside the centred card: they are a list of
    several statements, and centred bullets give the eye no edge to return to.
@@ -234,15 +235,19 @@
 .modal--import .modal__card { display: flex; flex-direction: column; max-height: 100%; }
 .import__notes {
   flex: 0 1 auto; min-height: 0; overflow-y: auto;
-  margin: 2px -2px 0; padding: 0 2px;
+  margin: var(--space-0-5) -2px 0; padding: 0 var(--space-0-5);
 }
 .import__note {
-  display: flex; gap: 8px; align-items: baseline;
-  font-family: var(--font-body); font-size: 12.5px; line-height: 1.5;
-  color: var(--ink-muted); padding: 3px 0;
+  display: flex; gap: var(--space-2); align-items: baseline;
+  font-family: var(--font-body); font-size: var(--fs-note); line-height: 1.5;
+  color: var(--ink-muted); padding: var(--space-1) 0;
 }
 .import__note::before { content: "\2022"; color: var(--line-warm); }
-.import__note--warn { color: var(--damage); }
+/* A warning note swaps its bullet for the .status triangle. The base note's
+   ::before (the bullet) is restated rather than fought: emptied, and given back
+   the text colour so the mask paints amber. */
+.import__note.status { padding-left: 1.45em; }
+.import__note.status::before { content: ""; color: inherit; }
 
 /* ---- share --------------------------------------------------------
    A small card: who is going, one choice, one button. It needs almost no
@@ -254,17 +259,17 @@
    between the head and the choice by its own margin rather than a rule: it
    is a confirmation, not a section. */
 .share__name {
-  font-family: var(--font-display); font-size: 19px; color: var(--heading);
-  margin: -4px 0 16px;
+  font-family: var(--font-display); font-size: var(--fs-row); color: var(--heading);
+  margin: -4px 0 var(--space-4);
 }
 
 /* The size on a format chip. Dimmer than the label so the two options are
    told apart by their names first and their weight second. */
-.share__size { color: var(--ink-faint); margin-left: 6px; }
+.share__size { color: var(--ink-faint); margin-left: var(--space-1-5); }
 
 /* The chip row sits directly under the name, so the rule .tag-picks carries
    for the gear window would be a second line doing nothing here. */
 .modal--share .tag-picks { padding-top: 0; border-top: 0; }
 /* Nothing below the chips but the button, which brings its own space. */
-.modal--share .form-actions { margin-top: 16px; }
+.modal--share .form-actions { margin-top: var(--space-4); }
 

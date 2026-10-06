@@ -18,7 +18,7 @@ Framework-free web app (vanilla HTML/CSS/JS) — no build step, no dependencies.
 
 The app deliberately keeps behavior, structure, and appearance apart. Preserve this:
 - **`index.html`** — the shell, and nothing else: the device frame, the `.app` state root, the script tags. ~60 lines. No screen markup lives here.
-- **`pages/`** — one HTML fragment per screen (`home`, `characters`, `sheet`, `edit`, `rules`, `settings`, `create`, `menu`), plus `pages/modals/` grouped by owner (`dice`, `inventory`, `character`). Structure + hooks only: semantic classes and `data-*` state attributes, **never** inline styles.
+- **`pages/`** — one HTML fragment per screen (`home`, `characters`, `sheet`, `edit`, `rules`, `settings`, `create`, `menu`), plus `pages/modals/` grouped by owner (`dice`, `inventory`, `character`), and `pages/toast.html` (the transient confirmation, loaded last). Structure + hooks only: semantic classes and `data-*` state attributes, **never** inline styles.
 - **`resources/js/boot.js`** — fetches every fragment in `pages/`, injects them into `.app` in a fixed order, then resolves `window.WAYPOINT_READY`. Adding a screen means adding a file and one entry in its `PAGES` array.
 - **`resources/css/style.css`** — an index of `@import`s and nothing else. The import order IS the cascade; it follows the original §1–§25 numbering deliberately.
 - **`resources/css/tokens.css`** — ALL design tokens. To re-skin, edit here — never hardcode colors/sizes elsewhere. The remaining CSS files are one per screen, mirroring `pages/`.
@@ -35,11 +35,13 @@ The app deliberately keeps behavior, structure, and appearance apart. Preserve t
 - **Never use `eval()`.** Dice expressions are parsed by the hand-written recursive-descent parser. Keep the limits (1–100 dice, 2–1000 sides, `floor()` the total).
 - **Derive, don't store, computed stats.** Game rules live as named constants (e.g. `PRECISION_TO_HIT`). Change the rule in one place and every readout follows.
 - **No selector is defined in two CSS files.** That invariant is what makes the `@import` order in `style.css` safe to reason about. To change a primitive from a screen file, override it with a more specific selector — never copy the rule.
+- **Sizes come from the scales.** Every `font-size` is a `--fs-*` token and every `padding` / `margin` / `gap` a `--space-*` token (or a named layout constant like `--statusbar-clear`). Raw px only for 1px border compensation, negative optical nudges, or a size written as its derivation. See `docs/design-system.md` §5.1 / §6.1.
+- **Feedback uses the shared patterns.** Inline errors and warnings are `.status` + `--error` / `--warn` / `--ok` (glyph + words, never colour alone). A confirmation for an action with no other visible result is `showToast()`. Don't invent a one-off warning style.
 - **`init()` waits on `WAYPOINT_READY`, not `DOMContentLoaded`.** The screens are fetched, so they land well after that event. Anything that needs the full DOM must wait on the same promise.
 
 ## Design language
 
-Direction **"Ember Journal"** — direction 1a "Field Journal" after dark. Same
+Theme **"Field Journal"** (dark) — design direction 1a "Field Journal" after dark. Same
 Marcellus / Spectral type and Latin flavor; the parchment is now lamplit dark.
 Built on a 60/30/10 split, declared at the top of `tokens.css`:
 
@@ -81,6 +83,13 @@ conflate. Reach for the right half — the wrong one is a contrast bug, not tast
   spent ink on both, which inverted into a near-white bar under the app.
 - Gold at size is `--gold-fill`, not `--gold-bright` — the latter is sized for
   8px diamonds, and across a keypad it out-shouts the 10%.
+- **`--heal` and `--damage` are fills too.** Red text, icons or outlines on the
+  page take `--danger-bright` — `--damage` as text is 2.3:1.
+- **Focus is `--focus` + `--focus-ring`**, never `--accent` (2.4:1 fails the 3:1
+  a focus edge needs). Anything that sets `outline: none` must draw one.
+- **Disabled is `opacity: var(--disabled-opacity)`** — one dimming app-wide.
+
+Full design system, themes, and known gaps: `docs/design-system.md`.
 
 Every foreground/background pair in `tokens.css` clears **WCAG AA (4.5:1)**;
 the muted and faint inks are the floor, not a starting point. Re-check before

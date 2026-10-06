@@ -3,16 +3,15 @@
    Source:    tools/csv/*.csv
    Regenerate: node tools/csv-to-json.mjs
 
-   Declared as a plain global rather than exported as a module because
-   index.html is opened directly off the filesystem, where a browser
-   blocks module imports and fetch() alike. Must load BEFORE main.js.
+   Declared as a plain global, like every script the app loads, so it is
+   in place synchronously before main.js runs. Must load BEFORE main.js.
    ===================================================================== */
 window.WAYPOINT_LIBRARY = {
   "waypoint": {
     "schemaVersion": 1,
     "title": "Waypoint Core Compendium",
     "version": "0.1.0",
-    "updated": "2026-09-20",
+    "updated": "2026-10-05",
     "author": "Mikey"
   },
   "classes": [

@@ -3,7 +3,8 @@
    ---------------------------------------------------------------------
    This file owns DATA and BEHAVIOR only. It never contains styling —
    it emits class names and toggles data-* attributes, and the
-   stylesheet (waypoint.css) decides how everything looks.
+   stylesheet (resources/css/style.css and the files it imports)
+   decides how everything looks.
 
    Layers:
      character  → the sheet's content (swap this to load a real character)
@@ -267,9 +268,9 @@
   /* ------------------------------------------------------------------ */
   /* LIBRARY — generated game content                                   */
   /* resources/js/library.js declares this global and must load first    */
-  /* (see index.html). It is a plain script rather than a fetched JSON    */
-  /* because the app is opened straight off the filesystem, where the     */
-  /* browser blocks fetch() and module imports alike.                     */
+  /* (see index.html). A plain script rather than a fetched JSON, so the  */
+  /* content is there synchronously before this file runs — no second    */
+  /* request to wait on or fail. See docs/architecture.md §9, Decision 4. */
   /* ------------------------------------------------------------------ */
   /* An imported compendium, if one has been installed over the built-in file.
 
@@ -2702,8 +2703,8 @@
     </button>`;
   }
 
-    const PENCIL_SVG = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/><path d="m15 5 4 4"/></svg>';
-    const TRASH_SVG  = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>';
+    const PENCIL_SVG = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/><path d="m15 5 4 4"/></svg>';
+    const TRASH_SVG  = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>';
 
   // The backpack shows ONE item at a time. The sheet's ledger is already the
   // index, so making the player scan a second list to find what they just
@@ -2915,7 +2916,7 @@
                accessible name otherwise, and "Export" was doing that job. -->
           <button class="persona-card__export" data-char-export="${esc(r.id)}"${editing ? '' : ' tabindex="-1"'}
                   aria-label="Export ${esc(r.name)}">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"/><path d="M14 2v5a1 1 0 0 0 1 1h5"/><path d="M12 12v6"/><path d="m15 15-3-3-3 3"/></svg>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"/><path d="M14 2v5a1 1 0 0 0 1 1h5"/><path d="M12 12v6"/><path d="m15 15-3-3-3 3"/></svg>
           </button>
           <button class="persona-card__grip" data-char-grip="${esc(r.id)}"${editing ? '' : ' tabindex="-1"'}
                   aria-label="Reorder ${esc(r.name)} — use the arrow keys, or drag">
@@ -3940,8 +3941,10 @@
     save();
     // Stays on the screen. The edit is confirmed by Save going inert, which
     // leaves you where you were rather than making a saved field impossible to
-    // glance at without navigating back.
+    // glance at without navigating back — and by a toast, because an inert
+    // button on its own is easy to miss.
     refreshBioSave();
+    showToast('Character saved.');
   }
 
   /* ------------------------------------------------------------------ */
@@ -5919,6 +5922,8 @@
     const file = characterFile([id]);
     if (!file) return;
     deliverCharacterFile(file, { via: 'save' });
+    // A download gives no sign inside the app that anything happened.
+    showToast('Character exported.');
   }
 
   /* ---- share ----------------------------------------------------------
@@ -6368,6 +6373,7 @@
     if (!file) return;
     // Named as a backup whatever the count — see backupFilename().
     deliverCharacterFile(file, { via: 'save', name: backupFilename(file) });
+    showToast('Backup saved.');
   }
 
   /* ---- compendium ----------------------------------------------------- */
@@ -6447,6 +6453,7 @@
     const bag = compendiumFile();
     const blob = new Blob([JSON.stringify(bag, null, 2)], { type: 'application/json' });
     saveBlob(blob, compendiumFilename(bag));
+    showToast('Compendium exported.');
   }
 
   /* Read a compendium file without committing to it. Mirrors
@@ -6702,7 +6709,7 @@
     setText('fileAskTitle', ask.title);
     setText('fileAskText', ask.text);
     fillList('fileAskNotes', (ask.notes || [])
-      .map((n) => `<p class="import__note${n.warn ? ' import__note--warn' : ''}">${esc(n.text)}</p>`).join(''));
+      .map((n) => `<p class="import__note${n.warn ? ' status status--warn' : ''}">${esc(n.text)}</p>`).join(''));
     fillList('fileAskActions', ask.actions
       .map((a) => `<button class="btn-save${a.danger ? ' btn-save--danger' : ''}"`
         + ` data-file-apply="${esc(a.mode)}">${esc(a.label)}</button>`).join(''));
@@ -6844,7 +6851,7 @@
     // Characters page, which is where the player was standing a moment ago.
     setText('importDismiss', ok ? 'Done' : 'Close');
     fillList('importNotes', (notes || [])
-      .map((n) => `<p class="import__note${n.warn ? ' import__note--warn' : ''}">${esc(n.text)}</p>`).join(''));
+      .map((n) => `<p class="import__note${n.warn ? ' status status--warn' : ''}">${esc(n.text)}</p>`).join(''));
     app.setAttribute('data-modal', 'import');
   }
 
@@ -7297,7 +7304,7 @@
     const n = state.create.notice;
     if (!n || n.step !== state.create.step) return '';
     n.shown = true;     // now it may be discarded on the way out — see gotoStep()
-    return `<div class="wizard__budget" data-state="over">${esc(n.text)}</div>`;
+    return `<div class="wizard__budget status status--warn" data-state="over">${esc(n.text)}</div>`;
   };
 
   /* ---- step 1: classes, in three family bands ---- */
@@ -7453,6 +7460,11 @@
     if (!el) return;
     el.innerHTML = `<span>${esc(main)}</span><span>${esc(right || '')}</span>`;
     el.setAttribute('data-state', state_);
+    // Over and ready are feedback, so they read as a status line: glyph +
+    // words. 'open' (still spending) is just a readout and stays plain.
+    el.classList.toggle('status', state_ === 'over' || state_ === 'ready');
+    el.classList.toggle('status--warn', state_ === 'over');
+    el.classList.toggle('status--ok', state_ === 'ready');
   }
 
   /* ---- step 4: skills, grouped by category like the sheet's picker ---- */
@@ -7936,6 +7948,34 @@
   }
 
   /* ------------------------------------------------------------------ */
+  /* TOAST — a short confirmation for an action with no other result    */
+  /* For saves that leave you where you were and files sent to the      */
+  /* browser's downloads. Never for errors (those stay in their result  */
+  /* windows) and never for anything that needs a decision. One at a    */
+  /* time: a new toast replaces the last and restarts its timer.        */
+  /* ------------------------------------------------------------------ */
+  // Long enough to read a short sentence twice; short enough not to sit over
+  // the next thing the player does. A tap dismisses it sooner.
+  const TOAST_MS = 3000;
+  let toastTimer = 0;
+
+  function showToast(text, variant = 'ok') {
+    const el = $('[data-toast-text]');
+    if (!el) return;
+    el.textContent = text;
+    // The variant picks the glyph; the words stay in ink (see toast.css).
+    el.className = `toast__text status status--${variant}`;
+    app.setAttribute('data-toast', 'on');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(hideToast, TOAST_MS);
+  }
+
+  function hideToast() {
+    clearTimeout(toastTimer);
+    app.setAttribute('data-toast', 'off');
+  }
+
+  /* ------------------------------------------------------------------ */
   /* WIRING — one delegated click handler for the whole app             */
   /* ------------------------------------------------------------------ */
   function wire() {
@@ -7945,7 +7985,7 @@
       // processed below never has its own element pulled out from under it.
       if (state.openStat && !e.target.closest('.stat-card')) showStatPop(null);
 
-      const t = e.target.closest('[data-nav],[data-tab],[data-edit-tab],[data-edit-attr],[data-skill-rank],[data-toggle],[data-step],[data-calc],[data-menu],[data-wound],[data-wound-reset],[data-calc-step],[data-calc-apply],[data-action],[data-key],[data-dice-back],[data-dice-roll],[data-roll],[data-roll-again],[data-inv-add],[data-inv-open],[data-item-save],[data-bp-step],[data-bp-edit],[data-bp-delete],[data-mod-add],[data-mod-remove],[data-stat-toggle],[data-effect-open],[data-effect-add],[data-effect-step],[data-effect-tick],[data-effects-clear],[data-tick-confirm],[data-skill-edit],[data-skill-draft],[data-skill-filter],[data-skill-save],[data-detail],[data-gear-add],[data-armor-add],[data-detail-remove],[data-pick],[data-tag],[data-note-add],[data-note-save],[data-note-cancel],[data-note-edit],[data-note-delete],[data-note-del-confirm],[data-portrait-pick],[data-portrait-remove],[data-portrait-menu],[data-rest],[data-patch],[data-patch-confirm],[data-poison-toggle],[data-adv],[data-rules-toggle],[data-id-save],[data-portrait-crop],[data-crop-save],[data-crop-reset],[data-open-character],[data-wiz],[data-wiz-step],[data-wiz-expand],[data-wiz-pick],[data-wiz-attr],[data-wiz-skill],[data-wiz-sec],[data-wiz-slot],[data-wiz-clear],[data-wiz-pick-group],[data-equip-drop],[data-roster-edit],[data-char-del],[data-char-del-confirm],[data-char-export],[data-import-open],[data-share-format],[data-share-send],[data-backup-export],[data-compendium-export],[data-compendium-reset],[data-file-open],[data-file-apply],[data-ap-mode],[data-ap-theme]');
+      const t = e.target.closest('[data-nav],[data-tab],[data-edit-tab],[data-edit-attr],[data-skill-rank],[data-toggle],[data-step],[data-calc],[data-menu],[data-wound],[data-wound-reset],[data-calc-step],[data-calc-apply],[data-action],[data-key],[data-dice-back],[data-dice-roll],[data-roll],[data-roll-again],[data-inv-add],[data-inv-open],[data-item-save],[data-bp-step],[data-bp-edit],[data-bp-delete],[data-mod-add],[data-mod-remove],[data-stat-toggle],[data-effect-open],[data-effect-add],[data-effect-step],[data-effect-tick],[data-effects-clear],[data-tick-confirm],[data-skill-edit],[data-skill-draft],[data-skill-filter],[data-skill-save],[data-detail],[data-gear-add],[data-armor-add],[data-detail-remove],[data-pick],[data-tag],[data-note-add],[data-note-save],[data-note-cancel],[data-note-edit],[data-note-delete],[data-note-del-confirm],[data-portrait-pick],[data-portrait-remove],[data-portrait-menu],[data-rest],[data-patch],[data-patch-confirm],[data-poison-toggle],[data-adv],[data-rules-toggle],[data-id-save],[data-portrait-crop],[data-crop-save],[data-crop-reset],[data-open-character],[data-wiz],[data-wiz-step],[data-wiz-expand],[data-wiz-pick],[data-wiz-attr],[data-wiz-skill],[data-wiz-sec],[data-wiz-slot],[data-wiz-clear],[data-wiz-pick-group],[data-equip-drop],[data-roster-edit],[data-char-del],[data-char-del-confirm],[data-char-export],[data-import-open],[data-share-format],[data-share-send],[data-backup-export],[data-compendium-export],[data-compendium-reset],[data-file-open],[data-file-apply],[data-ap-mode],[data-ap-theme],[data-toast-dismiss]');
       if (!t) return;
       /* The app root is STATE, never a control. It carries data-view, data-tab,
          data-edit-tab, data-menu and data-modal so the stylesheet can switch on
@@ -8092,6 +8132,7 @@
       // branch. These two are the only controls inside it.
       if (t.dataset.shareFormat !== undefined) { setShareFormat(t.dataset.shareFormat === '1'); return; }
       if (t.hasAttribute('data-share-send'))   { shareCharacter(); return; }
+      if (t.hasAttribute('data-toast-dismiss')) { hideToast(); return; }
 
       // --- settings ---
       // Both imports open the same picker; which one asked is state, and the

@@ -6,14 +6,14 @@
    library in the two forms the project needs:
 
      resources/js/library.js   a classic script declaring one global.
-                               CHECKED IN, because index.html is opened
-                               straight off the filesystem (file://) and a
-                               browser blocks BOTH fetch() and ES module
-                               imports as cross-origin there. A .json the
-                               app fetches simply cannot work without a
-                               server, and "no build step" is a promise
-                               made to whoever opens the app — not to
-                               whoever authors the content.
+                               CHECKED IN, because "no build step" is a
+                               promise made to whoever serves the app —
+                               not to whoever authors the content. Serve
+                               the folder and the content is already
+                               there, without running this script. A
+                               classic script (not a fetched .json) so it
+                               loads synchronously ahead of main.js, like
+                               every other script the app loads.
 
      tools/out/library.json    the same data, for the import-a-library
                                feature described in docs/library-schema.md.
@@ -731,9 +731,8 @@ writeFileSync(join(ROOT, 'resources', 'js', 'library.js'),
    Source:    tools/csv/*.csv
    Regenerate: node tools/csv-to-json.mjs
 
-   Declared as a plain global rather than exported as a module because
-   index.html is opened directly off the filesystem, where a browser
-   blocks module imports and fetch() alike. Must load BEFORE main.js.
+   Declared as a plain global, like every script the app loads, so it is
+   in place synchronously before main.js runs. Must load BEFORE main.js.
    ===================================================================== */
 window.WAYPOINT_LIBRARY = ${json};
 `);

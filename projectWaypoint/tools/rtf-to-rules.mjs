@@ -11,6 +11,15 @@
 
        node tools/rtf-to-rules.mjs
 
+   MAC ONLY. The RTF is read by macOS's built-in `textutil`, so this
+   script runs on a Mac and nowhere else; anywhere else it stops with a
+   message saying so. The guide is written in Google Docs, which can
+   export HTML directly — reading that export instead would remove the
+   textutil step and make this run anywhere. Not done yet: the heading
+   detection below reads textutil's stylesheet, and a Google Docs export
+   styles text differently, so it needs a sample export to adapt to.
+   See docs/architecture.md §13.
+
    ---------------------------------------------------------------------
    WHY IT GOES THROUGH HTML AND NOT PLAIN TEXT
 
@@ -57,6 +66,14 @@ const TARGET = join(ROOT, 'resources/js/rules.js');
 // macOS ships textutil, which is the only thing on the machine that reads
 // RTF properly. Failing loudly here beats emitting an empty rulebook.
 function toHtml(path) {
+  // Checked before trying, so a non-Mac gets the actual reason rather than
+  // a spawn error about a missing binary. See "MAC ONLY" at the top.
+  if (process.platform !== 'darwin') {
+    console.error(
+      'rtf-to-rules needs macOS: it reads the guide with textutil, which only ships on a Mac.\n'
+      + 'Run it on a Mac, or see docs/architecture.md §13 for the plan to read a Google Docs HTML export instead.');
+    process.exit(1);
+  }
   try {
     return execFileSync('textutil', ['-convert', 'html', '-stdout', path], {
       encoding: 'utf8', maxBuffer: 64 * 1024 * 1024,
@@ -261,9 +278,8 @@ const out = `/* ================================================================
    means the app and the document disagree, and the document wins next time
    anyone runs the converter.
 
-   Declared as a plain global rather than a module because index.html is
-   opened straight off the filesystem, where the browser blocks module
-   imports and fetch() alike — same arrangement as dice.js and library.js.
+   Declared as a plain global, like every script the app loads — same
+   arrangement as dice.js and library.js.
    ===================================================================== */
 
 window.WAYPOINT_RULES = ${JSON.stringify({ ...guide, generated: stamp }, null, 2)};

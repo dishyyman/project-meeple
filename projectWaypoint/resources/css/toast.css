@@ -1,0 +1,55 @@
+/* WAYPOINT · toast.css
+   Toast (§26) — the transient confirmation. Mirrors pages/toast.html.
+   Part of the stylesheet loaded by style.css. Appearance only — no layout
+   decisions that belong to structure, and no values that belong in tokens.css. */
+
+/* ----------------------------------------------------------------- */
+/* 26. TOAST                                                          */
+/* ----------------------------------------------------------------- */
+/* Pinned to the foot of the app and centred. Positioned high enough to clear
+   the sheet's tab bar (its height is roughly the home inset plus one 64px
+   row), so a toast never covers the controls the player just used. The
+   container ignores the pointer — only the card itself takes a tap. */
+.toast {
+  position: absolute; left: var(--space-4); right: var(--space-4);
+  bottom: calc(var(--home-clear) + var(--space-16));
+  z-index: 60;
+  display: flex; justify-content: center;
+  pointer-events: none;
+}
+.toast__card {
+  max-width: 100%;
+  background: var(--bg-card);
+  border: 1px solid var(--line-hair); border-radius: var(--r-sm);
+  box-shadow: var(--shadow-modal);
+  padding: var(--space-2-5) var(--space-3-5);
+  text-align: left;
+  /* Hidden by default. visibility (not just opacity) so a hidden toast is out
+     of the tab order and the accessibility tree, and cannot be tapped. */
+  opacity: 0; visibility: hidden; transform: translateY(var(--space-2));
+  transition: opacity 0.2s ease, transform 0.2s ease, visibility 0s linear 0.2s;
+}
+.app[data-toast="on"] .toast__card {
+  opacity: 1; visibility: visible; transform: none; pointer-events: auto;
+  transition: opacity 0.2s ease, transform 0.2s ease, visibility 0s;
+}
+/* The words in ink, the glyph in the status colour: a toast is read, and a
+   whole sentence in green or amber is harder to read than one glyph is. The
+   .status variant is set by showToast(). */
+.toast__text {
+  display: block;
+  font-family: var(--font-body); font-size: var(--fs-body); line-height: 1.45;
+}
+/* Matches the doubled-class weight of the .status variants, so ink wins here. */
+.toast__text.status { color: var(--ink); }
+.toast__text.status--ok::before   { background: var(--success-bright); }
+.toast__text.status--warn::before { background: var(--warning-bright); }
+
+/* Off the sheet there is no tab bar to clear, so the toast sits lower. */
+.app:not([data-view="sheet"]) .toast { bottom: calc(var(--home-clear) + var(--space-4)); }
+
+@media (prefers-reduced-motion: reduce) {
+  /* Fade only — no slide. */
+  .toast__card,
+  .app[data-toast="on"] .toast__card { transform: none; }
+}
