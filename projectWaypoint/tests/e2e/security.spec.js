@@ -18,7 +18,7 @@
    Fixtures: tests/fixtures/files/ — see the note in malicious.waypoint.json's
    generator in docs/testing.md §4.
    ===================================================================== */
-const { test, expect } = require('@playwright/test');
+const { test, expect } = require('./helpers/test');
 const {
   openApp, press, appAttr, closeModal, fixture, chooseFile, readResult, rosterNames,
 } = require('./helpers/app');
@@ -53,7 +53,7 @@ const injectedElements = (page) => page.evaluate(() => {
 
 test('a malicious character file: nothing runs, nothing becomes markup', async ({ page }) => {
   await watchCsp(page);
-  const errors = await openApp(page);
+  await openApp(page);
   await press(page, '[data-nav="characters"]');
   await chooseFile(page, '[data-import-open]', fixture('malicious.waypoint.json'));
   const result = await readResult(page);
@@ -87,26 +87,34 @@ test('a malicious character file: nothing runs, nothing becomes markup', async (
   const portraits = await page.evaluate(() =>
     Object.entries(localStorage).filter(([k, v]) => k.endsWith('.portrait') && !v.startsWith('data:image/')));
   expect(portraits).toEqual([]);
-  expect(errors).toEqual([]);
 });
 
-test('the Content Security Policy refuses inline script', async ({ page }) => {
-  await watchCsp(page);
-  await openApp(page);
-  // Simulates an escaping failure: inline script and an inline handler,
-  // put straight into the page.
-  await page.evaluate(() => {
-    const s = document.createElement('script');
-    s.textContent = 'window.__pwned = "script"';
-    document.body.append(s);
-    const holder = document.createElement('div');
-    holder.innerHTML = '<img src="data:image/gif;base64,R0lGODlhAQABAAAAACw=" onload="window.__pwned=\'handler\'">';
-    document.body.append(holder);
+/* Wrapped in a describe only so the error allowance below covers this one
+   test. The browser REPORTS each script it refuses as a console error —
+   here that report is the policy working, not the app failing. The pattern
+   is the browser's own wording (Chrome and WebKit both name the policy),
+   so any other error in this test still fails it. */
+test.describe('the policy refusing injected script', () => {
+  test.use({ allowedErrors: [/Content Security Policy/i] });
+
+  test('the Content Security Policy refuses inline script', async ({ page }) => {
+    await watchCsp(page);
+    await openApp(page);
+    // Simulates an escaping failure: inline script and an inline handler,
+    // put straight into the page.
+    await page.evaluate(() => {
+      const s = document.createElement('script');
+      s.textContent = 'window.__pwned = "script"';
+      document.body.append(s);
+      const holder = document.createElement('div');
+      holder.innerHTML = '<img src="data:image/gif;base64,R0lGODlhAQABAAAAACw=" onload="window.__pwned=\'handler\'">';
+      document.body.append(holder);
+    });
+    await page.waitForTimeout(200);
+    expect(await page.evaluate(() => window.__pwned)).toBeUndefined();
+    const violations = await page.evaluate(() => window.__violations);
+    expect(violations.some((v) => v.startsWith('script-src'))).toBe(true);
   });
-  await page.waitForTimeout(200);
-  expect(await page.evaluate(() => window.__pwned)).toBeUndefined();
-  const violations = await page.evaluate(() => window.__violations);
-  expect(violations.some((v) => v.startsWith('script-src'))).toBe(true);
 });
 
 /* Each of these must be refused with a message, leaving the roster as it was. */
@@ -119,7 +127,7 @@ const REFUSED = [
 
 for (const [what, file, title] of REFUSED) {
   test(`refuses ${what}`, async ({ page }) => {
-    const errors = await openApp(page);
+    await openApp(page);
     await press(page, '[data-nav="characters"]');
     const before = await rosterNames(page);
     await chooseFile(page, '[data-import-open]', fixture(file));
@@ -127,7 +135,6 @@ for (const [what, file, title] of REFUSED) {
     expect(result).toMatchObject({ state: 'error', title });
     await closeModal(page);
     expect(await rosterNames(page)).toEqual(before);
-    expect(errors).toEqual([]);
   });
 }
 
@@ -140,14 +147,13 @@ test('refuses a character file given to the compendium importer', async ({ page 
 });
 
 test('refuses a file over 10 MB before reading it (security.md Gap 1)', async ({ page }) => {
-  const errors = await openApp(page);
+  await openApp(page);
   await press(page, '[data-nav="characters"]');
   const big = Buffer.alloc(11 * 1024 * 1024, ' ');
   await chooseFile(page, '[data-import-open]', { name: 'huge.waypoint.json', mimeType: 'application/json', buffer: big });
   const result = await readResult(page);
   expect(result).toMatchObject({ state: 'error', title: 'That file is too large' });
   expect(result.text).toContain('huge.waypoint.json');
-  expect(errors).toEqual([]);
 });
 
 test('the policy is in place on the page', async ({ page }) => {

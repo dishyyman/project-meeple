@@ -16,14 +16,31 @@
 
    Never re-record to make an unexplained failure go away.
    ===================================================================== */
-const { test, expect } = require('@playwright/test');
+const { test, expect } = require('./helpers/test');
 const grimm = require('../fixtures/saves/grimm-multiclass.json');
 const {
   openApp, press, appAttr, openFirstCharacter, closeModal, applyCalc, addEffect, readSheet,
 } = require('./helpers/app');
 
+/* Reduced motion, so the dice do not tumble. Two reasons, both about the
+   record being exact:
+
+   · The tumble (animateRoll() in main.js) draws throwaway faces from
+     Math.random on every animation frame. How many frames run before the
+     test closes the roll window depends on how busy the machine is — so the
+     pinned random sequence drifted, and every later roll with it. Chrome
+     happened to be steady; Safari under load was not (found 2026-11-04).
+   · The test reads the total straight after the tap. Mid-tumble, that is a
+     throwaway face; with reduced motion the app paints the REAL result at
+     once (the prefersReducedMotion() branch), which is what should be on
+     record.
+
+   The tumble itself is theatre, not arithmetic — every real roll still goes
+   through evaluateDice(), which is what this record checks. */
+test.use({ reducedMotion: 'reduce' });
+
 test('the seed character, through a full session of play', async ({ page }) => {
-  const errors = await openApp(page, { seed: 7 });
+  await openApp(page, { seed: 7 });
   await openFirstCharacter(page);
 
   const steps = [];
@@ -92,7 +109,6 @@ test('the seed character, through a full session of play', async ({ page }) => {
   }
 
   expect(JSON.stringify({ steps, rolls }, null, 2)).toMatchSnapshot('session.json');
-  expect(errors).toEqual([]);
 });
 
 /* The seed is a single-class Hunter. This one covers what Elara does not:
@@ -100,7 +116,7 @@ test('the seed character, through a full session of play', async ({ page }) => {
    with generated mana (Spellblade), heavy armour, a two-handed weapon, an
    item that both raises and lowers attributes, and a Condition already on. */
 test('a multiclass character with mixed modifiers', async ({ page }) => {
-  const errors = await openApp(page, { seed: 11, saves: { cgrimm: grimm } });
+  await openApp(page, { seed: 11, saves: { cgrimm: grimm } });
   await openFirstCharacter(page);
 
   const steps = [];
@@ -128,5 +144,4 @@ test('a multiclass character with mixed modifiers', async ({ page }) => {
   }
 
   expect(JSON.stringify({ steps, rolls }, null, 2)).toMatchSnapshot('multiclass.json');
-  expect(errors).toEqual([]);
 });

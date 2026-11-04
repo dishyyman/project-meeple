@@ -6,7 +6,7 @@
    import, backup and delete paths end to end and check the result
    survives a reload.
    ===================================================================== */
-const { test, expect } = require('@playwright/test');
+const { test, expect } = require('./helpers/test');
 const {
   openApp, press, appAttr, openFirstCharacter, closeModal, applyCalc,
   fixture, chooseFile, download, readResult, rosterNames,
@@ -19,7 +19,7 @@ async function reloadApp(page) {
 }
 
 test('Flow 6 — edit and save: toast, inert Save, survives reload; a blank name is refused', async ({ page }) => {
-  const errors = await openApp(page);
+  await openApp(page);
   await openFirstCharacter(page);
   await press(page, '[data-nav="edit"]');
 
@@ -38,11 +38,10 @@ test('Flow 6 — edit and save: toast, inert Save, survives reload; a blank name
   await reloadApp(page);
   await press(page, '[data-nav="characters"]');
   expect(await rosterNames(page)).toEqual(['Elara the Bold']);
-  expect(errors).toEqual([]);
 });
 
 test('Flow 7 — export a character, then import it back as a copy', async ({ page }) => {
-  const errors = await openApp(page);
+  await openApp(page);
   await press(page, '[data-nav="characters"]');
   await press(page, '[data-roster-edit]');
 
@@ -67,11 +66,10 @@ test('Flow 7 — export a character, then import it back as a copy', async ({ pa
   await reloadApp(page);
   await press(page, '[data-nav="characters"]');
   expect((await rosterNames(page)).length).toBe(2);
-  expect(errors).toEqual([]);
 });
 
 test('Flow 7b — restore in place overwrites the matching character', async ({ page }) => {
-  const errors = await openApp(page);
+  await openApp(page);
   await openFirstCharacter(page);
   await applyCalc(page, 'health', 'damage', 5);                // 7 → 2
   await expect(page.locator('[data-bind="healthCur"]').first()).toHaveText('2');
@@ -88,11 +86,10 @@ test('Flow 7b — restore in place overwrites the matching character', async ({ 
   expect(await rosterNames(page)).toEqual(['Elara Starwhisper']);
   await press(page, '[data-open-character]');
   await expect(page.locator('[data-bind="healthCur"]').first()).toHaveText('7');
-  expect(errors).toEqual([]);
 });
 
 test('Flow 8 — back up the roster, delete a character, restore it', async ({ page }) => {
-  const errors = await openApp(page);
+  await openApp(page);
   await press(page, '[data-nav="settings"]');
   const backup = await download(page, '[data-backup-export]');
   expect(backup.json.characters.length).toBe(1);
@@ -114,11 +111,10 @@ test('Flow 8 — back up the roster, delete a character, restore it', async ({ p
 
   await press(page, '[data-nav="characters"]');
   expect(await rosterNames(page)).toEqual(['Elara Starwhisper']);
-  expect(errors).toEqual([]);
 });
 
 test('Flow 11 — a deleted character stays deleted after reload (the seed included)', async ({ page }) => {
-  const errors = await openApp(page);
+  await openApp(page);
   await press(page, '[data-nav="characters"]');
   await press(page, '[data-roster-edit]');
   await press(page, '[data-char-del]');
@@ -134,5 +130,4 @@ test('Flow 11 — a deleted character stays deleted after reload (the seed inclu
   // Nothing left in storage under the deleted id.
   const keys = await page.evaluate(() => Object.keys(localStorage).filter((k) => k.startsWith('waypoint.character.')));
   expect(keys).toEqual([]);
-  expect(errors).toEqual([]);
 });

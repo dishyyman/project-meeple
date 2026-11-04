@@ -48,24 +48,13 @@ async function openApp(page, { seed = 1, saves = null } = {}) {
         (${seedStorage.toString()})(${JSON.stringify(saves)});
       }`);
   }
-  const errors = [];
-  page.on('pageerror', (e) => errors.push(String(e)));
-  // A failed resource load reports only "404" in its text; the URL is in
-  // the message's location, and is the part worth reading.
-  page.on('console', (m) => {
-    if (m.type() !== 'error') return;
-    const url = m.location().url || '';
-    // The browser asks for /favicon.ico on its own; the app has no icon yet
-    // (the logo is undecided — design-system.md §2). Not an app error.
-    if (url.endsWith('/favicon.ico')) return;
-    errors.push(`${m.text()} ${url}`.trim());
-  });
+  // Console errors and uncaught exceptions are watched for every test by
+  // helpers/test.js, from before this navigation — nothing to collect here.
   await page.goto('/index.html');
   // init() lands on Home once WAYPOINT_READY has resolved and the app wired.
   await page.waitForFunction(() =>
     document.querySelector('.app')?.getAttribute('data-view') === 'home'
     && document.querySelector('[data-bind="healthMax"]')?.textContent !== '');
-  return errors;
 }
 
 // element.click() on the first match — see the header for why.

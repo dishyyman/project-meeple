@@ -211,44 +211,44 @@
   ],
   "rolls": [
     {
-      "total": "9",
+      "total": "12",
       "crit": false,
-      "card": "1H Melee To-Hit Critical Strike Lethality 1 · crits on 19–20 Half 9 Double (3)+6 d20+6 Reroll"
-    },
-    {
-      "total": "8",
-      "crit": false,
-      "card": "1H Melee Damage Critical Strike Lethality 1 · crits on 19–20 Half 8 Double (6)+2 1d6+2 Reroll"
-    },
-    {
-      "total": "18",
-      "crit": false,
-      "card": "Ictus Findens To-Hit Critical Strike Lethality 1 · crits on 19–20 Half 18 Double (12)+6 d20+6 Reroll"
-    },
-    {
-      "total": "9",
-      "crit": false,
-      "card": "Ictus Findens Damage Critical Strike Lethality 1 · crits on 19–20 Half 9 Double (6+1)+2 2d6+2 Reroll"
+      "card": "1H Melee To-Hit Critical Strike Lethality 1 · crits on 19–20 Half 12 Double (6)+6 d20+6 Reroll"
     },
     {
       "total": "6",
       "crit": false,
-      "card": "Clamor Bellicus Damage Critical Strike Lethality 1 · crits on 19–20 Half 6 Double (2+2)+2 2d6+2 Reroll"
+      "card": "1H Melee Damage Critical Strike Lethality 1 · crits on 19–20 3 Half 6 12 Double (4)+2 1d6+2 Reroll"
     },
     {
-      "total": "26",
+      "total": "13",
       "crit": false,
-      "card": "Ignis Fatuus To-Hit Critical Strike Lethality 1 · crits on 19–20 Half 26 Double (20)+6 d20+6 Reroll"
+      "card": "Ictus Findens To-Hit Critical Strike Lethality 1 · crits on 19–20 3 Half 13 12 Double (7)+6 d20+6 Reroll"
+    },
+    {
+      "total": "6",
+      "crit": false,
+      "card": "Ictus Findens Damage Critical Strike Lethality 1 · crits on 19–20 3 Half 6 12 Double (1+3)+2 2d6+2 Reroll"
     },
     {
       "total": "10",
       "crit": false,
-      "card": "Ignis Fatuus Damage Critical Strike Lethality 1 · crits on 19–20 Half 10 Double (8)+2 1d8+2 Reroll"
+      "card": "Clamor Bellicus Damage Critical Strike Lethality 1 · crits on 19–20 5 Half 10 20 Double (3+5)+2 2d6+2 Reroll"
     },
     {
-      "total": "6",
+      "total": "24",
       "crit": false,
-      "card": "Manus Salutis Healing Critical Strike Lethality 1 · crits on 19–20 Half 6 Double (4)+2 1d6+2 Reroll"
+      "card": "Ignis Fatuus To-Hit Critical Strike Lethality 1 · crits on 19–20 5 Half 24 20 Double (18)+6 d20+6 Reroll"
+    },
+    {
+      "total": "9",
+      "crit": false,
+      "card": "Ignis Fatuus Damage Critical Strike Lethality 1 · crits on 19–20 4 Half 9 18 Double (7)+2 1d8+2 Reroll"
+    },
+    {
+      "total": "4",
+      "crit": false,
+      "card": "Manus Salutis Healing Critical Strike Lethality 1 · crits on 19–20 4 Half 4 18 Double (2)+2 1d6+2 Reroll"
     }
   ]
 }

@@ -2,7 +2,7 @@
 
 > **What this doc is for:** how the app is validated. "The code looks correct" is not done — the change has to be **run and checked**.
 >
-> **Status (2026-10-05):** an automated suite exists — **80 unit tests** and **18 browser tests**, all passing. Run everything with `npm test` (§7). What each file covers is in §4; what's still to build is in §9. Items not yet built are marked **Open**.
+> **Status (2026-11-04):** an automated suite exists — **80 unit tests** and **19 browser tests**, each browser test run in **Chrome and Safari (WebKit)**, all passing (one is a marked known bug, §10). Any JavaScript error in the page fails the test it happens in. Run everything with `npm test` (§7) before committing. What each file covers is in §4; what's still to build is in §9. Items not yet built are marked **Open**.
 >
 > **Related docs:** [`prd.md`](prd.md) (features and acceptance criteria) · [`architecture.md`](architecture.md) · [`security.md`](security.md) (Gap 3 — malicious-file test) · [`code-style.md`](code-style.md) · [`rules-gaps.md`](rules-gaps.md) (rules the app must match)
 
@@ -72,15 +72,17 @@ Chosen to keep the app itself dependency-free. **Test tools are development-only
 |---|---|---|
 | **Unit** | **Node's built-in test runner** (`node --test`, `node:assert`) | Zero dependencies; Node 24 is already installed; `dice.js` already loads in Node |
 | **Integration** | Node test runner for file-format logic once extracted; **Playwright** for anything that needs the browser (storage, files, rendering) | |
-| **E2E** | **Playwright** (`@playwright/test`, driving the installed Chrome via `channel: 'chrome'`) | No browser download; one `npm install` and it runs |
+| **E2E** | **Playwright** (`@playwright/test`), every test in two projects: **chrome** (the installed Chrome, `channel: 'chrome'`) and **safari** (Playwright's WebKit) | Chrome and Safari are what players use. WebKit is the engine inside Safari and every iPhone browser — it is not the Safari app itself, so it catches engine bugs, not every Safari quirk; real-device QA still matters |
 | **Accessibility** | Manual keyboard pass; **Open:** automated checks (e.g. axe-core via Playwright) | |
-| **Visual** | Playwright screenshots, compared before/after | |
+| **Visual** | Manual visual QA in the app. Playwright saves a screenshot of a **failed** test only — there are no screenshot baselines | Decided 2026-11-04: baselines would need re-approving on every deliberate look change; visual issues are noted by hand instead |
+| **Error capture** | `tests/e2e/helpers/test.js` — every browser test fails on any uncaught exception or console error | Automatic, so no test can forget the check |
+| **When it runs** | Locally, with `npm test`, before committing | Decided 2026-11-04: no pre-commit hook (would slow and block every commit) and no CI on push (would only report problems after they are pushed) |
 
 **Decided 2026-10-05** (`architecture.md` Decision 10): Playwright is a **dev-only** dependency in `projectWaypoint/package.json`. The app never loads it.
 
 **Do not add `"type": "module"` to `package.json`.** Node would then treat `dice.js` and `mechanics.js` as ES modules and the converter and unit tests would break.
 
-**Setup on a new machine:** Node 20+ and Google Chrome, then `npm install` in `projectWaypoint/`.
+**Setup on a new machine:** Node 20+ and Google Chrome, then in `projectWaypoint/`: `npm install` and `npx playwright install webkit` (a one-time ~80 MB download of the Safari engine; Chrome needs no download).
 
 ---
 
@@ -89,19 +91,21 @@ Chosen to keep the app itself dependency-free. **Test tools are development-only
 ```text
 projectWaypoint/
 ├── package.json             # dev-only scripts and devDependencies
-├── playwright.config.js     # starts tests/serve.mjs, drives installed Chrome
+├── playwright.config.js     # starts tests/serve.mjs; chrome + safari projects
 └── tests/
     ├── serve.mjs            # tiny static server (Node's http, no dependency)
     ├── unit/                # node --test
     │   ├── dice.test.js       # 17 — arithmetic, limits, refusals, never eval
     │   ├── mechanics.test.js  # 56 — every rules-gaps §6 rule + §7 rulings
     │   └── content.test.js    #  7 — the real compendium vs the guide
-    ├── e2e/                 # Playwright
+    ├── e2e/                 # Playwright — every test runs in Chrome AND Safari
+    │   ├── helpers/test.js    # the `test` to import: fails on any page error
     │   ├── helpers/app.js     # openApp, press, seed storage, files, downloads
     │   ├── characterization.spec.js  # 2 — the whole sheet, step by step
     │   ├── characterization.spec.js-snapshots/   # the recorded baselines
     │   ├── smoke.spec.js      # 2 — Flows 1, 2
     │   ├── data-safety.spec.js # 5 — Flows 6, 7, 7b, 8, 11
+    │   ├── rules.spec.js      # 1 — Flow 10 (marked known bug, §10)
     │   └── security.spec.js   # 9 — Flow 12, CSP, size limit
     └── fixtures/
         ├── files/             # real exports + hostile/malformed files
@@ -110,6 +114,7 @@ projectWaypoint/
 
 **Rules:**
 - Unit tests are `<thing>.test.js`; browser tests are `<thing>.spec.js`.
+- **Browser tests import from `./helpers/test`, never `@playwright/test` directly** — that import is what makes a JavaScript error fail the test. A test that deliberately causes a console error declares it narrowly with `test.use({ allowedErrors: [/…/] })` inside a `describe` (see the CSP test in `security.spec.js`).
 - **Fixtures are real files** in the formats players actually exchange — they double as compatibility tests: once a character file is in `fixtures/files/`, every future version must still import it. **Never edit or delete one to make a test pass.**
 - `elara.waypoint.json`, `backup.waypoint.json` and `compendium.library.json` were exported by the app itself. The hostile and malformed ones were made from `elara.waypoint.json`; `malicious.waypoint.json` puts script payloads in every player-authored string and in a restored content entry.
 - Tests never touch a real player's storage — every browser test gets a fresh context.
@@ -126,7 +131,9 @@ When a rules change is **deliberate**, the record will differ. Read the diff, co
 npx playwright test characterization --update-snapshots
 ```
 
-**Never re-record to make an unexplained failure go away.** The snapshot files are named `-darwin`, because Playwright names them per OS; a non-Mac machine would record its own the first time.
+**They run with reduced motion** (`test.use({ reducedMotion: 'reduce' })`), so the dice don't tumble. The tumble draws throwaway faces from `Math.random` on every animation frame, so on a busy machine the pinned sequence drifted and the rolls with it. The roll records were also being read mid-tumble. Re-recorded 2026-11-04 for this: every sheet step was identical, and only the roll windows changed, from throwaway faces to the real results.
+
+**Never re-record to make an unexplained failure go away.** There is **one** record per snapshot, shared by both browsers and every OS (`snapshotPathTemplate` in `playwright.config.js`): the records are text, not images, so if Safari and Chrome ever disagree about what the sheet says, that's a bug to look at — never a reason to keep a second baseline.
 
 ---
 
@@ -172,7 +179,7 @@ Each flow lists the steps and the result that must hold. These are the E2E suite
 
 ### Flow 10 — Look up a rule
 **Steps:** from the sheet's Gear tab, open Rules from the menu → search → go back.
-**Expected:** results filter as you type. **Known gap:** back currently lands on the Action tab, not Gear (`prd.md` Feature 2, Known Gaps) — this flow should pass once that's fixed.
+**Expected:** results filter as you type; back returns to the Gear tab. **Known bug:** back currently lands on the Action tab (`prd.md` Feature 2, Known Gaps). `rules.spec.js` tests the full flow and is marked as an expected failure until that's fixed (§10).
 
 ### Flow 11 — Delete a character
 **Steps:** Characters → edit → delete → confirm → reload.
@@ -199,7 +206,10 @@ Each flow lists the steps and the result that must hold. These are the E2E suite
 | Flows 3, 4, 5 (damage, rolls, effects) | `e2e/characterization.spec.js` (as recorded output, not readable assertions) |
 | Flows 6, 7, 8, 11 (edit, export/import, backup, delete) | `e2e/data-safety.spec.js` |
 | Flow 12 (hostile files), CSP, import size limit | `e2e/security.spec.js` |
-| **Not yet:** Flow 9 (compendium Add/Replace/Restore), Flow 10 (rules lookup — waits on the back-button fix), accessibility | §9 |
+| Flow 10 (rules lookup) — written, marked known bug | `e2e/rules.spec.js`, §10 |
+| No JavaScript errors during any browser test | `e2e/helpers/test.js` (every test, automatically) |
+| Chrome and Safari (WebKit) | every browser test runs in both |
+| **Not yet:** Flow 9 (compendium Add/Replace/Restore), accessibility | §9 |
 
 **Prioritize:**
 1. **Data mutations** — save, load, delete, import, export, backup. Losing a character is the worst failure this app can have.
@@ -218,9 +228,11 @@ Each flow lists the steps and the result that must hold. These are the E2E suite
 | **Run the app** | VS Code → right-click `index.html` → Open with Live Server (or any static server, e.g. `python3 -m http.server`) | Works today |
 | **Everything** | `npm test` | Works — unit, then browser |
 | **Unit tests** | `npm run test:unit` | Works — 80 tests, under a second |
-| **Browser tests** | `npm run test:e2e` (or `npx playwright test <file>`) | Works — 18 tests, ~7 seconds; starts its own server |
+| **Browser tests** | `npm run test:e2e` (or `npx playwright test <file>`) | Works — 19 tests × 2 browsers, ~15 seconds; starts its own server |
+| **One browser only** | `npm run test:chrome` / `npm run test:safari` | |
 | **One browser test** | `npx playwright test security -g malicious` | |
-| **A failed browser test** | `npx playwright show-trace test-results/<test>/trace.zip` | Step-by-step replay, kept on failure |
+| **A failed browser test** | `npm run test:report` | The last run's HTML report: each failure's error, a screenshot of the moment it failed, and the step-by-step replay. Kept in `playwright-report/` (git-ignored) |
+| **Just the replay** | `npx playwright show-trace test-results/<test>/trace.zip` | |
 | **Serve for tests** | `npm run serve` | `http://localhost:4173` |
 | **Content check** | `node tools/csv-to-json.mjs` | Works today — exits with errors and writes nothing if the content is invalid |
 | **Rules regenerate** | `node tools/rtf-to-rules.mjs` | Works today (Mac only — `architecture.md` §13) |
@@ -259,5 +271,27 @@ A change is done when:
 8. **Open — Flow 9:** compendium Add, Replace (reloads) and Restore Built-in.
 9. **Open — readable play tests:** Flows 3, 4, 5 as plain assertions ("health reads 4 / 9"), so a failure names the rule rather than a snapshot diff.
 10. **Open — extract save/load validation** (`applySave()`, file parsers) from `main.js` and unit-test the clamping in `database.md` A6.
-11. **Open — Flow 10** once the Rules back button returns to the right screen (`prd.md` Feature 2).
+11. ~~**Flow 10**~~ — test written 2026-11-04, marked as a known bug until the Rules back button is fixed (§10).
 12. **Open — automated accessibility:** keyboard reachability of every control and an axe-core pass.
+13. ~~**Fail on any page error, Safari, failure reports**~~ — done 2026-11-04: `helpers/test.js`, the `safari` project, HTML report + failure screenshots.
+
+---
+
+## 10. Known bugs
+
+A known bug that a test can show gets a test **marked as expected to fail**, rather than being left untested or skipped:
+
+```js
+test('…', async ({ page }) => {
+  test.fail(true, 'Known bug — <doc and section>: <what is wrong>');
+  …
+});
+```
+
+- **While the bug exists**, the test fails as expected and the run stays green. The terminal shows it with a ✘ but counts it as passed; the HTML report lists it as an expected failure, with the reason.
+- **When the bug is fixed**, the test passes, and Playwright reports *that* as a failure ("expected to fail, but passed"). That's the prompt to delete the `test.fail(…)` line so the test starts guarding the fix — and to remove the row below.
+- Every marked test says in its header comment which doc records the bug. Rules that aren't built yet (`rules-gaps.md` §2–§4) are missing features, not bugs, and don't get marked tests.
+
+| Bug | Recorded in | Test |
+|---|---|---|
+| Rules → back lands on the Action tab, not the tab the player came from | `prd.md` Feature 2, Known Gaps | `e2e/rules.spec.js` (Flow 10) |

@@ -5,7 +5,7 @@ Framework-free web app (vanilla HTML/CSS/JS) — no build step, no runtime depen
 
 **Previewing: serve the folder over `http://`** — in VS Code, right-click `index.html` → **Open with Live Server**. Opening the file directly no longer works: the screens are assembled from `pages/` with `fetch()`, which browsers block on `file://`. The app will tell you so on screen if you forget.
 
-**Testing: `npm test`** in this folder (unit + browser; one-time `npm install` first). Run it before calling a change done, and add a test with the change — see `docs/testing.md`. If the characterization snapshots fail after a *deliberate* rules change, read the diff before re-recording; never re-record to silence an unexplained failure.
+**Testing: `npm test`** in this folder (unit + browser tests in Chrome and Safari/WebKit; one-time `npm install` and `npx playwright install webkit` first). Run it before calling a change done — before any commit — and report the result; add a test with the change — see `docs/testing.md`. Browser tests import `test` from `tests/e2e/helpers/test.js` (it fails a test on any page error). Known bugs get a `test.fail()` test, listed in `docs/testing.md` §10. If the characterization snapshots fail after a *deliberate* rules change, read the diff before re-recording; never re-record to silence an unexplained failure.
 
 **Docs:** `docs/` holds the PRD, design system, architecture, database, security, code style and testing docs. Read the relevant one before scoping work; `docs/code-style.md` §13 has recipes for adding common things.
 

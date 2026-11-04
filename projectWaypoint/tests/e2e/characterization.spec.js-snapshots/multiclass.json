@@ -54,10 +54,10 @@
     }
   ],
   "rolls": [
-    "2H Melee To-Hit Critical Strike Lethality 1 · crits on 19–20 Half 17 Double (15)+2 d20+2 Reroll",
-    "2H Melee Damage Critical Strike Lethality 1 · crits on 19–20 Half 4 Double (1+2)+1 2d8+1 Reroll",
-    "Cleave To-Hit Critical Strike Lethality 1 · crits on 19–20 Half 20 Double (18)+2 d20+2 Reroll",
-    "Cleave Damage Critical Strike Lethality 1 · crits on 19–20 Half 8 Double (3+4)+1 2d6+1 Reroll",
-    "Mend Healing Critical Strike Lethality 1 · crits on 19–20 Half 5 Double (4)+1 1d6+1 Reroll"
+    "2H Melee To-Hit Critical Strike Lethality 1 · crits on 19–20 Half 10 Double (8)+2 d20+2 Reroll",
+    "2H Melee Damage Critical Strike Lethality 1 · crits on 19–20 8 Half 16 32 Double (8+7)+1 2d8+1 Reroll",
+    "Cleave To-Hit Critical Strike Lethality 1 · crits on 19–20 8 Half 17 32 Double (15)+2 d20+2 Reroll",
+    "Cleave Damage Critical Strike Lethality 1 · crits on 19–20 4 Half 8 16 Double (6+1)+1 2d6+1 Reroll",
+    "Mend Healing Critical Strike Lethality 1 · crits on 19–20 4 Half 4 16 Double (3)+1 1d6+1 Reroll"
   ]
 }

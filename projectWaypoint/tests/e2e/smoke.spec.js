@@ -2,16 +2,16 @@
    WAYPOINT — smoke: every screen opens, a character can be created
    ---------------------------------------------------------------------
    The cheapest net under the whole app: visit every screen and walk the
-   creation wizard end to end (docs/testing.md §5, Flows 1, 2 and 10),
+   creation wizard end to end (docs/testing.md §5, Flows 1 and 2),
    failing on any console error along the way. The wizard matters here
    because it asks the mechanics engine about a build nobody has committed
    to yet — level(), proficiencies() and isTrained() with a draft build.
    ===================================================================== */
-const { test, expect } = require('@playwright/test');
+const { test, expect } = require('./helpers/test');
 const { openApp, press, appAttr, openFirstCharacter } = require('./helpers/app');
 
 test('Flow 1 — first run: Home, the seed character, every screen', async ({ page }) => {
-  const errors = await openApp(page);
+  await openApp(page);
   expect(await appAttr(page, 'data-view')).toBe('home');
 
   await openFirstCharacter(page);
@@ -25,11 +25,10 @@ test('Flow 1 — first run: Home, the seed character, every screen', async ({ pa
     await press(page, `[data-nav="${view}"]`);
     expect(await appAttr(page, 'data-view')).toBe(view);
   }
-  expect(errors).toEqual([]);
 });
 
 test('Flow 2 — create a character through every wizard step', async ({ page }) => {
-  const errors = await openApp(page);
+  await openApp(page);
   await press(page, '[data-nav="characters"]');
   await press(page, '[data-action="create-character"]');
   expect(await appAttr(page, 'data-view')).toBe('create');
@@ -80,5 +79,4 @@ test('Flow 2 — create a character through every wizard step', async ({ page })
   await page.waitForFunction(() => document.querySelector('.app')?.getAttribute('data-view') === 'home');
   await press(page, '[data-nav="characters"]');
   await expect(page.locator('.screen--characters')).toContainText('Test Wanderer');
-  expect(errors).toEqual([]);
 });
