@@ -21,6 +21,7 @@
   padding: var(--space-16) var(--space-6) var(--space-12);
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
+  scroll-padding-block: var(--space-2);   /* focus-ring room, see .scroll */
 }
 .home__title {
   font-family: var(--font-display); font-size: var(--fs-wordmark); color: var(--heading);

@@ -15,7 +15,7 @@
 /* The scroller is the flex child, NOT the section — the topbar and its
    divider are pinned and only the settings themselves move, which is
    what Rules does with rules__scroll for the same reason. */
-.settings__scroll { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+.settings__scroll { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; scroll-padding-block: var(--space-2); }  /* focus-ring room, see .scroll */
 
 /* The prose under a ✦ heading. Body face and muted, so it reads as the
    explanation of the section rather than as a row in it. */

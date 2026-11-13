@@ -32,3 +32,18 @@ button {
 }
 svg { display: block; }
 
+/* The app's focus ring, for everything a keyboard can reach. Before this,
+   most controls showed the browser's own ring — visible, but not the app's,
+   and differently drawn in each browser. This is the ring the portrait
+   cropper already used (edit.css): a 2px --focus line just outside the
+   control, which follows its border-radius, so round buttons get a round
+   ring. --focus is --accent-bright, which clears the 3:1 a focus edge needs.
+
+   :focus-visible, not :focus, so a tap or click never leaves a ring behind —
+   only the keyboard draws it. Deliberately the lowest-weight selector there
+   is, so every control that draws its own focus wins without trying: the
+   fields (border + --focus-ring glow, inventory.css), the calculator input,
+   the notes search pill. Those set `outline: none` in files imported after
+   this one, at equal or higher specificity. */
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+

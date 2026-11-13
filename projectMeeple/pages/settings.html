@@ -205,9 +205,10 @@
           <!-- One picker for both imports; which one asked is state, not a
                second input. Kept out of view rather than display:none, so the
                click that opens it is a real user gesture in every browser —
-               same reason the Characters screen's picker is. -->
+               same reason the Characters screen's picker is, and out of the
+               Tab order for the same reason too. -->
           <input class="visually-hidden" type="file" data-settings-file
-                 accept=".json,application/json" aria-label="Choose a Meeple file">
+                 accept=".json,application/json" tabindex="-1" aria-hidden="true">
         </div>
       </div>
     </section>

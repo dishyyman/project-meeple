@@ -16,7 +16,7 @@
 /* overscroll-behavior stops the browser's own rubber-band from running
    alongside the hero's pull — without it two elastic effects compete for the
    same gesture and the whole page bounces under the stretch. */
-.sheet__scroll { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior-y: contain; }
+.sheet__scroll { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior-y: contain; scroll-padding-block: var(--space-2); }  /* focus-ring room, see .scroll */
 .sheet__pad { padding: var(--space-5) var(--space-4) var(--space-8); }
 
 /* ---- hero ---- */

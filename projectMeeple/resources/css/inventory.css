@@ -75,7 +75,7 @@
 
 /* ---- backpack: one item at a time ---- */
 .modal--backpack .modal__card { display: flex; flex-direction: column; max-height: 100%; }
-.bp-card { flex: 1; min-height: 0; overflow-y: auto; margin: 0 -2px; padding: 0 var(--space-0-5); }
+.bp-card { flex: 1; min-height: 0; overflow-y: auto; margin: 0 -2px; padding: 0 var(--space-0-5) var(--space-0-5); scroll-padding-block: var(--space-2); }  /* focus-ring room (the bottom padding too — the last row can't scroll past the end), see .scroll */
 .bp-card__head { display: flex; align-items: center; gap: var(--space-1-5); }
 .bp-card__name { flex: 1; min-width: 0; font-family: var(--font-display); font-size: var(--fs-title); line-height: 1.15; color: var(--ink); }
 /* Round edit/delete affordance, shared by the backpack card and note rows —
@@ -292,7 +292,7 @@
   font-family: var(--font-label); font-size: var(--fs-caption);
   letter-spacing: 0.12em; text-transform: uppercase;
 }
-.rules__scroll { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+.rules__scroll { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; scroll-padding-block: var(--space-2); }  /* focus-ring room, see .scroll */
 
 /* Body copy, set for reading rather than for scanning — this is the one
    place in the app with paragraphs long enough to need a reading measure. */
@@ -397,7 +397,7 @@
 .modal--skill-edit .modal__card,
 .modal--wiz-pick .modal__card,
 .modal--pick .modal__card { display: flex; flex-direction: column; max-height: 100%; }
-.effect-picker { flex: 1; min-height: 0; overflow-y: auto; margin: 0 -2px; padding: 0 var(--space-0-5); }
+.effect-picker { flex: 1; min-height: 0; overflow-y: auto; margin: 0 -2px; padding: 0 var(--space-0-5) var(--space-0-5); scroll-padding-block: var(--space-2); }  /* focus-ring room (the bottom padding too — the last row can't scroll past the end), see .scroll */
 .effect-picker__group {
   font-family: var(--font-label);
   font-size: var(--fs-caption); letter-spacing: 0.14em; text-transform: uppercase;
@@ -416,6 +416,12 @@
    +/- inside it is pressed. The steppers carry their own press state. */
 .effect-pick:active,
 .armor-pick:active { background: var(--bg-parchment2); }
+/* The focus ring sits ON the row's own border rather than outside it. These
+   rows run the full width of a list whose side gutter is 2px (.effect-picker,
+   .bp-card), and the app-wide ring (base.css) reaches 4px out — so it was cut
+   off at both sides. At -1px it reaches 1px out, inside the gutter. */
+.effect-pick:focus-visible,
+.armor-pick:focus-visible { outline-offset: -1px; }
 .effect-pick__name,
 .skill-pick__name,
 .armor-pick__name {
