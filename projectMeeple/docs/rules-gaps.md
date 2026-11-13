@@ -1059,3 +1059,31 @@ an attribute term. Regeneration, Bleed, Burn, Confusion and Poison's damage are
 all **turn events**, which is §2.9 and needs `startOfTurn()`'s twin. Neither is a
 missing `mod` row: only an effect that moves one of the six attributes belongs in
 `EFFECTS.mod`, and there are exactly two of those.
+
+---
+
+### 2.11 The maximum-health floor — DECIDED / SHIPPED 2026-11-13
+
+**Was:** `healthMax()` was the subclass's HP plus Constitution, with no lower
+bound. Constitution can go negative — an inventory modifier ranges −20 to +20 —
+so a −20 trinket on a 10-HP subclass gave a **−10** health bar, and a rest then
+wrote −10 into current health. At a maximum of 0 or below the Wound cascade also
+broke down: the refill was empty, so a single point of damage ran straight
+through every Wound to Downed. Found in the Codex second-opinion review.
+
+**Ruling (designer, 2026-11-13): maximum health is never below 1** while the
+character is standing. Reaching 0 takes a Wound and refills the bar to full, so
+the bar has to hold *something* for that to mean anything. Once Wounds reach the
+cap, *current* health stays at 0 — that is Downed, and it is unchanged.
+
+**How it is built:** `RULES.HEALTH_MAX_FLOOR = 1` in `mechanics.js`, applied in
+`healthMax()`. Only once the character has a subclass — a sheet with none is not
+a character yet and keeps its pool of 0, the same distinction `isDowned()` draws.
+Constitution itself still reads its true (negative) total; only the derived pool
+is floored. Unit tests: *maximum health never drops below the floor* in
+`tests/unit/mechanics.test.js`.
+
+**Not decided here:** Evasion, Fortitude and Speed can also go negative through
+modifiers and Conditions (Speed already has `DOWNED_SPEED` for Downed, but no
+floor while standing). None of them breaks a rule the way a negative health pool
+did, so they are left as they are until there's a ruling.

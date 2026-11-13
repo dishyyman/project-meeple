@@ -111,6 +111,57 @@ describe('attributes feed derived stats', () => {
   });
 });
 
+/* Designer ruling 2026-11-13 (RULES.HEALTH_MAX_FLOOR). Constitution can go
+   negative through an inventory modifier (down to −20), and maximum health
+   used to follow it below zero — a rest then wrote that negative number into
+   current health. Found in the Codex second-opinion review (finding 3). */
+describe('maximum health never drops below the floor', () => {
+  const sunk = (con) => char({ inventory: [{ mods: [{ stat: 'Constitution', value: con }] }] });
+
+  test('the floor is 1, and it is a named rule', () => {
+    assert.equal(RULES.HEALTH_MAX_FLOOR, 1);
+  });
+
+  test('a Constitution penalty bottoms out at the floor, however large', () => {
+    assert.equal(M.healthMax(sunk(-9)), 1);    // exactly the floor
+    assert.equal(M.healthMax(sunk(-10)), 1);   // would have been 0
+    assert.equal(M.healthMax(sunk(-20)), 1);   // would have been −10
+    assert.equal(M.healthMax(sunk(-8)), 2);    // above the floor: untouched
+  });
+
+  test('a boon or effect cannot push it under either — it reads the same total', () => {
+    const ch = sunk(-20);
+    ch.effects = [{ id: 'boon.strength', stacks: 3 }];
+    assert.equal(M.healthMax(ch), 1);
+  });
+
+  test('both rests fill to the floor, never to a negative', () => {
+    for (const kind of ['short', 'long']) {
+      const ch = { ...sunk(-20), health: 0 };
+      M.rest(ch, kind);
+      assert.equal(ch.health, 1, kind);
+    }
+  });
+
+  test('healing stops at the floor', () => {
+    const ch = { ...sunk(-20), health: 1 };
+    M.heal(ch, 'health', 5);
+    assert.equal(ch.health, 1);
+  });
+
+  test('at the floor, each point of damage is a Wound — until the last one downs', () => {
+    // sc.alpha has 4 Wounds. Reaching 0 takes a Wound and refills to max (1),
+    // so every point costs one Wound; the 4th leaves the bar empty.
+    const ch = { ...sunk(-20), health: 1 };
+    M.damage(ch, 'health', 1);
+    assert.deepEqual([ch.health, ch.wounds], [1, 1]);
+    M.damage(ch, 'health', 2);
+    assert.deepEqual([ch.health, ch.wounds], [1, 3]);
+    const out = M.damage(ch, 'health', 1);
+    assert.deepEqual([ch.health, ch.wounds, out.downed], [0, 4, true]);
+  });
+});
+
 describe('base stats', () => {
   test('the base block is Evasion 8 / Armor 0 / Fortitude 8 / Speed 5', () => {
     const ch = char();

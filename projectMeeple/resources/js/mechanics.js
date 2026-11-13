@@ -70,6 +70,13 @@
     DOWNED_SPEED: 0,
     // A short rest returns half the Mana POOL, rounded down.
     SHORT_REST_MANA_DIVISOR: 2,
+    // The smallest a character's MAXIMUM health can be, however far gear or
+    // effects push Constitution down — see healthMax(). Designer ruling
+    // (2026-11-13): 1, because the bar has to hold something for the Wound
+    // cascade to work. Reaching 0 takes a Wound and refills to max; at 0 max
+    // the refill is empty and one point of damage would run straight through
+    // every Wound. CURRENT health still reaches 0 — that is Downed.
+    HEALTH_MAX_FLOOR: 1,
     // A guard against a stuck finger, not a game rule.
     MAX_STACKS: 99,
   });
@@ -252,7 +259,18 @@
 
     // Constitution is +1 HP per point, read through statValue() — so a +2
     // Constitution trinket widens the bar with nothing wiring the two together.
-    const healthMax  = (ch) => (primarySubclass(ch.build)?.hp ?? 0) + statValue(ch, 'Constitution');
+    //
+    // Floored at HEALTH_MAX_FLOOR, because Constitution can be NEGATIVE: an
+    // inventory modifier goes down to −20, and a −20 trinket on a 10-HP
+    // subclass used to give a −10 bar that a rest then wrote into current
+    // health. The floor applies only once there IS a subclass. Without one
+    // the pool is 0 on purpose — a sheet that is not a character yet — which
+    // is the same distinction isDowned() draws with its cap guard.
+    const healthMax = (ch) => {
+      const sc = primarySubclass(ch.build);
+      if (!sc) return 0;
+      return Math.max(R.HEALTH_MAX_FLOOR, (sc.hp ?? 0) + statValue(ch, 'Constitution'));
+    };
     const woundsMax  = (ch) => primarySubclass(ch.build)?.wounds ?? 0;
     const patchesMax = (ch) => primarySubclass(ch.build)?.patches ?? 0;
 
