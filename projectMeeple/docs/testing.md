@@ -108,6 +108,7 @@ projectMeeple/
     │   ├── data-safety.spec.js # 9 — Flows 6, 7, 7b, 8, 11; storage refusing writes
     │   ├── compendium.spec.js # 6 — Flow 9; malformed compendiums; launch safety net
     │   ├── keyboard.spec.js   # 6 — Enter/Space on custom buttons, Shift+Enter holds
+    │   ├── dialogs.spec.js    # 5 — dialog markup, focus in/kept/back, Escape
     │   ├── rules.spec.js      # 1 — Flow 10 (marked known bug, §10)
     │   └── security.spec.js   # 9 — Flow 12, CSP, size limit
     └── fixtures/
@@ -216,6 +217,7 @@ Each flow lists the steps and the result that must hold. These are the E2E suite
 | No JavaScript errors during any browser test | `e2e/helpers/test.js` (every test, automatically) |
 | Chrome and Safari (WebKit) | every browser test runs in both |
 | Keyboard: custom buttons, the hold gestures, Wound pips | `e2e/keyboard.spec.js` (real key presses, never `press()`) |
+| Modals as dialogs: semantics, focus in/kept/returned, Escape | `e2e/dialogs.spec.js` |
 | **Not yet:** an automated accessibility scan (axe-core) | §9 |
 
 **Prioritize:**
@@ -279,9 +281,9 @@ A change is done when:
 9. **Open — readable play tests:** Flows 3, 4, 5 as plain assertions ("health reads 4 / 9"), so a failure names the rule rather than a snapshot diff.
 10. **Open — extract save/load validation** (`applySave()`, file parsers) from `main.js` and unit-test the clamping in `database.md` A6.
 11. ~~**Flow 10**~~ — test written 2026-11-04, marked as a known bug until the Rules back button is fixed (§10).
-12. **Open — automated accessibility:** an axe-core pass. Keyboard operation of custom buttons and holds is done (2026-11-13, `keyboard.spec.js`); modal focus is §9 item 14.
+12. **Open — automated accessibility:** an axe-core pass. Keyboard operation of custom buttons and holds (`keyboard.spec.js`) and modal focus (`dialogs.spec.js`) are done, 2026-11-13.
 13. ~~**Fail on any page error, Safari, failure reports**~~ — done 2026-11-04: `helpers/test.js`, the `safari` project, HTML report + failure screenshots.
-14. **Open — modals as dialogs:** dialog role and name, focus moved in on open, kept inside, and returned on close.
+14. ~~**Modals as dialogs**~~ — done 2026-11-13: dialog role and name, focus moved in on open, kept inside, returned on close (`dialogs.spec.js`).
 
 ---
 

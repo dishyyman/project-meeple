@@ -15,6 +15,14 @@
    68px clears it with room to breathe. The sides are tighter than the old 24px
    so cards run wider — 402 − 32 rather than 402 − 48. */
 .modal { position: absolute; inset: 0; z-index: 50; display: none; align-items: center; justify-content: center; padding: calc(var(--statusbar-clear) + var(--space-3-5)) var(--modal-gutter) var(--modal-gutter); }
+/* The dialog container takes focus when a modal opens (watchModals() in
+   main.js) so a screen reader announces it and Tab starts from the top of it.
+   It is a container, not a control — nothing happens if you press it — so it
+   draws no focus ring: a ring around the whole card would read as "this card
+   is a button". The controls inside keep theirs, and the first Tab lands on
+   one. The CLAUDE.md rule "anything that sets outline: none must draw one" is
+   about controls; this is the one non-control that takes focus. */
+.modal [role="dialog"]:focus { outline: none; }
 .app[data-modal="calc"] .modal--calc { display: flex; }
 .app[data-modal="dice"] .modal--dice { display: flex; }
 .app[data-modal="roll"] .modal--roll { display: flex; }

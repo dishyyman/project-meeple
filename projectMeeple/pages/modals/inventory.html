@@ -1,9 +1,9 @@
     <!-- ================= BOON / CONDITION PICKER ================= -->
     <div class="modal modal--effects">
       <div class="modal__scrim" data-modal="close"></div>
-      <div class="modal__card">
+      <div class="modal__card" role="dialog" aria-modal="true" aria-labelledby="effects-title" tabindex="-1">
         <div class="modal__head">
-          <div class="modal__title">Boons &amp; Conditions</div>
+          <div class="modal__title" id="effects-title">Boons &amp; Conditions</div>
           <button class="modal__close" data-modal="close" aria-label="Close"></button>
         </div>
         <div class="effect-picker">
@@ -20,9 +20,9 @@
          once you already have it. Reached by tapping the slot row. -->
     <div class="modal modal--detail">
       <div class="modal__scrim" data-modal="close"></div>
-      <div class="modal__card">
+      <div class="modal__card" role="dialog" aria-modal="true" aria-labelledby="detail-title" tabindex="-1">
         <div class="modal__head">
-          <div class="modal__title" data-bind="detailTitle"></div>
+          <div class="modal__title" id="detail-title" data-bind="detailTitle"></div>
           <button class="modal__close" data-modal="close" aria-label="Close"></button>
         </div>
         <div data-list="detailBody"></div>
@@ -49,9 +49,9 @@
     <!-- ================= GEAR / ARMOR PICKER ================= -->
     <div class="modal modal--pick">
       <div class="modal__scrim" data-modal="close"></div>
-      <div class="modal__card">
+      <div class="modal__card" role="dialog" aria-modal="true" aria-labelledby="pick-title" tabindex="-1">
         <div class="modal__head">
-          <div class="modal__title" data-bind="pickTitle"></div>
+          <div class="modal__title" id="pick-title" data-bind="pickTitle"></div>
           <button class="modal__close" data-modal="close" aria-label="Close"></button>
         </div>
         <div class="effect-picker">
@@ -68,9 +68,9 @@
          mode flag on every line of both. -->
     <div class="modal modal--wiz-pick">
       <div class="modal__scrim" data-modal="close"></div>
-      <div class="modal__card">
+      <div class="modal__card" role="dialog" aria-modal="true" aria-labelledby="wiz-pick-title" tabindex="-1">
         <div class="modal__head">
-          <div class="modal__title" data-bind="wizPickTitle"></div>
+          <div class="modal__title" id="wiz-pick-title" data-bind="wizPickTitle"></div>
           <button class="modal__close" data-modal="close" aria-label="Close"></button>
         </div>
         <!-- Search and category chips. Both are shown only for lists long
@@ -94,9 +94,9 @@
          the fields do not. -->
     <div class="modal modal--item">
       <div class="modal__scrim" data-modal="close"></div>
-      <div class="modal__card">
+      <div class="modal__card" role="dialog" aria-modal="true" aria-labelledby="item-title" tabindex="-1">
         <div class="modal__head">
-          <div class="modal__title" data-bind="itemHeading"></div>
+          <div class="modal__title" id="item-title" data-bind="itemHeading"></div>
           <button class="modal__close" data-modal="close" aria-label="Close"></button>
         </div>
         <label class="field">
@@ -133,9 +133,9 @@
          to hunt in. -->
     <div class="modal modal--backpack">
       <div class="modal__scrim" data-modal="close"></div>
-      <div class="modal__card">
+      <div class="modal__card" role="dialog" aria-modal="true" aria-labelledby="backpack-title" tabindex="-1">
         <div class="modal__head">
-          <div class="modal__title">Backpack</div>
+          <div class="modal__title" id="backpack-title">Backpack</div>
           <button class="modal__close" data-modal="close" aria-label="Close"></button>
         </div>
         <div class="bp-card" data-list="backpack"></div>

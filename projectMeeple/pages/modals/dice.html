@@ -7,9 +7,9 @@
          Spend Mana. -->
     <div class="modal modal--calc">
       <div class="modal__scrim" data-modal="close"></div>
-      <div class="modal__card" data-resource="health">
+      <div class="modal__card" role="dialog" aria-modal="true" aria-labelledby="calc-title" tabindex="-1" data-resource="health">
         <div class="modal__head">
-          <div class="modal__title" data-bind="calcTitle"></div>
+          <div class="modal__title" id="calc-title" data-bind="calcTitle"></div>
           <div class="modal__meta"><span data-bind="calcCur"></span> / <span data-bind="calcMax"></span></div>
         </div>
         <div class="calc-row">
@@ -36,7 +36,7 @@
     <!-- ================= QUICK ROLL RESULT ================= -->
     <div class="modal modal--roll">
       <div class="modal__scrim" data-modal="close"></div>
-      <div class="modal__card roll-card">
+      <div class="modal__card roll-card" role="dialog" aria-modal="true" aria-label="Roll result" tabindex="-1">
         <div class="roll-card__source" data-bind="outSource"></div>
         <div class="roll-card__kind" data-bind="outKind"></div>
         <!-- The pool's name, empty on a straight roll so the card reads
@@ -128,7 +128,7 @@
          result card shows the discarded die struck through. -->
     <div class="modal modal--adv">
       <div class="modal__scrim" data-modal="close"></div>
-      <div class="adv-menu" data-adv-menu>
+      <div class="adv-menu" role="dialog" aria-modal="true" aria-label="Roll with Advantage or Disadvantage" tabindex="-1" data-adv-menu>
           <button class="adv-menu__row" data-adv="2">
             <span class="adv-menu__label">2 Advantage</span>
             <span class="adv-menu__dice">3d20</span>
@@ -151,7 +151,7 @@
     <!-- ================= DICE ROLLER ================= -->
     <div class="modal modal--dice">
       <div class="modal__scrim" data-modal="close"></div>
-      <div class="dice-sheet">
+      <div class="dice-sheet" role="dialog" aria-modal="true" aria-label="Dice roller" tabindex="-1">
         <div class="dice-sheet__grab"></div>
 
         <div class="dice-sheet__head">

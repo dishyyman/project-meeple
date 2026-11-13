@@ -56,9 +56,13 @@
                   <span class="eyebrow vital__label">Health</span>
                   <span class="vital__value"><span data-bind="healthCur"></span> / <span data-bind="healthMax"></span></span>
                 </div>
+                <!-- The bar is a <button>: tapping it opens the damage/healing
+                     calculator, the only way to apply more than 1 at once. It
+                     was a <div> until 2026-11-13, which no keyboard could
+                     reach. The cells inside are drawn by renderVitals(). -->
                 <div class="vital__row">
                   <button class="stepper" data-step="health:-1" aria-label="Health minus">−</button>
-                  <div class="vital__track" data-calc="health" data-cells="health"></div>
+                  <button class="vital__track" type="button" data-calc="health" data-cells="health" aria-label="Damage or heal Health"></button>
                   <button class="stepper" data-step="health:1" aria-label="Health plus">+</button>
                 </div>
               </div>
@@ -70,7 +74,7 @@
                 </div>
                 <div class="vital__row">
                   <button class="stepper" data-step="mana:-1" aria-label="Mana minus">−</button>
-                  <div class="vital__track" data-calc="mana" data-cells="mana"></div>
+                  <button class="vital__track" type="button" data-calc="mana" data-cells="mana" aria-label="Spend or restore Mana"></button>
                   <button class="stepper" data-step="mana:1" aria-label="Mana plus">+</button>
                 </div>
               </div>

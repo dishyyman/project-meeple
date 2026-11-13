@@ -9,9 +9,9 @@
          legal. See openSkillEditor(). -->
     <div class="modal modal--skill-edit">
       <div class="modal__scrim" data-modal="close"></div>
-      <div class="modal__card">
+      <div class="modal__card" role="dialog" aria-modal="true" aria-labelledby="skill-edit-title" tabindex="-1">
         <div class="modal__head">
-          <div class="modal__title">Assign Skills</div>
+          <div class="modal__title" id="skill-edit-title">Assign Skills</div>
           <button class="modal__close" data-modal="close" aria-label="Close"></button>
         </div>
         <p class="modal__note">Every point is worth&nbsp;+2. Four <em>different</em> skills is the minimum; points beyond the first four may stack onto those or open new ones.</p>
@@ -34,9 +34,9 @@
          it, so this is the one delete in the app that stops to ask. -->
     <div class="modal modal--note-del">
       <div class="modal__scrim" data-modal="close"></div>
-      <div class="modal__card">
+      <div class="modal__card" role="dialog" aria-modal="true" aria-labelledby="note-del-title" tabindex="-1">
         <div class="modal__head">
-          <div class="modal__title">Delete note?</div>
+          <div class="modal__title" id="note-del-title">Delete note?</div>
           <button class="modal__close" data-modal="close" aria-label="Close"></button>
         </div>
         <p class="confirm__text">&ldquo;<span data-bind="noteDelTitle"></span>&rdquo; will be removed for good.</p>
@@ -54,9 +54,9 @@
          points at the export beside it, which is the only way back. -->
     <div class="modal modal--char-del">
       <div class="modal__scrim" data-modal="close"></div>
-      <div class="modal__card">
+      <div class="modal__card" role="dialog" aria-modal="true" aria-labelledby="char-del-title" tabindex="-1">
         <div class="modal__head">
-          <div class="modal__title">Delete character?</div>
+          <div class="modal__title" id="char-del-title">Delete character?</div>
           <button class="modal__close" data-modal="close" aria-label="Close"></button>
         </div>
         <p class="confirm__text"><strong data-bind="charDelName"></strong> will be deleted from this device
@@ -78,9 +78,9 @@
          nothing to confirm or undo, the damage is already applied. -->
     <div class="modal modal--downed">
       <div class="modal__scrim" data-modal="close"></div>
-      <div class="modal__card">
+      <div class="modal__card" role="dialog" aria-modal="true" aria-labelledby="downed-title" tabindex="-1">
         <div class="modal__head">
-          <div class="modal__title">You are downed!</div>
+          <div class="modal__title" id="downed-title">You are downed!</div>
           <button class="modal__close" data-modal="close" aria-label="Close"></button>
         </div>
         <p class="confirm__text status status--warn">Your <strong data-bind="downedWounds"></strong> Wound is
@@ -118,9 +118,9 @@
            phone user reaches for anyway. The same reasoning the Rest popup is
            built on. Retrying a bad file is the Import button on the Characters
            page, where the player already is. -->
-      <div class="modal__card" data-import-state="ok">
+      <div class="modal__card" role="dialog" aria-modal="true" aria-labelledby="import-title" tabindex="-1" data-import-state="ok">
         <div class="import__mark" aria-hidden="true"></div>
-        <div class="import__title" data-bind="importTitle"></div>
+        <div class="import__title" id="import-title" data-bind="importTitle"></div>
         <p class="confirm__text" data-bind="importText"></p>
         <div class="import__notes" data-list="importNotes"></div>
         <div class="form-actions">
@@ -152,9 +152,9 @@
          needing a dialog of its own. -->
     <div class="modal modal--file-ask">
       <div class="modal__scrim" data-modal="close"></div>
-      <div class="modal__card">
+      <div class="modal__card" role="dialog" aria-modal="true" aria-labelledby="file-ask-title" tabindex="-1">
         <div class="modal__head">
-          <div class="modal__title" data-bind="fileAskTitle"></div>
+          <div class="modal__title" id="file-ask-title" data-bind="fileAskTitle"></div>
           <button class="modal__close" data-modal="close" aria-label="Close"></button>
         </div>
         <p class="confirm__text" data-bind="fileAskText"></p>
@@ -188,9 +188,9 @@
          relabels the button to say what it will actually do instead. -->
     <div class="modal modal--share">
       <div class="modal__scrim" data-modal="close"></div>
-      <div class="modal__card">
+      <div class="modal__card" role="dialog" aria-modal="true" aria-labelledby="share-title" tabindex="-1">
         <div class="modal__head">
-          <div class="modal__title">Share Character</div>
+          <div class="modal__title" id="share-title">Share Character</div>
           <button class="modal__close" data-modal="close" aria-label="Close"></button>
         </div>
 
@@ -228,9 +228,9 @@
          person spending it will see it. -->
     <div class="modal modal--rest">
       <div class="modal__scrim" data-modal="close"></div>
-      <div class="modal__card">
+      <div class="modal__card" role="dialog" aria-modal="true" aria-labelledby="rest-title" tabindex="-1">
         <div class="modal__head">
-          <div class="modal__title">Rest</div>
+          <div class="modal__title" id="rest-title">Rest</div>
         </div>
         <div class="menu-stack menu-stack--last">
           <button class="menu-stack__btn" data-rest="short">
@@ -256,9 +256,9 @@
          will not deliver. -->
     <div class="modal modal--patch">
       <div class="modal__scrim" data-modal="close"></div>
-      <div class="modal__card">
+      <div class="modal__card" role="dialog" aria-modal="true" aria-labelledby="patch-title" tabindex="-1">
         <div class="modal__head">
-          <div class="modal__title">Spend a Patch</div>
+          <div class="modal__title" id="patch-title">Spend a Patch</div>
           <button class="modal__close" data-modal="close" aria-label="Close"></button>
         </div>
         <div class="menu-stack menu-stack--last">
@@ -285,9 +285,9 @@
          for one event is one too many. -->
     <div class="modal modal--boonloss">
       <div class="modal__scrim" data-modal="close"></div>
-      <div class="modal__card">
+      <div class="modal__card" role="dialog" aria-modal="true" aria-labelledby="boonloss-title" tabindex="-1">
         <div class="modal__head">
-          <div class="modal__title">Boons lost</div>
+          <div class="modal__title" id="boonloss-title">Boons lost</div>
           <button class="modal__close" data-modal="close" aria-label="Close"></button>
         </div>
         <p class="confirm__text status status--warn" data-bind="boonLossText"></p>
@@ -309,9 +309,9 @@
          the button does is the multiplication. -->
     <div class="modal modal--tick">
       <div class="modal__scrim" data-modal="close"></div>
-      <div class="modal__card">
+      <div class="modal__card" role="dialog" aria-modal="true" aria-labelledby="tick-title" tabindex="-1">
         <div class="modal__head">
-          <div class="modal__title" data-bind="tickTitle"></div>
+          <div class="modal__title" id="tick-title" data-bind="tickTitle"></div>
           <button class="modal__close" data-modal="close" aria-label="Close"></button>
         </div>
         <div class="menu-stack menu-stack--last">
@@ -331,9 +331,9 @@
          because two of these three choices would be dead. -->
     <div class="modal modal--portrait">
       <div class="modal__scrim" data-modal="close"></div>
-      <div class="modal__card">
+      <div class="modal__card" role="dialog" aria-modal="true" aria-labelledby="portrait-title" tabindex="-1">
         <div class="modal__head">
-          <div class="modal__title">Portrait</div>
+          <div class="modal__title" id="portrait-title">Portrait</div>
           <button class="modal__close" data-modal="close" aria-label="Close"></button>
         </div>
         <div class="menu-stack">
@@ -354,9 +354,9 @@
          once. Cancel restores whatever was saved when the window opened. -->
     <div class="modal modal--crop">
       <div class="modal__scrim" data-modal="close"></div>
-      <div class="modal__card">
+      <div class="modal__card" role="dialog" aria-modal="true" aria-labelledby="crop-title" tabindex="-1">
         <div class="modal__head">
-          <div class="modal__title">Reposition</div>
+          <div class="modal__title" id="crop-title">Reposition</div>
           <button class="modal__close" data-modal="close" aria-label="Close"></button>
         </div>
         <p class="modal__note">Drag the picture to move it. Pinch, or use the slider, to zoom. Arrow keys nudge.</p>

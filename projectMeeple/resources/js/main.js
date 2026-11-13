@@ -4374,6 +4374,131 @@
     state.calcResource = null;
   }
   const closeCalc = closeModal;
+
+  /* ------------------------------------------------------------------ */
+  /* MODALS AS DIALOGS — focus in, focus kept, focus back               */
+  /* ------------------------------------------------------------------ */
+  /* Every modal card is marked up as a dialog (role="dialog",
+     aria-modal, a name from its title — see pages/modals/). This is the
+     behaviour that markup promises, and it is driven from ONE place: the
+     data-modal attribute on .app. Two dozen functions open a modal by
+     setting that attribute, and they keep doing exactly that; a
+     MutationObserver sees every change and does the rest, so a modal added
+     tomorrow gets all of this without its opener knowing it exists.
+
+       open      the page behind goes inert (unreachable by Tab or a screen
+                 reader), and focus moves into the dialog — unless the opener
+                 already put it somewhere inside, as the calculator, the item
+                 form and the note editor do with their fields.
+       Tab       wraps at the dialog's edges instead of leaving it.
+       close     the page comes back, and focus returns to whatever opened
+                 the modal — or, when a re-render has replaced that element,
+                 to its replacement (same data-* hook).
+
+     Focus lands on the DIALOG ITSELF rather than its first control. Uniform,
+     and the safe choice for the destructive confirmations: Enter can never
+     delete a character just because focus happened to start on Delete. A
+     screen reader announces the dialog's name, and Tab goes on to its first
+     control. Found missing in the Codex second-opinion review (finding 5). */
+  const modalFocus = { back: null, backSel: null, lastOutside: null };
+
+  const openModalEl = () => {
+    const m = app.getAttribute('data-modal');
+    return m && m !== 'closed' ? app.querySelector(`.modal--${m}`) : null;
+  };
+  const dialogIn = (modal) => modal && modal.querySelector('[role="dialog"]');
+
+  // What Tab can actually land on inside a dialog right now — rendered, not
+  // hidden, not disabled.
+  const tabbables = (root) => [...root.querySelectorAll(
+    'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])')]
+    .filter((el) => !el.disabled && el.getClientRects().length);
+
+  /* A selector that finds this control again after a re-render: its first
+     data-* hook. Renders here replace markup wholesale (innerHTML), so a
+     Wound pip pressed to open "You are downed!" no longer exists by the time
+     the dialog closes — but [data-wound="3"] does. */
+  function hookSelector(el) {
+    const a = [...el.attributes].find((x) => x.name.startsWith('data-') && x.name !== 'data-bind');
+    return a ? `[${a.name}="${CSS.escape(a.value)}"]` : null;
+  }
+
+  function onModalChange(was, now) {
+    const opening = now && now !== 'closed';
+    const wasOpen = was && was !== 'closed';
+    const modal = opening ? app.querySelector(`.modal--${now}`) : null;
+
+    /* Everything but the open modal goes inert. The notices are spared on
+       purpose: an inert subtree is silent to screen readers, and the toast
+       is a live region that does report while a modal is up ("Character
+       exported." from the Share window). Its card is tabindex="-1" and the
+       storage alert hides itself under a modal, so neither can take focus. */
+    for (const el of app.children) {
+      el.inert = opening && el !== modal && !el.classList.contains('notices');
+    }
+
+    if (opening) {
+      // Remember the way back only on the way IN from the page. A modal
+      // handing over to another (the backpack opening the item form, the
+      // Advantage chooser giving way to the roll) keeps the original.
+      if (!wasOpen) {
+        const from = modalFocus.lastOutside;
+        modalFocus.back = from;
+        modalFocus.backSel = from ? hookSelector(from) : null;
+      }
+      const dialog = dialogIn(modal);
+      if (dialog && !modal.contains(document.activeElement)) dialog.focus({ preventScroll: true });
+      return;
+    }
+
+    // Closed. Back to the opener if it is still on screen; else to the
+    // control that has replaced it; else nowhere — focus on a control that
+    // has gone (a deleted character's row) would be focus on nothing.
+    let back = modalFocus.back;
+    if (!back || !back.isConnected) back = modalFocus.backSel ? app.querySelector(modalFocus.backSel) : null;
+    modalFocus.back = modalFocus.backSel = null;
+    if (back && back.getClientRects().length) back.focus({ preventScroll: true });
+  }
+
+  function watchModals() {
+    /* The opener, as it was before any modal took focus. Recorded on focus
+       AND on pointerdown: Safari does not focus a button when it is clicked,
+       so after a tap the focused element can be stale, while the control
+       under the finger is the one that opened the modal. */
+    const note = (el) => {
+      const c = el && el.closest && el.closest('button, [href], input, select, textarea, [tabindex]');
+      if (c && c !== app && !c.closest('.modal')) modalFocus.lastOutside = c;
+    };
+    app.addEventListener('focusin', (e) => note(e.target));
+    app.addEventListener('pointerdown', (e) => note(e.target), true);
+
+    new MutationObserver((records) => {
+      for (const r of records) {
+        const now = app.getAttribute('data-modal');
+        // Re-setting the same modal (a reroll repaints the roll card) is not
+        // an open or a close.
+        if (r.oldValue !== now) onModalChange(r.oldValue, now);
+      }
+    }).observe(app, { attributes: true, attributeFilter: ['data-modal'], attributeOldValue: true });
+
+    // Tab and Shift+Tab wrap at the dialog's edges. Only the edges: in the
+    // middle the browser moves focus by its own rules (Safari's Tab-skips-
+    // buttons setting included), and inert has already taken the page out
+    // of reach behind it.
+    document.addEventListener('keydown', (e) => {
+      if (e.key !== 'Tab') return;
+      const modal = openModalEl();
+      if (!modal) return;
+      const list = tabbables(modal);
+      const dialog = dialogIn(modal);
+      if (!list.length) { e.preventDefault(); dialog?.focus(); return; }
+      const first = list[0], last = list[list.length - 1];
+      const at = document.activeElement;
+      const inside = modal.contains(at);
+      if (e.shiftKey && (!inside || at === first || at === dialog)) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && (!inside || at === last)) { e.preventDefault(); first.focus(); }
+    });
+  }
   function bumpCalc(delta) {
     const el = calcInput();
     el.value = String(Math.max(0, (parseInt(el.value, 10) || 0) + delta));
@@ -7581,6 +7706,7 @@
   /* WIRING — one delegated click handler for the whole app             */
   /* ------------------------------------------------------------------ */
   function wire() {
+    watchModals();
     app.addEventListener('click', (e) => {
       // The source popover is a transient overlay: anything pressed outside a
       // stat card dismisses it. Handled by class toggle, so the click being
@@ -8158,22 +8284,24 @@
       if (e.key === 'Escape' && state.openStat) showStatPop(null);
     });
 
-    /* Escape dismisses the roll card. Every OTHER modal in the app carries a
-       visible close control — a .modal__close X in its head, or the dice
-       sheet's own — so every other modal is already operable from the
-       keyboard by tabbing to that button. The roll card has no head and, since
-       Done was removed, no control but Reroll: without this line the only way
-       out would be clicking the scrim, which is a <div> and so not reachable
-       by keyboard at all. A mouse gesture that has no keyboard equivalent is
-       exactly the gap this app's markup is otherwise written to avoid.
+    /* Escape dismisses a modal whose ONLY way out is its scrim — the roll
+       card, the Rest menu, the health/Mana calculator and the Advantage
+       chooser. The scrim is a <div>, so for those a mouse gesture was the
+       only exit, and with focus now held inside an open dialog (see
+       watchModals()) a keyboard user would be stuck in them.
 
-       Deliberately scoped to this one modal rather than made global. The rest
-       already have their exit, and a blanket Escape-closes-everything would
-       silently change how a half-filled item form or an open wizard step
-       behaves — a bigger decision than this one, and not one to make as a
-       side effect of tidying a button off a card. */
+       Deliberately NOT every modal. The rest carry a visible close control
+       (a .modal__close X, the dice sheet's own, a Cancel), so they are
+       already operable from the keyboard — and a blanket Escape-closes-
+       everything would silently change how a half-filled item form or an
+       open wizard step behaves, which is a bigger decision than this one.
+       This was the roll card alone until 2026-11-13; the rule is the same,
+       now applied to every modal it describes. Decided by the markup rather
+       than a list, so a new scrim-only modal gets it without being named. */
     document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape' && app.getAttribute('data-modal') === 'roll') closeModal();
+      if (e.key !== 'Escape') return;
+      const modal = openModalEl();
+      if (modal && !modal.querySelector('button[data-modal="close"]')) closeModal();
     });
 
     // backpack: left/right arrows page through carried items

@@ -372,7 +372,7 @@ Cards sit on `--bg-card`. A selected card gets the accent border and `--bg-parch
 | **Menu** | A drawer from the right (82% width) over a `--scrim`, reached from every main screen. Holds Edit Character, Rules, Settings. |
 | **Mobile navigation** | The character sheet has a bottom tab bar: Action · Character · Gear. Labels are Marcellus `--fs-caption` uppercase. Inactive is `--ink-faint`; active is `--accent-bright`. Top edge is a `--rule-strong` line. |
 | **Sidebar** | None — the app is a single phone-width column. |
-| **Modals** | Centered card over a scrim; one open at a time (`data-modal` on `.app`). |
+| **Modals** | Centered card over a scrim; one open at a time (`data-modal` on `.app`). Each card is a named `role="dialog"`: focus moves onto the dialog when it opens (or stays on the field its opener focused), Tab stays inside it, the page behind is `inert`, and focus returns to the opener on close. Escape closes a modal only when its scrim is its only exit (roll result, Rest, calculator, Advantage); modals with a close control keep Escape inert so a half-filled form isn't lost. |
 | **Mechanism** | Screens, tabs, modals and the drawer switch via `data-view`, `data-tab`, `data-modal`, `data-menu` on `.app`; CSS decides what shows. |
 
 ---
@@ -521,3 +521,4 @@ The app will grow beyond phone width. Nothing below is built; `--frame-max` keep
 | 9 | No warning color, no loading state, no success feedback | Warning and success **built 2026-10-05** (§13.1). Loading state still _TBD_ |
 | 10 | Roll boxes and gear/armour rows announced as buttons but ignored Enter/Space; the three hold gestures (Advantage, Patch spend, clear roller) had no keyboard path; Wound pips were spans a keyboard couldn't reach | **Fixed 2026-11-13** — Enter/Space on every `role="button"`, Shift+Enter for every hold, Wound pips are buttons (`e2e/keyboard.spec.js`) |
 | 11 | Most buttons show the browser's default focus ring rather than `--focus` / `--focus-ring` | Open — visible, so not a blocker; a global `:focus-visible` rule would bring them in line |
+| 12 | Modals had no dialog role or name, focus stayed behind them, Tab could leave them, and closing dropped focus; Rest, the calculator and Advantage had no keyboard exit; the health/Mana bars (the calculator's only door) were `<div>`s | **Fixed 2026-11-13** — named dialogs, `watchModals()` focus handling, Escape for scrim-only modals, bars are buttons (`e2e/dialogs.spec.js`) |
