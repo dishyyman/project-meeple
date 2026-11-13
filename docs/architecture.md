@@ -47,7 +47,7 @@ A server, accounts, and cloud sync are on the roadmap (`prd.md` §8, Nice to Hav
 | **Database** | Browser `localStorage` (per device) | Current. Server database **Open** |
 | **Authentication** | None. Sign-in / sign-out UI exists with no login behind it (`meeple.account` stores a placeholder flag) | **Open** |
 | **Storage (files)** | Downloads via `Blob` + `<a download>`; Web Share API (`navigator.share`) for sending a character file; `FileReader` for imports | Current |
-| **Hosting** | Static files. Locally: VS Code Live Server. Source on GitHub (`dishyyman/project-meeple`) | Production hosting **Open** |
+| **Hosting** | Static files. Locally: VS Code Live Server. Source on GitHub (`dishyyman/project-meeple`). Test deploy: GitHub Pages from `main`, repo root — `dishyyman.github.io/project-meeple/` | Production hosting (custom domain) **Open** |
 | **Payments** | None | Not planned |
 | **Email** | None. "Send an E-mail" feedback button is a stub | **Open** |
 | **Analytics** | None | **Open** — would need a privacy decision (`security.md`) |
@@ -181,43 +181,43 @@ Server-side database: **Open** — see `database.md` when it exists.
 ## 7. Project Structure
 
 ```text
-project-meeple/
+project-meeple/              # repo root = site root (GitHub Pages serves it as-is)
+├── index.html               # shell only: frame, .app root, script tags
+├── CLAUDE.md                # working conventions for the codebase
+├── pages/                   # one HTML fragment per screen (structure only)
+│   ├── home.html  characters.html  sheet.html  edit.html
+│   ├── rules.html  settings.html  create.html  menu.html
+│   ├── toast.html
+│   └── modals/              # dice.html  inventory.html  character.html
+├── resources/
+│   ├── css/                 # style.css (import index), tokens.css, one file per screen
+│   ├── js/
+│   │   ├── boot.js          # fetches and injects pages/
+│   │   ├── frame.js         # preview frame toggle
+│   │   ├── dice.js          # the one dice engine (also used by tools/)
+│   │   ├── mechanics.js     # the one game-mechanics engine (also used by tests/)
+│   │   ├── portrait.js      # the one image pipeline
+│   │   ├── library.js       # GENERATED — game content
+│   │   ├── library-check.js # the one compendium/entry shape check (also used by tests/)
+│   │   ├── rules.js         # GENERATED — Player's Guide
+│   │   └── main.js          # model, content indexes, render, wiring
+│   └── images/              # portrait assets
+├── tools/
+│   ├── csv/                 # exported Google Sheets tabs (source of content)
+│   ├── out/library.json     # converter output, readable JSON
+│   ├── csv-to-json.mjs      # content converter
+│   └── rtf-to-rules.mjs     # Player's Guide converter
+├── tests/                   # DEV ONLY — see testing.md
+│   ├── unit/                # node --test: dice, mechanics, content
+│   ├── e2e/                 # Playwright: flows, characterization, security
+│   ├── fixtures/            # real exported files + hostile ones; seeded saves
+│   └── serve.mjs            # tiny static server the browser tests start
+├── package.json             # DEV ONLY — test tooling; the app has no dependencies
+├── playwright.config.js     # DEV ONLY
+├── docs/                    # this documentation set + the Player's Guide RTF
+├── design/                  # archived design prototypes — reference, never shipped
 ├── README.md
-└── projectMeeple/
-    ├── index.html               # shell only: frame, .app root, script tags
-    ├── CLAUDE.md                # working conventions for the codebase
-    ├── pages/                   # one HTML fragment per screen (structure only)
-    │   ├── home.html  characters.html  sheet.html  edit.html
-    │   ├── rules.html  settings.html  create.html  menu.html
-    │   ├── toast.html
-    │   └── modals/              # dice.html  inventory.html  character.html
-    ├── resources/
-    │   ├── css/                 # style.css (import index), tokens.css, one file per screen
-    │   ├── js/
-    │   │   ├── boot.js          # fetches and injects pages/
-    │   │   ├── frame.js         # preview frame toggle
-    │   │   ├── dice.js          # the one dice engine (also used by tools/)
-    │   │   ├── mechanics.js     # the one game-mechanics engine (also used by tests/)
-    │   │   ├── portrait.js      # the one image pipeline
-    │   │   ├── library.js       # GENERATED — game content
-    │   │   ├── library-check.js # the one compendium/entry shape check (also used by tests/)
-    │   │   ├── rules.js         # GENERATED — Player's Guide
-    │   │   └── main.js          # model, content indexes, render, wiring
-    │   └── images/              # portrait assets
-    ├── tools/
-    │   ├── csv/                 # exported Google Sheets tabs (source of content)
-    │   ├── out/library.json     # converter output, readable JSON
-    │   ├── csv-to-json.mjs      # content converter
-    │   └── rtf-to-rules.mjs     # Player's Guide converter
-    ├── tests/                   # DEV ONLY — see testing.md
-    │   ├── unit/                # node --test: dice, mechanics, content
-    │   ├── e2e/                 # Playwright: flows, characterization, security
-    │   ├── fixtures/            # real exported files + hostile ones; seeded saves
-    │   └── serve.mjs            # tiny static server the browser tests start
-    ├── package.json             # DEV ONLY — test tooling; the app has no dependencies
-    ├── playwright.config.js     # DEV ONLY
-    ├── docs/                    # this documentation set + the Player's Guide RTF
-    └── design/                  # archived design prototypes — reference, never shipped
+└── .nojekyll                # empty; tells GitHub Pages to serve files untouched
 ```
 
 ---

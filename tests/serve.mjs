@@ -7,7 +7,7 @@
    does it in a page, so the test setup adds no server dependency.
 
    Run:  node tests/serve.mjs [port]      (default 4173)
-   Serves the projectMeeple/ folder. Development only — never shipped.
+   Serves the repo root (which is also the site root). Development only — never shipped.
    ===================================================================== */
 import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';

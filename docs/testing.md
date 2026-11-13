@@ -80,18 +80,18 @@ Chosen to keep the app itself dependency-free. **Test tools are development-only
 | **Error capture** | `tests/e2e/helpers/test.js` — every browser test fails on any uncaught exception or console error | Automatic, so no test can forget the check |
 | **When it runs** | Locally, with `npm test`, before committing | Decided 2026-11-04: no pre-commit hook (would slow and block every commit) and no CI on push (would only report problems after they are pushed) |
 
-**Decided 2026-10-05** (`architecture.md` Decision 10): Playwright is a **dev-only** dependency in `projectMeeple/package.json`. The app never loads it. Neither does it load `@axe-core/playwright` (added 2026-11-13), which is pinned to an exact version so a scan can't start failing on an upgrade nobody chose.
+**Decided 2026-10-05** (`architecture.md` Decision 10): Playwright is a **dev-only** dependency in the root `package.json`. The app never loads it. Neither does it load `@axe-core/playwright` (added 2026-11-13), which is pinned to an exact version so a scan can't start failing on an upgrade nobody chose.
 
 **Do not add `"type": "module"` to `package.json`.** Node would then treat `dice.js` and `mechanics.js` as ES modules and the converter and unit tests would break.
 
-**Setup on a new machine:** Node 20+ and Google Chrome, then in `projectMeeple/`: `npm install` and `npx playwright install webkit` (a one-time ~80 MB download of the Safari engine; Chrome needs no download).
+**Setup on a new machine:** Node 20+ and Google Chrome, then at the repo root: `npm install` and `npx playwright install webkit` (a one-time ~80 MB download of the Safari engine; Chrome needs no download).
 
 ---
 
 ## 4. Test File Structure
 
 ```text
-projectMeeple/
+project-meeple/
 ├── package.json             # dev-only scripts and devDependencies
 ├── playwright.config.js     # starts tests/serve.mjs; chrome + safari projects
 └── tests/

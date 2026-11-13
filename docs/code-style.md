@@ -50,7 +50,7 @@
 ## 3. Folder Structure
 
 ```text
-projectMeeple/
+project-meeple/         # repo root = site root
 ├── index.html          # shell ONLY — frame, .app root, script tags
 ├── pages/              # one HTML fragment per screen; pages/modals/ grouped by owner
 ├── resources/
