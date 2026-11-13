@@ -372,7 +372,7 @@ Cards sit on `--bg-card`. A selected card gets the accent border and `--bg-parch
 | **Menu** | A drawer from the right (82% width) over a `--scrim`, reached from every main screen. Holds Edit Character, Rules, Settings. |
 | **Mobile navigation** | The character sheet has a bottom tab bar: Action · Character · Gear. Labels are Marcellus `--fs-caption` uppercase. Inactive is `--ink-faint`; active is `--accent-bright`. Top edge is a `--rule-strong` line. |
 | **Sidebar** | None — the app is a single phone-width column. |
-| **Modals** | Centered card over a scrim; one open at a time (`data-modal` on `.app`). Each card is a named `role="dialog"`: focus moves onto the dialog when it opens (or stays on the field its opener focused), Tab stays inside it, the page behind is `inert`, and focus returns to the opener on close. Escape closes a modal only when its scrim is its only exit (roll result, Rest, calculator, Advantage); modals with a close control keep Escape inert so a half-filled form isn't lost. |
+| **Modals** | Centered card over a scrim; one open at a time (`data-modal` on `.app`). Each card is a named `role="dialog"`: focus moves onto the dialog when it opens (or stays on the field its opener focused), Tab stays inside it, the page behind is `inert` (and so is the shell outside `.app`, such as the frame toggle), and focus returns to the opener on close. Escape closes a modal only when its scrim is its only exit (roll result, Rest, calculator, Advantage); modals with a close control keep Escape inert so a half-filled form isn't lost. |
 | **Mechanism** | Screens, tabs, modals and the drawer switch via `data-view`, `data-tab`, `data-modal`, `data-menu` on `.app`; CSS decides what shows. |
 
 ---
@@ -431,8 +431,8 @@ Amber sits between the gold and the ember, so it is close to both. **A warning i
 
 **Current triggers:** character saved (Edit → Dossier), character exported, backup saved, compendium exported. Imports already show a result window with notes, so they don't also toast. When storage refuses the Edit → Dossier save, the same toast says *"Updated for this session only — not saved."* with the `--warn` glyph instead.
 
-**Storage alert — `pages/toast.html`, `toast.css`, `noteStorage(ok)` in `main.js`**
-- The one notice that doesn't time out. Up while browser storage is refusing writes (full quota or blocked), so changes are living in memory only; down after the next write that gets through.
+**Storage alert — `pages/toast.html`, `toast.css`, `settleStorage()` in `main.js`**
+- The one notice that doesn't time out. Up while any character's changes are held in memory because storage refused them (full quota or blocked), or the roster index write failed; down only once every held change has been written. A write that lands for one thing (say, the roster index) doesn't clear it while another character's changes are still held.
 - Shares the toast's column at the foot of the app and its card styling, with an amber border so it doesn't read as something that will go away by itself. A toast stacks above it.
 - Hidden while a modal is open, so it never covers a modal's buttons; back as soon as the modal closes.
 - The card is a button to Settings, where Export All Characters writes a file that needs no browser storage.
@@ -465,7 +465,7 @@ The app is designed for phones and only phones, today.
 | **Tablet / Desktop** | Not designed. With the frame turned off ("full window"), the column grows to `--frame-max` (520px) and stops, so layouts never stretch past phone widths. |
 | **Breakpoints** | One today: `max-width: 340px` collapses the bio grid to one column. Wider layouts are planned — see §15.1. |
 | **Safe areas** | Bottom controls pad with `env(safe-area-inset-bottom)`. |
-| **Reduced motion** | `prefers-reduced-motion` turns off dice animation and slows the spinner. |
+| **Reduced motion** | `prefers-reduced-motion` turns off the dice tumble and settle, slows the spinner, and turns spatial motion into fades or instant changes: the dice sheet and toast fade in rather than slide, carets turn without sweeping, and roster rows jump rather than slide during a drag. Opacity fades stay, because they aren't movement. |
 
 ### 15.1 Planned — wider layouts (not implemented)
 

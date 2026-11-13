@@ -641,7 +641,7 @@ Errors block output; warnings don't.
 **Errors**
 - Missing required field
 - Duplicate derived `id`, anywhere in the file — usually two rows sharing a name
-- A `formerIds` entry that is malformed, or that names a **live** id (§2)
+- A `formerIds` entry that is malformed, that names a **live** id, or that another row already claims as its former id (§2). An old id can only lead to one place.
 - Unparseable dice, or one outside the 1–100 / 2–1000 limits
 - `skills.category` not in the five (§6)
 - Non-integer in an int column, or a `mod` column that isn't `+2` / `0` / `-1` shaped

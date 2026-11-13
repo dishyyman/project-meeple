@@ -161,13 +161,15 @@ Functions should:
 ## 7. Error Handling
 
 **Use:**
-- **`try/catch` around every storage read and write**, with a comment saying what happens on failure. The pattern: play continues in memory, **and the player is told.** A write a reload depends on returns whether it landed (`save()`, `saveRoster()`, `savePortrait()` all do), feeds `noteStorage(ok)` so the standing storage alert goes up or comes down, and anything that would announce success checks the result first.
+- **`try/catch` around every storage read and write**, with a comment saying what happens on failure. The pattern: play continues in memory, **nothing the player changed is thrown away, and the player is told.** A write a reload depends on returns whether it landed (`save()`, `saveRoster()`, `savePortrait()` all do), and anything that would announce success checks the result first.
+  - **A refused character save or portrait is held, not dropped.** It goes into `heldSaves` / `heldPortraits` in `main.js`, and `readSave()` / `readPortrait()` return the held copy first. So opening, backing up and sharing all see the version on screen, and every later write retries it. Read characters through those two functions, never straight from `localStorage`, or you will read the stale copy.
+  - **The storage alert is derived, never set:** `settleStorage()` puts it up while anything is held or the roster index write failed, and takes it down only when all of it has landed. One write succeeding does not mean another's data is safe.
+  - **An import is the exception:** a refused import is *undone* (row taken back, nothing held), because holding it would retry it and turn "Not imported" into an import after all.
   ```js
-  let written = false;
-  try { localStorage.setItem(KEY, value); written = true; }
-  catch (_) { /* storage unavailable — play continues in-memory; see noteStorage() */ }
-  noteStorage(written);
-  return written;
+  const writeSave = (id, json) => {
+    try { localStorage.setItem(saveKey(id), json); return true; }
+    catch (_) { return false; }   // the caller holds it or undoes it — see save(), adoptCharacter()
+  };
   ```
   Never show "saved" for a write you didn't check.
 - **Check, don't trust** anything from storage or a file: validate shape and type, clamp numbers, drop unknown fields, fall back to a safe default (`database.md` A6).

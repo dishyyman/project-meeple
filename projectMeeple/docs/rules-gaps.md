@@ -1083,6 +1083,15 @@ Constitution itself still reads its true (negative) total; only the derived pool
 is floored. Unit tests: *maximum health never drops below the floor* in
 `tests/unit/mechanics.test.js`.
 
+**Saves from before the floor (designer, 2026-11-13):** a save can hold a
+negative current health that an old rest wrote. Loading clamps it to 0, which
+left a standing character on 0/1, a state no rule produces. Such a character
+loads at **full health, with no Wound added**: they never took that damage, and
+the number came from the bug. A downed character keeps its 0, and a sheet with
+no subclass keeps 0/0. Built as `settleHealth()` in `mechanics.js`, run last in
+`applySave()` once inventory and effects (which move Constitution) are loaded.
+Unit tests: *a save cannot load a standing character on an empty bar*.
+
 **Not decided here:** Evasion, Fortitude and Speed can also go negative through
 modifiers and Conditions (Speed already has `DOWNED_SPEED` for Downed, but no
 floor while standing). None of them breaks a rule the way a negative health pool

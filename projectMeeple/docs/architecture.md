@@ -166,10 +166,10 @@ Server-side database: **Open** — see `database.md` when it exists.
 2. A rules wrapper in `main.js` hands the open `character` to the mechanics engine, which updates it (e.g. `damage()` runs the Wound cascade).
 3. Derived stats are recomputed from the model — never stored.
 4. Render functions repaint the affected parts using class names and `data-*` attributes.
-5. `save()` writes the character to `localStorage` and returns whether it landed. If storage is unavailable, play continues in memory and the standing storage alert tells the player (`noteStorage()`).
+5. `save()` writes the character to `localStorage` and returns whether it landed. If storage refuses it, play continues in memory: the character is **held** (`heldSaves` in `main.js`) so switching away and back, a backup or a share all still see the latest version, every later write retries it, and the standing storage alert stays up until it lands (`settleStorage()`).
 
 **Exporting and importing a character**
-1. Export: the character is read back out of storage, wrapped with a snapshot of the content it uses, and delivered as `<name>.meeple.json` (download, or the device share sheet).
+1. Export: the character is read back out through `readSave()` (storage, or the held copy if storage refused the latest version), wrapped with a snapshot of the content it uses, and delivered as `<name>.meeple.json` (download, or the device share sheet).
 2. Import: the file is read and validated (envelope, schema version), the player chooses *add a copy* or *overwrite*, missing content fills gaps from the file's snapshot, and a result window reports what happened.
 
 **Updating content**

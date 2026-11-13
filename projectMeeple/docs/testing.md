@@ -43,7 +43,7 @@ Test pieces working together:
 - **Backup → restore** of a whole roster.
 - **Compendium import** — Add fills gaps without overwriting; Replace reloads; Restore drops it; characters referencing missing ids lose them with a warning.
 - **Files across versions** — older files still import; newer `schemaVersion` is refused (`character-file.md` §6).
-- **Storage full** — portrait that won't fit is kept in memory with a message; play continues. A refused save raises the standing storage alert, Edit doesn't claim "saved", and a refused import is undone and reported (`data-safety.spec.js`, "when storage refuses writes").
+- **Storage full** — portrait that won't fit is kept in memory with a message; play continues. A refused save raises the standing storage alert, Edit doesn't claim "saved", and a refused import is undone and reported (`data-safety.spec.js`, "when storage refuses writes"). Refused changes are held: switching away and back, creating a character, or a backup never loses them, and the alert stays until they land ("nothing on the sheet is lost"). An import's report matches what reached storage, whichever write failed ("import: the report matches").
 - **Future (Open):** APIs, database interactions, authentication flows, sync conflicts.
 
 ### End-to-End Testing
@@ -98,22 +98,22 @@ projectMeeple/
     ├── serve.mjs            # tiny static server (Node's http, no dependency)
     ├── unit/                # node --test
     │   ├── dice.test.js       # 17 — arithmetic, limits, refusals, never eval
-    │   ├── mechanics.test.js  # 56 — every rules-gaps §6 rule + §7 rulings
+    │   ├── mechanics.test.js  # 67 — every rules-gaps §6 rule + §7 rulings
     │   ├── content.test.js    #  7 — the real compendium vs the guide
-    │   └── library-check.test.js # 11 — the compendium/entry shape check
+    │   └── library-check.test.js # 14 — the compendium/entry shape check
     ├── e2e/                 # Playwright — every test runs in Chrome AND Safari
     │   ├── helpers/test.js    # the `test` to import: fails on any page error
     │   ├── helpers/app.js     # openApp, press, seed storage, files, downloads
     │   ├── characterization.spec.js  # 2 — the whole sheet, step by step
     │   ├── characterization.spec.js-snapshots/   # the recorded baselines
     │   ├── smoke.spec.js      # 2 — Flows 1, 2
-    │   ├── data-safety.spec.js # 11 — Flows 6, 7, 7b, 7c (full round trip), 8, 11; storage refusing writes; an old pre-roster save
-    │   ├── compendium.spec.js # 6 — Flow 9; malformed compendiums; launch safety net
+    │   ├── data-safety.spec.js # 19 — Flows 6, 7, 7b, 7c (full round trip), 8, 11; storage refusing writes; held changes; import outcomes; old saves
+    │   ├── compendium.spec.js # 8 — Flow 9; malformed compendiums; launch safety net and its grace period
     │   ├── keyboard.spec.js   # 6 — Enter/Space on custom buttons, Shift+Enter holds
-    │   ├── dialogs.spec.js    # 5 — dialog markup, focus in/kept/back, Escape
-    │   ├── a11y.spec.js       # 19 — axe on every screen and main modal (Chrome); collapsible tap targets (both)
+    │   ├── dialogs.spec.js    # 7 — dialog markup, focus in/kept/back, Escape, the shell made inert
+    │   ├── a11y.spec.js       # 22 — axe on every screen and main modal (Chrome); collapsible tap targets, note state, reduced motion (both)
     │   ├── rules.spec.js      # 1 — Flow 10 (marked known bug, §10)
-    │   └── security.spec.js   # 9 — Flow 12, CSP, size limit
+    │   └── security.spec.js   # 10 — Flow 12, hostile ids, CSP, size limit
     └── fixtures/
         ├── files/             # real exports + hostile/malformed files
         └── saves/             # raw saves seeded straight into storage
@@ -215,6 +215,10 @@ Each flow lists the steps and the result that must hold. These are the E2E suite
 | Flows 3, 4, 5 (damage, rolls, effects) | `e2e/characterization.spec.js` (as recorded output, not readable assertions) |
 | Flows 6, 7, 8, 11 (edit, export/import, backup, delete) | `e2e/data-safety.spec.js` |
 | Storage refusing writes (alert, no false "saved", import undone) | `e2e/data-safety.spec.js` |
+| Changes storage refused are held: switch, create, reorder, backup and restore | `e2e/data-safety.spec.js` |
+| Import outcomes match what reached storage (each write failing alone, mixed files) | `e2e/data-safety.spec.js` |
+| Hostile ids in a character file (attributes and selectors, not just text) | `e2e/security.spec.js` |
+| Screen-reader state of journal notes; reduced motion | `e2e/a11y.spec.js` |
 | Flow 12 (hostile files), CSP, import size limit | `e2e/security.spec.js` |
 | Flow 10 (rules lookup) — written, marked known bug | `e2e/rules.spec.js`, §10 |
 | No JavaScript errors during any browser test | `e2e/helpers/test.js` (every test, automatically) |
