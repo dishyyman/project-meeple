@@ -1741,8 +1741,12 @@
     const value = b.roll === 'tohit' ? formatMod(toHitBonus()) : rolled;
     const expr  = b.roll === 'tohit' ? `d20+${toHitBonus()}` : rolled;
     const cls = `val-box${extraCls}${b.dice ? ' val-box--dice' : ''}${b.roll ? ' val-box--roll' : ''}`;
+    // To-Hit boxes have a second gesture — hold for Advantage — and its
+    // keyboard twin is Shift+Enter (see the keydown handler in wire()).
+    // aria-keyshortcuts is how a screen reader learns it exists.
     const hooks = b.roll
       ? ` role="button" tabindex="0" data-roll="${b.roll}" data-roll-label="${esc(sourceName)}" data-roll-expr="${esc(expr)}"`
+        + (b.roll === 'tohit' ? ' aria-keyshortcuts="Shift+Enter"' : '')
       : '';
     return `<span class="${cls}"${hooks}>${esc(value)}</span>`;
   }
@@ -4132,7 +4136,13 @@
     let html = '';
     for (let i = 0; i < woundsMax(); i++) {
       const on = i < character.wounds;
-      html += `<span class="pip${on ? ' is-on' : ''}" data-wound="${i}">${on ? WOUND_ICON : ''}</span>`;
+      /* A real <button> per pip, like the Patch boxes below — these used to be
+         spans, which a mouse or finger could press and a keyboard could not
+         reach at all. The label is spelled out for the same reason the Patch
+         boxes spell theirs: "3" alone does not say what pressing it does. */
+      html += `<button class="pip${on ? ' is-on' : ''}" data-wound="${i}"`
+        + ` aria-label="Set Wounds to ${i + 1}${on && i + 1 === character.wounds ? ', or tap again for ' + i : ''}">`
+        + `${on ? WOUND_ICON : ''}</button>`;
     }
     el.innerHTML = html;
     // The reset is only meaningful once a wound is marked, so it greys out at
@@ -4181,8 +4191,8 @@
          easy and are the thing that should move, not the pattern to copy. The
          label is spelled out per box because "3" alone tells a screen-reader
          user nothing about what pressing it will do. */
-      html += `<button class="patch${on ? ' is-on' : ''}" data-patch="${i}"`
-        + ` aria-label="Set Patches to ${i + 1}${on && i + 1 === character.patches ? ', or tap again for ' + i : ''}">`
+      html += `<button class="patch${on ? ' is-on' : ''}" data-patch="${i}" aria-keyshortcuts="Shift+Enter"`
+        + ` aria-label="Set Patches to ${i + 1}${on && i + 1 === character.patches ? ', or tap again for ' + i : ''}. Hold, or Shift+Enter, to spend one">`
         + `${PATCH_ICON}</button>`;
     }
     el.innerHTML = html;
@@ -5109,7 +5119,11 @@
     if (advHold.timer) { clearTimeout(advHold.timer); advHold.timer = null; }
   }
 
-  function openAdv(box) {
+  // `focus` is set by the keyboard path (Shift+Enter): the menu is elsewhere
+  // in the DOM from the box that opened it, so without moving focus onto its
+  // first row a keyboard user would have no way to reach it. A finger needs
+  // no such help — it simply taps a row.
+  function openAdv(box, { focus = false } = {}) {
     const el = $('[data-adv-menu]');
     if (!el || !box) return;
     // What the chooser will roll when a row is picked. Read now, while the box
@@ -5142,6 +5156,7 @@
     el.setAttribute('data-adv-dir', up ? 'up' : 'down');
     el.style.setProperty('--adv-x', `${Math.round(r.left + r.width / 2 - frame.left)}px`);
     el.style.setProperty('--adv-y', `${Math.round((up ? r.top : r.bottom) - frame.top)}px`);
+    if (focus) el.querySelector('[data-adv]')?.focus();
   }
 
   // Picking a row rolls it. The menu closes on the way, so the result card is
@@ -8027,6 +8042,50 @@
     // the move away would be the more surprising of the two outcomes.
     document.addEventListener('pointerup', () => endRosterDrag(true));
     document.addEventListener('pointercancel', () => endRosterDrag(true));
+
+    /* ---- keyboard: custom buttons, and the holds ----------------------
+       Two gaps the Codex review found, closed in one place.
+
+       1. role="button" on something that is NOT a <button> — the roll boxes
+          (spans, because they sit inside a collapsible's header button and
+          buttons cannot nest) and the gear and armour rows. The role and
+          tabindex promise a button, so they must behave like one: Enter and
+          Space press it. Translated into a click, so the ONE delegated click
+          handler stays the only place a press is interpreted. Space is
+          prevented so it does not also scroll the sheet; held-key repeats are
+          swallowed so a held Enter does not roll forty times.
+
+       2. The three press-and-hold gestures — hold a To-Hit box for
+          Advantage, hold a Patch box to spend one, hold the roller's delete
+          key to clear — had no keyboard path at all. Shift+Enter is the hold,
+          on all three: one rule to learn rather than three. It is advertised
+          with aria-keyshortcuts on each control. On a phone or tablet nothing
+          changes — this only runs for a keyboard (a desktop, or an iPad with
+          one attached).
+
+       Native <button>s are left alone for Enter and Space: the browser already
+       presses them, and doing it again here would press them twice. */
+    app.addEventListener('keydown', (e) => {
+      if (e.key !== 'Enter' && e.key !== ' ') return;
+      const el = e.target;
+      if (!el || !el.matches) return;
+
+      if (e.key === 'Enter' && e.shiftKey) {
+        const hold = el.matches('[data-roll="tohit"]') ? () => openAdv(el, { focus: true })
+                   : el.matches('[data-patch]')        ? () => openPatch()
+                   : el.matches('[data-dice-back]')    ? () => diceClear()
+                   : null;
+        if (hold) {
+          e.preventDefault();          // or a native button also takes it as a plain press
+          if (!e.repeat) hold();
+          return;
+        }
+      }
+
+      if (el.getAttribute('role') !== 'button' || el.tagName === 'BUTTON') return;
+      e.preventDefault();
+      if (!e.repeat) el.click();
+    });
 
     /* A drag is unreachable without a pointer, so the grip is also a pair of
        arrow keys. Accessibility outranks performance in this project's order

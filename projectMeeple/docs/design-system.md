@@ -500,6 +500,8 @@ The app will grow beyond phone width. Nothing below is built; `--frame-max` keep
 - Icon-only buttons carry an `aria-label`; their SVG is `aria-hidden`.
 - Content for screen readers only uses `.visually-hidden`.
 - Clickable things are `<button>`s, not `<div>`s (e.g. the portrait is a button so it can be reached by keyboard).
+- Where a `<button>` can't be used — a roll box nests inside a collapsible's header button, and buttons can't nest — use `role="button" tabindex="0"`. Enter and Space then press it automatically (one delegated `keydown` handler in `wire()` turns them into a click), so nothing else is needed.
+- **Every press-and-hold has a keyboard twin: Shift+Enter.** Hold a To-Hit box for Advantage, hold a Patch box to spend one, hold the roller's delete key to clear. Advertise it with `aria-keyshortcuts="Shift+Enter"` on the control. A new hold gesture adds its control to the same handler.
 - Respect `prefers-reduced-motion`.
 
 ---
@@ -517,3 +519,5 @@ The app will grow beyond phone width. Nothing below is built; `--frame-max` keep
 | 7 | `.account__btn` text used `--bg-card` instead of `--on-accent` | **Fixed 2026-10-05** |
 | 8 | Theme picker records a choice that nothing reads | On hold — other themes not in progress (§3) |
 | 9 | No warning color, no loading state, no success feedback | Warning and success **built 2026-10-05** (§13.1). Loading state still _TBD_ |
+| 10 | Roll boxes and gear/armour rows announced as buttons but ignored Enter/Space; the three hold gestures (Advantage, Patch spend, clear roller) had no keyboard path; Wound pips were spans a keyboard couldn't reach | **Fixed 2026-11-13** — Enter/Space on every `role="button"`, Shift+Enter for every hold, Wound pips are buttons (`e2e/keyboard.spec.js`) |
+| 11 | Most buttons show the browser's default focus ring rather than `--focus` / `--focus-ring` | Open — visible, so not a blocker; a global `:focus-visible` rule would bring them in line |
