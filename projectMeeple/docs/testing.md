@@ -38,7 +38,7 @@ Test small pieces with no browser:
 Test pieces working together:
 
 - **Save → reload → load** round-trips every field (`database.md` A3).
-- **Export → import** round-trips a character (add a copy and overwrite), including the portrait and the content snapshot.
+- **Export → import** round-trips a character (add a copy and overwrite), including the portrait and the content snapshot. Flow 7c requires the copy's stored save to equal the original's field for field — portrait, bio, notes, held weapons and tags, armour, gear, inventory modifiers, effects, level history and spent resources.
 - **Backup → restore** of a whole roster.
 - **Compendium import** — Add fills gaps without overwriting; Replace reloads; Restore drops it; characters referencing missing ids lose them with a warning.
 - **Files across versions** — older files still import; newer `schemaVersion` is refused (`character-file.md` §6).
@@ -105,7 +105,7 @@ projectMeeple/
     │   ├── characterization.spec.js  # 2 — the whole sheet, step by step
     │   ├── characterization.spec.js-snapshots/   # the recorded baselines
     │   ├── smoke.spec.js      # 2 — Flows 1, 2
-    │   ├── data-safety.spec.js # 9 — Flows 6, 7, 7b, 8, 11; storage refusing writes
+    │   ├── data-safety.spec.js # 10 — Flows 6, 7, 7b, 7c (full round trip), 8, 11; storage refusing writes
     │   ├── compendium.spec.js # 6 — Flow 9; malformed compendiums; launch safety net
     │   ├── keyboard.spec.js   # 6 — Enter/Space on custom buttons, Shift+Enter holds
     │   ├── dialogs.spec.js    # 5 — dialog markup, focus in/kept/back, Escape

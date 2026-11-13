@@ -68,6 +68,81 @@ test('Flow 7 — export a character, then import it back as a copy', async ({ pa
   expect((await rosterNames(page)).length).toBe(2);
 });
 
+/* Flow 7's promise in full: "the copy is identical with a new id; portrait,
+   notes and gear survive". The test above checks the file's envelope and the
+   roster; this one checks the CHARACTER. It starts from a character carrying
+   every kind of state a player can give one — portrait, bio, notes, held
+   weapons with a tag, worn armour, carried gear, inventory with modifiers
+   (one negative), Boons and Conditions with stacks, a level history, and
+   spent health, Mana, Wounds and Patches — and requires the imported copy's
+   stored save to equal the original's, field for field. Added after the
+   Codex review found Flow 7 only asserted on the name and id. */
+test('Flow 7c — an exported character comes back identical, portrait and all', async ({ page }) => {
+  const fs = require('fs');
+  const elara = JSON.parse(fs.readFileSync(fixture('elara.meeple.json'), 'utf8')).characters[0];
+  const { id: _id, portrait: _p, ...rest } = elara;
+  const save = {
+    ...rest,
+    bio: { ...elara.bio, eyes: 'Grey', hair: 'Ash' },
+    inventory: [...elara.inventory, {
+      id: 'inv-coin', title: 'Lucky Coin', desc: 'Warm to the touch.',
+      mods: [{ stat: 'Fortune', value: 1 }, { stat: 'Constitution', value: -2 }],
+    }],
+  };
+  // A real 1×1 PNG: portraits are only accepted as image data URLs.
+  const PORTRAIT = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
+  await page.addInitScript((p) => {
+    if (sessionStorage.getItem('portrait-seeded')) return;
+    sessionStorage.setItem('portrait-seeded', '1');
+    localStorage.setItem('meeple.character.rt.portrait', p);
+  }, PORTRAIT);
+  await openApp(page, { saves: { rt: save } });
+
+  await press(page, '[data-nav="characters"]');
+  await press(page, '[data-roster-edit]');
+  const file = await download(page, '[data-char-export]');
+  expect(file.json.characters[0].portrait).toBe(PORTRAIT);
+  await press(page, '[data-roster-edit]');
+
+  await chooseFile(page, '[data-import-open]', {
+    name: file.name, mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(file.json)),
+  });
+  expect((await readResult(page)).state).toBe('ok');
+  await closeModal(page);
+
+  const stored = await page.evaluate(() => {
+    const { ids } = JSON.parse(localStorage.getItem('meeple.roster'));
+    return ids.map((id) => ({
+      id,
+      save: JSON.parse(localStorage.getItem(`meeple.character.${id}`)),
+      portrait: localStorage.getItem(`meeple.character.${id}.portrait`),
+    }));
+  });
+  expect(stored.length).toBe(2);
+  const [original, copy] = stored;
+  expect(copy.id).not.toBe(original.id);
+
+  // The named promises, one by one, so a failure says which one broke…
+  expect(copy.portrait).toBe(PORTRAIT);
+  expect(copy.save.notes).toEqual(original.save.notes);
+  expect(copy.save.notes.length).toBeGreaterThan(0);
+  expect(copy.save.hands).toEqual([{ id: 'weapon.1h-melee', tag: 'Reach' }, { id: 'shield.armor' }]);
+  expect(copy.save.armorWorn).toBe('armor.light');
+  expect(copy.save.inventory.find((i) => i.id === 'inv-coin').mods)
+    .toEqual([{ stat: 'Fortune', value: 1 }, { stat: 'Constitution', value: -2 }]);
+  expect(copy.save.effects).toEqual(original.save.effects);
+  expect(copy.save.build.levels).toEqual(original.save.build.levels);
+  expect([copy.save.health, copy.save.mana, copy.save.wounds, copy.save.patches]).toEqual([7, 4, 1, 2]);
+  expect(copy.save.bio).toMatchObject({ eyes: 'Grey', hair: 'Ash' });
+  // …and then everything else, so nothing can slip through unnamed.
+  expect(copy.save).toEqual(original.save);
+
+  // And it all survives a reload.
+  await reloadApp(page);
+  const afterReload = await page.evaluate((id) => localStorage.getItem(`meeple.character.${id}.portrait`), copy.id);
+  expect(afterReload).toBe(PORTRAIT);
+});
+
 test('Flow 7b — restore in place overwrites the matching character', async ({ page }) => {
   await openApp(page);
   await openFirstCharacter(page);
