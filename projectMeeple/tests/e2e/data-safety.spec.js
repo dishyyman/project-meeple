@@ -321,6 +321,281 @@ test.describe('when storage refuses writes', () => {
   });
 });
 
+/* =====================================================================
+   Round-2 review: what reaches storage must be what the app SAYS reached
+   it, and what storage refuses must not then be thrown away by the app.
+   The helpers below read the stored state directly, because "after a
+   reload" is the promise and storage is what a reload reads.
+   ===================================================================== */
+const storedRoster = (page) => page.evaluate(() => JSON.parse(localStorage.getItem('meeple.roster')).ids);
+const storedSave = (page, id) => page.evaluate((k) => JSON.parse(localStorage.getItem(`meeple.character.${k}`)), id);
+const storedCharacterKeys = (page) => page.evaluate(() =>
+  Object.keys(localStorage).filter((k) => k.startsWith('meeple.character.')).sort());
+const healthNow = (page) => page.locator('[data-bind="healthCur"]').first();
+
+// The backup fixture's one character (Elara, id `aurelia`), renamed so an
+// overwrite is visible on the sheet and in storage.
+function renamedBackup(name, extra = []) {
+  const fs = require('fs');
+  const file = JSON.parse(fs.readFileSync(fixture('backup.meeple.json'), 'utf8'));
+  file.characters[0].name = name;
+  file.characters.push(...extra);
+  return { name: 'backup.meeple.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(file)) };
+}
+
+async function importFromSettings(page, file, mode) {
+  await press(page, '[data-nav="settings"]');
+  await chooseFile(page, '[data-file-open="characters"]', file);
+  await expect.poll(() => appAttr(page, 'data-modal')).toBe('file-ask');
+  await press(page, `[data-file-apply="${mode}"]`);
+  return readResult(page);
+}
+
+test.describe('import: the report matches what reached storage', () => {
+  test('overwrite — the character lands, the roster index is refused: reported as imported, because it was', async ({ page }) => {
+    await breakableStorage(page);
+    await openApp(page);
+    await failWrites(page, '^meeple\\.roster$');
+
+    const result = await importFromSettings(page, renamedBackup('Overwritten'), 'overwrite');
+    expect(result.state).toBe('ok');
+    expect(result.text).toContain('Overwritten');
+    expect(result.text).toContain('overwritten with the version in the file');
+    await closeModal(page);
+
+    // The index on disk already lists `aurelia`, so the new save is what a
+    // reload reads — and it is what the list shows now.
+    await press(page, '[data-nav="characters"]');
+    expect(await rosterNames(page)).toEqual(['Overwritten']);
+    expect((await storedSave(page, 'aurelia')).name).toBe('Overwritten');
+    await expect(alertCard(page)).toBeVisible();      // the index write WAS refused
+
+    await healWrites(page);
+    await reloadApp(page);
+    await press(page, '[data-nav="characters"]');
+    expect(await rosterNames(page)).toEqual(['Overwritten']);
+  });
+
+  test('add — the character lands, the roster index is refused: taken back, nothing orphaned', async ({ page }) => {
+    await breakableStorage(page);
+    await openApp(page);
+    await press(page, '[data-nav="characters"]');
+    await failWrites(page, '^meeple\\.roster$');
+
+    await chooseFile(page, '[data-import-open]', fixture('elara.meeple.json'));
+    const result = await readResult(page);
+    expect(result).toMatchObject({ state: 'error', title: 'Not imported' });
+    expect(result.text).toContain('could not be imported');
+    await closeModal(page);
+
+    expect(await rosterNames(page)).toEqual(['Elara Starwhisper']);
+    // No save left behind that no screen could ever open.
+    expect(await storedCharacterKeys(page)).toEqual(['meeple.character.aurelia']);
+
+    await healWrites(page);
+    await reloadApp(page);
+    await press(page, '[data-nav="characters"]');
+    expect(await rosterNames(page)).toEqual(['Elara Starwhisper']);
+  });
+
+  test('overwrite — the character is refused, the roster index is fine: not imported, nothing changed', async ({ page }) => {
+    await breakableStorage(page);
+    await openApp(page);
+    await openFirstCharacter(page);
+    await applyCalc(page, 'health', 'damage', 5);                  // 7 → 2, saved
+    await failWrites(page, '^meeple\\.character\\.');
+
+    const result = await importFromSettings(page, renamedBackup('Overwritten'), 'overwrite');
+    expect(result).toMatchObject({ state: 'error', title: 'Not imported' });
+    await closeModal(page);
+
+    await press(page, '[data-nav="characters"]');
+    expect(await rosterNames(page)).toEqual(['Elara Starwhisper']);
+    await press(page, '[data-open-character]');
+    await expect(healthNow(page)).toHaveText('2');
+    expect((await storedSave(page, 'aurelia')).name).toBe('Elara Starwhisper');
+
+    await healWrites(page);
+    await reloadApp(page);
+    await openFirstCharacter(page);
+    await expect(page.locator('[data-bind="name"]').first()).toHaveText('Elara Starwhisper');
+    await expect(healthNow(page)).toHaveText('2');
+  });
+
+  test('several characters, different outcomes: each reported, and each as a reload finds it', async ({ page }) => {
+    await breakableStorage(page);
+    await openApp(page);
+    const fs = require('fs');
+    const second = { ...JSON.parse(fs.readFileSync(fixture('backup.meeple.json'), 'utf8')).characters[0], id: 'grimm', name: 'Grimm' };
+    const third  = { ...second, id: 'vex', name: 'Vex' };
+    // Only Grimm's save is refused.
+    await failWrites(page, '^meeple\\.character\\.grimm$');
+
+    const result = await importFromSettings(page, renamedBackup('Overwritten', [second, third]), 'overwrite');
+    expect(result).toMatchObject({ state: 'error', title: 'Partly imported' });
+    expect(result.text).toContain('Vex was added');
+    expect(result.text).toContain('Overwritten was overwritten');
+    expect(result.text).toContain('Grimm could not be imported');
+    await closeModal(page);
+
+    await press(page, '[data-nav="characters"]');
+    expect(await rosterNames(page)).toEqual(['Overwritten', 'Vex']);
+    expect(await storedRoster(page)).toEqual(['aurelia', 'vex']);
+    expect(await storedCharacterKeys(page)).toEqual(['meeple.character.aurelia', 'meeple.character.vex']);
+
+    await healWrites(page);
+    await reloadApp(page);
+    await press(page, '[data-nav="characters"]');
+    expect(await rosterNames(page)).toEqual(['Overwritten', 'Vex']);
+  });
+});
+
+test.describe('while storage refuses writes, nothing on the sheet is lost', () => {
+  // A second character to switch to: the fixture's Elara, under another id.
+  async function twoCharacters(page) {
+    const fs = require('fs');
+    const elara = JSON.parse(fs.readFileSync(fixture('backup.meeple.json'), 'utf8')).characters[0];
+    const { id: _id, portrait: _p, ...save } = elara;
+    await openApp(page, { saves: { aurelia: save, grimm: { ...save, name: 'Grimm' } } });
+  }
+  const openRow = async (page, name) => {
+    await press(page, '[data-nav="characters"]');
+    await page.locator('[data-open-character]', { hasText: name }).evaluate((el) => el.click());
+    await expect.poll(() => appAttr(page, 'data-view')).toBe('sheet');
+  };
+
+  test('switching away and back keeps the unsaved changes, and the alert stays up until they land', async ({ page }) => {
+    await breakableStorage(page);
+    await twoCharacters(page);
+    await openRow(page, 'Elara');
+    await failWrites(page, '^meeple\\.character\\.');
+    await applyCalc(page, 'health', 'damage', 2);                  // 7 → 5, refused
+    await expect(alertCard(page)).toBeVisible();
+
+    // The switch writes the roster index fine — that must NOT clear the alert.
+    await openRow(page, 'Grimm');
+    expect(await storedRoster(page)).toEqual(['aurelia', 'grimm']);
+    await expect(alertCard(page)).toBeVisible();
+    expect(await appAttr(page, 'data-storage')).toBe('failing');
+
+    // A roster-only write of another kind: a reorder. Still up.
+    await press(page, '[data-nav="characters"]');
+    await press(page, '[data-roster-edit]');
+    await page.locator('[data-char-grip="grimm"]').focus();
+    await page.keyboard.press('ArrowUp');
+    expect(await storedRoster(page)).toEqual(['grimm', 'aurelia']);
+    await press(page, '[data-roster-edit]');
+    expect(await appAttr(page, 'data-storage')).toBe('failing');
+
+    // Back to Elara: the sheet shows what the player last saw, not storage.
+    await openRow(page, 'Elara');
+    await expect(healthNow(page)).toHaveText('5');
+
+    // Storage recovers. The next write lands everything that was held.
+    await healWrites(page);
+    await openRow(page, 'Grimm');
+    await expect(alertCard(page)).toBeHidden();
+    expect((await storedSave(page, 'aurelia')).health).toBe(5);
+    await reloadApp(page);
+    await openRow(page, 'Elara');
+    await expect(healthNow(page)).toHaveText('5');
+  });
+
+  test('creating a character keeps the one left, and a roster write does not clear the alert', async ({ page }) => {
+    await breakableStorage(page);
+    await openApp(page);
+    await openFirstCharacter(page);
+    await failWrites(page, '^meeple\\.character\\.');
+    await applyCalc(page, 'health', 'damage', 3);                  // 7 → 4, refused
+
+    // Through the wizard, the short way: every step's minimum.
+    await press(page, '[data-nav="characters"]');
+    await press(page, '[data-action="create-character"]');
+    await press(page, '[data-wiz-pick^="class:"]');
+    await press(page, '[data-wiz-pick^="sub:"]');
+    for (let i = 0; i < 4; i++) await press(page, '[data-wiz-attr$=":1"]');
+    await press(page, '[data-wiz="next"]');
+    const skills = await page.$$eval('[data-wiz-skill]', (els) => els.slice(0, 4).map((e) => e.dataset.wizSkill));
+    for (const id of skills) await press(page, `[data-wiz-skill="${id}"]`);
+    await press(page, '[data-wiz="next"]');
+    await press(page, '[data-wiz="next"]');
+    await page.fill('[data-wiz-name]', 'Newcomer');
+    await page.locator('[data-wiz-name]').dispatchEvent('input');
+    await press(page, '[data-wiz="next"]');
+    await expect(page.locator('[data-bind="name"]').first()).toHaveText('Newcomer');
+
+    // Creating wrote the roster index fine; Elara's changes are still held.
+    await expect(alertCard(page)).toBeVisible();
+    expect(await appAttr(page, 'data-storage')).toBe('failing');
+    await openRow(page, 'Elara');
+    await expect(healthNow(page)).toHaveText('4');
+  });
+
+  test('a backup made while storage is failing carries the sheet as it is now — and restores it', async ({ page, browser }) => {
+    await breakableStorage(page);
+    await openApp(page);
+    await openFirstCharacter(page);
+    await failWrites(page, '^meeple\\.character\\.');
+
+    // Changes of every kind, all refused.
+    await applyCalc(page, 'health', 'damage', 3);                  // health 7 → 4
+    await press(page, '[data-wound="1"]');                          // wounds 1 → 2
+    // A Wound costs Elara a boon, and the app says so. Dismissed, not tested.
+    if ((await appAttr(page, 'data-modal')) !== 'closed') await closeModal(page);
+    await press(page, '[data-tab="notes"]');
+    await press(page, '[data-note-add]');
+    await page.fill('[data-note-title]', 'Held note');
+    await page.fill('[data-note-body]', 'Written while storage refused.');
+    await press(page, '[data-note-save]');
+    await press(page, '[data-tab="action"]');
+    await press(page, '[data-inv-add]');
+    await page.fill('[data-item-name]', 'Held trinket');
+    await page.locator('[data-item-name]').dispatchEvent('input');
+    await press(page, '[data-item-save]');
+    const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAIAAACQkWg2AAAAFklEQVR42mP8z8AARMQBxlGFoxQAAN4MAwmFx/0bAAAAAElFTkSuQmCC', 'base64');
+    await chooseFile(page, '.portrait-drop[data-portrait-pick]', { name: 'face.png', mimeType: 'image/png', buffer: PNG });
+    await expect(page.locator('[data-portrait-img]').first()).toHaveAttribute('src', /^data:image\//);
+    await press(page, '[data-nav="edit"]');
+    await page.fill('[data-id-name]', 'Elara Held');
+    await page.locator('[data-id-name]').dispatchEvent('input');
+    await press(page, '[data-id-save]');
+    await expect(page.locator('[data-toast-text]')).toHaveText('Updated for this session only — not saved.');
+
+    // Follow the alert to Settings and back up.
+    await press(page, '[data-storage-alert-text]');
+    await expect.poll(() => appAttr(page, 'data-view')).toBe('settings');
+    const backup = await download(page, '[data-backup-export]');
+    const got = backup.json.characters[0];
+    expect(got.name).toBe('Elara Held');
+    expect([got.health, got.wounds]).toEqual([4, 2]);
+    expect(got.notes.map((n) => n.title)).toContain('Held note');
+    expect(got.inventory.map((i) => i.title)).toContain('Held trinket');
+    expect(got.portrait).toMatch(/^data:image\//);
+
+    // Field for field: storage recovers, the next write stores the sheet as
+    // it is in memory, and the backup must equal exactly that.
+    await healWrites(page);
+    await press(page, '[data-nav="characters"]');
+    await press(page, '[data-open-character]');
+    await applyCalc(page, 'health', 'damage', 1);                  // two writes that cancel out
+    await applyCalc(page, 'health', 'heal', 1);
+    const { id: _id, portrait, ...fields } = got;
+    expect(fields).toEqual(await storedSave(page, 'aurelia'));
+    expect(portrait).toBe(await page.evaluate(() => localStorage.getItem('meeple.character.aurelia.portrait')));
+
+    // And it restores, in a browser that has never seen this character.
+    const fresh = await browser.newContext();
+    const other = await fresh.newPage();
+    await openApp(other);
+    const restored = await importFromSettings(other, {
+      name: backup.name, mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(backup.json)),
+    }, 'overwrite');
+    expect(restored.state).toBe('ok');
+    expect(await storedSave(other, 'aurelia')).toEqual(fields);
+    await fresh.close();
+  });
+});
+
 /* An install from before the roster existed, holding a save from before the
    gear catalog used library ids: armour stored as the bare proficiency name
    ("Light") and held items under ids that no longer exist. applySave() must

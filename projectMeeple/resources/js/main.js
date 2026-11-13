@@ -799,12 +799,43 @@
      later write gets through, and the callers that announce success —
      "Character saved.", the import window — ask first.
 
+     HELD COPIES. Keeping play going is only honest if the changes storage
+     refused are not then thrown away by the app itself. They used to be:
+     switching character, creating one, or importing re-read the open
+     character from storage, and the version on the sheet — the only copy
+     there was — went with it. So a refused write now leaves the latest
+     version HERE, in memory, keyed by character id:
+
+       heldSaves      id → the save JSON storage refused (the play state)
+       heldPortraits  id → the portrait storage refused (or null: "no photo")
+
+     readSave() and readPortrait() look here first, which is the whole fix:
+     every reader — opening a character, the Personae row, a backup, a share —
+     gets the version the player last saw, without knowing it was held. Every
+     later write retries them (retryHeld), and one that lands is let go. They
+     still do not survive the app closing, which is exactly what the notice
+     says, and why it leads to a backup that DOES carry them.
+
+     Portraits are held, but do not raise the notice: a refused photo already
+     says so where it was chosen ("Shown for this session only"), and the
+     play state is what the notice is about. */
+  const heldSaves = new Map();
+  const heldPortraits = new Map();
+  let rosterFailing = false;   // the last roster index write was refused
+
+  /* The notice is DERIVED, never set: it is up while anything is held or the
+     roster index is behind, and down only when all of it has landed. Before
+     this, it followed the last write — so a switch that failed to save the
+     character it left, and then wrote the small roster index fine, cleared it
+     while that character's changes were still unsaved.
+
      Idempotent, and the text is written only on the way INTO the failed
      state: the notice's live region announces when its text changes, and a
      player taking ten points of damage one tap at a time should hear it once,
      not ten times. */
   let storageFailing = false;
-  function noteStorage(ok) {
+  function settleStorage() {
+    const ok = !heldSaves.size && !rosterFailing;
     if (ok === !storageFailing) return;
     storageFailing = !ok;
     const text = $('[data-storage-alert-text]');
@@ -813,58 +844,102 @@
     app.setAttribute('data-storage', ok ? 'ok' : 'failing');
   }
 
-  // Returns whether the character AND the roster index both reached storage —
-  // the pair a reload reads back. True when there is nothing to write.
+  // The bare writes, each reporting whether it landed. Nothing here touches
+  // the held copies or the notice — the callers decide what a failure means,
+  // because an import and a play edit mean different things by it.
+  const writeSave = (id, json) => {
+    try { localStorage.setItem(saveKey(id), json); return true; } catch (_) { return false; }
+  };
+  const writePortrait = (id, portrait) => {
+    try {
+      if (portrait) localStorage.setItem(portraitKey(id), portrait);
+      else localStorage.removeItem(portraitKey(id));
+      return true;
+    } catch (_) { return false; }
+  };
+
+  // Record the outcome of a write for `id`: held if refused, let go if not.
+  const holdSave = (id, json, ok) => { if (ok) heldSaves.delete(id); else heldSaves.set(id, json); };
+  const holdPortrait = (id, portrait, ok) => { if (ok) heldPortraits.delete(id); else heldPortraits.set(id, portrait); };
+
+  // Forget a character entirely — deleted, or an import taken back.
+  const releaseHeld = (id) => { heldSaves.delete(id); heldPortraits.delete(id); };
+
+  /* Try every held copy again. Called on each write, because a write is the
+     only sign that storage might have room now (a portrait deleted, another
+     tab cleared out). Cheap: the maps are empty unless storage has refused
+     something, and then they hold a handful of characters at most.
+
+     The open character's SAVE is skipped — save() is about to write it fresh.
+     Its portrait is not: save() never writes the photo (it is the big write,
+     kept apart on purpose), so a refused photo for the open character would
+     otherwise wait for the next time a photo is chosen. What is held for it
+     is always the photo on screen, so retrying it is the same as saving it. */
+  function retryHeld() {
+    for (const [id, json] of heldSaves) {
+      if (id !== character.id && writeSave(id, json)) heldSaves.delete(id);
+    }
+    for (const [id, p] of heldPortraits) {
+      if (writePortrait(id, p)) heldPortraits.delete(id);
+    }
+  }
+
+  // Returns whether the OPEN character's play state reached storage — the
+  // question "Character saved." asks. True when there is nothing to write.
+  // The roster index is written too (the row may have changed) but reported
+  // only to the notice: what it holds is ids and order, which a refused
+  // character write does not depend on.
   const save = () => {
     // Only a character in the roster is persisted. Deleting the last one
     // leaves a blank bound to `character` so that every render and rule keeps
     // working without a null check; this is what stops that placeholder from
     // being written to storage and reappearing as a nameless roster row.
     if (!roster.some((r) => r.id === character.id)) return true;
-    let written = false;
-    try {
-      localStorage.setItem(saveKey(character.id), JSON.stringify({
-        // Identity is editable now (Edit Character), so it has to round-trip.
-        // This is the point at which the seed data at the top of this file
-        // stops being the source of truth and becomes a FIRST-RUN DEFAULT.
-        name: character.name,
-        // Optional descriptive fields. Written whole rather than field by
-        // field, so BIO_FIELDS stays the only list of them.
-        bio: character.bio,
-        portraitView: character.portraitView,
-        health: character.health, mana: character.mana,
-        // Patches are SPENT, so like health and mana the count is stored while
-        // the ceiling stays derived from the subclass — see patchesMax().
-        wounds: character.wounds, patches: character.patches, notes: character.notes,
-        // The build is saved now that creation can write one. Before the
-        // wizard existed every character was Elara and her build was a
-        // constant in this file; a character the player made has to carry
-        // its own class, subclass and level history or it loads as Unclassed.
-        build: character.build,
-        stats: character.stats,
-        abilities: character.abilities,
-        passives: character.passives,
-        armorWorn: character.armorWorn,
-        hands: character.hands,
-        equipment: character.equipment,
-        inventory: character.inventory,
-        effects: character.effects,
-        skills: character.skills,
-      }));
-      written = true;
-    } catch (_) { /* storage unavailable — play continues in-memory; see noteStorage() */ }
+    retryHeld();
+    const json = saveJson();
+    const written = writeSave(character.id, json);
+    holdSave(character.id, json, written);
     // The Personae row is refreshed on every save rather than at the handful
     // of call sites that change something it shows. Saves already happen on
     // exactly those edits, so this is the one place that cannot be forgotten.
     refreshRosterEntry();
-    // writeRoster(), not saveRoster(): the notice is settled ONCE, below, on
-    // both writes together. Letting the roster write report on its own would
-    // clear the notice for a moment whenever the roster fits and the
-    // character does not.
-    const ok = writeRoster() && written;
-    noteStorage(ok);
-    return ok;
+    rosterFailing = !writeRoster();
+    settleStorage();
+    return written;
   };
+
+  // The open character as the string save() stores. Its own function so the
+  // shape is written once — save() and nothing else decides what a save holds.
+  function saveJson() {
+    return JSON.stringify({
+      // Identity is editable now (Edit Character), so it has to round-trip.
+      // This is the point at which the seed data at the top of this file
+      // stops being the source of truth and becomes a FIRST-RUN DEFAULT.
+      name: character.name,
+      // Optional descriptive fields. Written whole rather than field by
+      // field, so BIO_FIELDS stays the only list of them.
+      bio: character.bio,
+      portraitView: character.portraitView,
+      health: character.health, mana: character.mana,
+      // Patches are SPENT, so like health and mana the count is stored while
+      // the ceiling stays derived from the subclass — see patchesMax().
+      wounds: character.wounds, patches: character.patches, notes: character.notes,
+      // The build is saved now that creation can write one. Before the
+      // wizard existed every character was Elara and her build was a
+      // constant in this file; a character the player made has to carry
+      // its own class, subclass and level history or it loads as Unclassed.
+      build: character.build,
+      stats: character.stats,
+      abilities: character.abilities,
+      passives: character.passives,
+      armorWorn: character.armorWorn,
+      hands: character.hands,
+      equipment: character.equipment,
+      inventory: character.inventory,
+      effects: character.effects,
+      skills: character.skills,
+    });
+  }
 
   const IDENTITY_MAX = 60;   // matches the maxlength on the Edit Character fields
   const BIO_MAX      = 24;   // ditto, for the optional bio fields
@@ -872,19 +947,22 @@
   // Returns false on a full quota. The caller keeps the photo in memory and
   // says so — an image you can see but that will not survive a reload is a
   // better outcome than a silent failure, and an honest message beats both.
+  // Held when refused, so it is still the photo shown after switching away
+  // and back, and the one a backup carries — see HELD COPIES above.
   const savePortrait = () => {
-    try {
-      const key = portraitKey(character.id);
-      if (character.portrait) localStorage.setItem(key, character.portrait);
-      else localStorage.removeItem(key);
-      return true;
-    } catch (_) { return false; }
+    if (!roster.some((r) => r.id === character.id)) return true;   // the blank, as in save()
+    const ok = writePortrait(character.id, character.portrait);
+    holdPortrait(character.id, character.portrait, ok);
+    return ok;
   };
 
   // Checked, not trusted. This value goes straight into an <img src>, so a
   // corrupt or hand-edited key must not become a request for something else
-  // entirely — only a self-contained image data URL is accepted.
+  // entirely — only a self-contained image data URL is accepted. A held
+  // portrait is the newer one, so it is read first; it was checked when it
+  // was chosen, and it is null when the newer state is "no photo".
   const readPortrait = (id) => {
+    if (heldPortraits.has(id)) return heldPortraits.get(id);
     try {
       const raw = localStorage.getItem(portraitKey(id));
       return (typeof raw === 'string' && /^data:image\/[a-z+]+;base64,/.test(raw)) ? raw : null;
@@ -893,9 +971,12 @@
 
   const loadPortrait = () => { character.portrait = readPortrait(character.id); };
 
+  // The latest version of a character: the held copy if storage refused it,
+  // else what storage has. Parsed fresh each time, so a caller can never
+  // mutate the held string's meaning by editing what it was handed.
   const readSave = (id) => {
     try {
-      const raw = localStorage.getItem(saveKey(id));
+      const raw = heldSaves.has(id) ? heldSaves.get(id) : localStorage.getItem(saveKey(id));
       return raw ? JSON.parse(raw) : null;
     } catch (_) { return null; }   // storage unavailable or corrupt save
   };
@@ -1185,10 +1266,14 @@
   };
 
   // The roster on its own: a reorder, a delete, a switch. Reports to the
-  // storage notice like every other write that a reload depends on.
+  // storage notice like every other write that a reload depends on — but
+  // only for ITS part. A roster write landing says nothing about a character
+  // whose save was refused, so it cannot clear the notice while one is held.
   const saveRoster = () => {
+    retryHeld();
     const ok = writeRoster();
-    noteStorage(ok);
+    rosterFailing = !ok;
+    settleStorage();
     return ok;
   };
 
@@ -1315,7 +1400,8 @@
      The outgoing character is saved FIRST. Every mutation already saves as it
      happens, so this is belt-and-braces rather than the only write — but the
      cost of being wrong is somebody's session, and the cost of the extra write
-     is nothing. */
+     is nothing. If storage refuses it, it is HELD (see save()): switching back
+     reopens the held version, and the storage notice stays up until it lands. */
   function switchCharacter(id) {
     if (id === character.id) { app.setAttribute('data-view', 'sheet'); app.setAttribute('data-tab', 'action'); return; }
     if (!roster.some((r) => r.id === id)) return;   // stale row; the list will be right after the next paint
@@ -1457,6 +1543,9 @@
       localStorage.removeItem(saveKey(id));
       localStorage.removeItem(portraitKey(id));
     } catch (_) { /* storage unavailable — the roster still drops the row */ }
+    // A held copy of a deleted character is not a change waiting to be saved;
+    // left here, retryHeld() would write the character straight back.
+    releaseHeld(id);
     roster.splice(at, 1);
 
     if (character.id === id) {
@@ -5423,6 +5512,9 @@
      a single card. `entries` is the union across everyone in the file, so gear
      two characters share is snapshotted once. */
   function characterFile(ids, { portrait = true } = {}) {
+    // readSave() and readPortrait(), not localStorage: they return a HELD copy
+    // where storage refused the latest version, so a file made while storage
+    // is failing still carries what the player last saw.
     const list = [];
     for (const id of ids) {
       const stored = readSave(id);
@@ -5549,8 +5641,8 @@
   }
 
   function exportCharacter(id) {
-    // The open character's unsaved edits have to reach storage before it is
-    // read back out of it.
+    // The open character's unsaved edits have to reach characterFile() — in
+    // storage, or held if storage refuses them (see exportBackup()).
     if (character.id === id) save();
     const file = characterFile([id]);
     if (!file) return;
@@ -5785,8 +5877,9 @@
       && /^data:image\/[a-z+]+;base64,/.test(source.portrait)) ? source.portrait : null;
     if (!character.name) character.name = 'Unnamed';
 
-    // The Personae row goes in BEFORE the save, because save() refuses to
-    // write a character the roster does not list — see the guard there.
+    // The Personae row goes in now, so the list is right the moment the loop
+    // in importCharacters() finishes. Taken back out by that loop if the write
+    // below is refused.
     const row = {
       id, name: character.name, build: character.build,
       portrait: character.portrait, portraitView: character.portraitView,
@@ -5802,9 +5895,24 @@
        still holds the OLD character — and writing the new portrait anyway
        would hang this file's photo on that old save. Skipping it leaves the
        stored pair exactly as it was, which is what lets importCharacters()
-       treat a refused character as never imported. */
-    const saved = save();
-    return { saved, portraitOk: saved && savePortrait() };
+       treat a refused character as never imported.
+
+       The bare writes, not save(). A refused import is UNDONE, not held: a
+       held copy would be retried behind the player's back and turn a "Not
+       imported" into an import after all. And the roster index is written
+       once, after the whole file — see importCharacters() — because it is a
+       separate write that can fail on its own, and what that means depends
+       on whether the character was added or replaced. */
+    const saved = writeSave(id, saveJson());
+    if (!saved) return { saved, portraitOk: false };
+    // The file's version is now the stored one, so anything held for this id
+    // (an overwrite of a character whose last edit storage refused) is stale.
+    heldSaves.delete(id);
+    const portraitOk = writePortrait(id, character.portrait);
+    // A refused photo is held, so "shown for this session only" is true of
+    // every character in the file — not just whichever one ends up open.
+    holdPortrait(id, character.portrait, portraitOk);
+    return { saved, portraitOk };
   }
 
   /* Import every character in a parsed file.
@@ -5832,9 +5940,16 @@
     const restored = mergeEntries(wanted, { markImported: true });
     const entriesKept = rememberImportedEntries(restored, wanted);
 
-    save();                          // the character being left
+    // The character being left. If storage refuses it, it is HELD (see
+    // save()), so reopening it below brings back the version on the sheet
+    // rather than the older one storage still has.
+    save();
     const wasOpen = character.id;
 
+    // `added` keeps ids as well as names: an added character depends on the
+    // roster index write after the loop, and is taken back if that fails.
+    // `lost` and `noPortrait` keep them so a taken-back character's notes go
+    // with it.
     const added = [];
     const replaced = [];
     const lost = [];
@@ -5863,22 +5978,22 @@
          it would open as a blank. Taking the row back out (or putting the
          replaced one back) means what the list shows is what a reload shows.
          Storage was left untouched — see adoptCharacter() — and the roster
-         index is rewritten by the saveRoster() after this loop. */
+         index is written once, after this loop. */
       if (!stored.saved) {
         unsaved.push(character.name);
         const at = roster.findIndex((r) => r.id === character.id);
         if (before) roster[at] = before; else if (at !== -1) roster.splice(at, 1);
         continue;
       }
-      if (!stored.portraitOk) noPortrait.push(character.name);
+      if (!stored.portraitOk) noPortrait.push({ id: character.id, name: character.name });
       if (file.characters.length === 1) soleLabel = buildLabel();
-      (existed ? replaced : added).push(character.name);
+      if (existed) replaced.push(character.name); else added.push({ id: character.id, name: character.name });
       /* What did not survive: ids that were neither in the library nor in the
          file's own snapshot. Measured against the source rather than guessed,
          because a silent partial import is the failure this window exists to
          prevent. Named, because in a twelve-character backup "a skill could
          not be restored" without saying whose is not a usable report. */
-      for (const l of referencedLoss(source)) lost.push(`${character.name}: ${l}`);
+      for (const l of referencedLoss(source)) lost.push({ id: character.id, text: `${character.name}: ${l}` });
     }
 
     /* Back to whoever was open. An import is an addition to the list, and
@@ -5889,15 +6004,51 @@
        something has to be. */
     const backTo = roster.some((r) => r.id === wasOpen) ? wasOpen : (roster[0] && roster[0].id);
     if (backTo) openCharacter(backTo);
-    saveRoster();
+
+    /* The roster index: ids and order, written once for the whole file.
+
+       What a refusal here means depends on how each character came in.
+       REPLACED characters are unaffected — they kept their ids, so the index
+       already on disk lists them, and their new saves are what a reload will
+       read. Reporting them as "not imported" would be false: they were.
+
+       ADDED characters are not listed by the index on disk, so after a reload
+       nothing would ever open them — saves taking up space that no screen can
+       reach. They are taken back: their keys removed (a removal frees space,
+       so it is the write most likely to get through), their rows dropped, and
+       they are reported as not imported. The index on disk then describes the
+       list on screen again. */
+    if (!saveRoster() && added.length) {
+      for (const { id, name } of added) {
+        try {
+          localStorage.removeItem(saveKey(id));
+          localStorage.removeItem(portraitKey(id));
+        } catch (_) { /* storage unavailable — the save is unreachable either way */ }
+        releaseHeld(id);
+        const at = roster.findIndex((r) => r.id === id);
+        if (at !== -1) roster.splice(at, 1);
+        unsaved.push(name);
+      }
+      const gone = new Set(added.map((a) => a.id));
+      added.length = 0;
+      for (const list of [lost, noPortrait]) {
+        for (let i = list.length - 1; i >= 0; i--) if (gone.has(list[i].id)) list.splice(i, 1);
+      }
+      // The open character may have been one of them (an import into an
+      // empty roster opens the first newcomer). Same fallback as delete.
+      if (gone.has(character.id)) {
+        if (roster[0]) openCharacter(roster[0].id); else character = newCharacter('');
+      }
+    }
     renderAll();
     renderSettings();                // the backup line now describes more characters
 
     const sentences = [];
     if (added.length) {
+      const names = added.map((a) => a.name);
       sentences.push(soleLabel
-        ? `${added[0]} — ${soleLabel} — was added to your Personae.`
-        : `${nameList(added)} ${added.length === 1 ? 'was' : 'were'} added to your Personae.`);
+        ? `${names[0]} — ${soleLabel} — was added to your Personae.`
+        : `${nameList(names)} ${names.length === 1 ? 'was' : 'were'} added to your Personae.`);
     }
     if (replaced.length) {
       sentences.push(soleLabel
@@ -5923,7 +6074,7 @@
       text: sentences.join(' '),
       notes: [
         noPortrait.length
-          ? { warn: true, text: `${nameList(noPortrait)}’s portrait${noPortrait.length === 1 ? '' : 's'} could not be stored — browser storage is full. Shown for this session only.` }
+          ? { warn: true, text: `${nameList(noPortrait.map((n) => n.name))}’s portrait${noPortrait.length === 1 ? '' : 's'} could not be stored — browser storage is full. Shown for this session only.` }
           : null,
         entriesKept ? null
           : { warn: true, text: 'The library entries restored from this file could not be stored, so they will be missing after a reload.' },
@@ -5933,7 +6084,7 @@
         head.library && head.library.version !== (LIBRARY.meeple?.version)
           ? { text: `Built against ${head.library.title} ${head.library.version}; you are running ${LIBRARY.meeple?.version || 'an unknown version'}.` }
           : null,
-        ...lost.map((l) => ({ warn: true, text: `${l} could not be restored and was left off the sheet.` })),
+        ...lost.map((l) => ({ warn: true, text: `${l.text} could not be restored and was left off the sheet.` })),
       ].filter(Boolean),
     });
   }
@@ -6077,7 +6228,12 @@
      — a backup that quietly drops every portrait is not a backup. */
   function exportBackup() {
     if (!roster.length) return;
-    save();                          // unsaved edits belong in the backup
+    /* Unsaved edits belong in the backup — and this is the button the storage
+       notice sends the player to, so it is MOST needed exactly when storage
+       refuses the save below. That is fine: a refused save is held, and
+       characterFile() reads through readSave(), which returns the held copy.
+       So the file carries what is on the sheet, written or not. */
+    save();
     const file = characterFile(roster.map((r) => r.id));
     if (!file) return;
     // Named as a backup whatever the count — see backupFilename().
