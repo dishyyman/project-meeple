@@ -130,7 +130,8 @@ test('a malformed compendium ALREADY stored no longer stops the app starting', a
 
 test('safety net: a compendium the last launch never finished on is set aside', async ({ page }) => {
   // A compendium that passes the check, and a boot mark left 'pending' — what
-  // a launch that threw part-way through start-up leaves behind.
+  // a launch that threw part-way through start-up left behind before marks
+  // carried a time (a bare 'pending' is read as old; see the grace tests).
   const lib = shipped();
   lib.meeple.title = 'Crashy Compendium';
   await seedOnce(page, { 'meeple.library': JSON.stringify(lib), 'meeple.library-boot': 'pending' });
@@ -145,6 +146,43 @@ test('safety net: a compendium the last launch never finished on is set aside', 
   await page.waitForFunction(() => document.querySelector('.app')?.getAttribute('data-view') === 'home');
   await press(page, '[data-nav="settings"]');
   await expect(libOff(page)).toContainText('didn’t finish starting');
+});
+
+/* Round-2 review, the boot-safety question. The mark is shared through
+   localStorage, so a second tab or a reload mid-start-up used to see a healthy
+   launch's 'pending' and set the compendium aside. A mark younger than the
+   grace period is now read as another launch still starting. Seeded with the
+   PAGE's clock, at the moment the page loads, so the age is exact. */
+async function seedBootMark(page, lib, ageMs) {
+  await page.addInitScript(([l, age]) => {
+    if (sessionStorage.getItem('compendium-test-seeded')) return;
+    sessionStorage.setItem('compendium-test-seeded', '1');
+    localStorage.setItem('meeple.library', l);
+    localStorage.setItem('meeple.library-boot', `pending:${Date.now() - age}:othertab`);
+  }, [JSON.stringify(lib), ageMs]);
+}
+
+test('safety net: another launch still starting (a second tab, a quick reload) is not a crash', async ({ page }) => {
+  const lib = shipped();
+  lib.meeple.title = 'Busy Compendium';
+  await seedBootMark(page, lib, 200);              // the other launch began 0.2s ago
+  await openApp(page);
+  await press(page, '[data-nav="settings"]');
+  await expect(libTitle(page)).toHaveText('Busy Compendium');
+  await expect(libOff(page)).toBeHidden();
+  // This launch wrote its own mark over the other and cleared it on finishing.
+  expect(await stored(page, 'meeple.library-boot')).toBeNull();
+});
+
+test('safety net: a mark older than the grace period is still a crash', async ({ page }) => {
+  const lib = shipped();
+  lib.meeple.title = 'Crashy Compendium';
+  await seedBootMark(page, lib, 60_000);           // left a minute ago, never cleared
+  await openApp(page);
+  await press(page, '[data-nav="settings"]');
+  await expect(libTitle(page)).toHaveText(BUILT_IN_TITLE);
+  await expect(libOff(page)).toContainText('didn’t finish starting');
+  expect(await stored(page, 'meeple.library-boot')).toBe('crashed');
 });
 
 test('a compendium that boots cleanly stands the safety net down', async ({ page }) => {

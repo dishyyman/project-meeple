@@ -303,11 +303,37 @@
      says what happened and offers Restore Built-in; installing or restoring
      a compendium clears the mark.
 
-     The cost of a false alarm (a tab closed in the instant between the two
-     writes, or two tabs opened at once) is a compendium switched off with
-     an explanation and a one-file remedy. The cost of no net is an app that
-     never starts. */
+     The cost of a false alarm is a compendium switched off with an
+     explanation and a one-file remedy. The cost of no net is an app that
+     never starts.
+
+     A GRACE PERIOD keeps the false alarms rare (round 2 review). The marker
+     is not a bare 'pending' but 'pending:<when>:<token>', and a marker set
+     under BOOT_GRACE_MS ago is read as ANOTHER LAUNCH STILL STARTING — a
+     second tab opened at the same moment, or a reload pressed mid-start-up —
+     not as a crash. Start-up takes well under a second, so a launch that is
+     really still running has a marker that young; a launch that crashed left
+     one that ages past the grace before anyone can see the broken app and
+     reload. Each launch clears only ITS OWN token, so one tab finishing
+     cannot wipe the mark another tab left. A crash reloaded within the grace
+     simply crashes once more; the next launch after it catches it.
+
+     A bare 'pending' (written before this change) or a marker with no
+     readable time is treated as old: the net errs on the side of starting. */
   const LIBRARY_BOOT_KEY = 'meeple.library-boot';
+  const BOOT_GRACE_MS = 3000;
+  // This launch's own mark, so libraryBooted() clears this one and no other.
+  // The token comes from crypto, NOT Math.random(): Math.random() is the dice,
+  // and a draw spent here at load would shift every roll after it — invisible
+  // in play, but it breaks the repeatable rolls the tests pin.
+  const BOOT_TOKEN = `pending:${Date.now()}:${crypto.getRandomValues(new Uint32Array(1))[0].toString(36)}`;
+
+  // Is this stored mark another launch that may still be starting?
+  const bootStillStarting = (mark) => {
+    const at = /^pending:(\d+):/.exec(mark || '');
+    const age = at ? Date.now() - Number(at[1]) : Infinity;
+    return age >= 0 && age < BOOT_GRACE_MS;   // a clock set backwards reads as old
+  };
 
   /* Why an installed compendium is NOT in use this launch — 'unreadable',
      'too-new' or 'crashed' — or null when it is in use or none is installed.
@@ -321,7 +347,7 @@
 
     let boot = null;
     try { boot = localStorage.getItem(LIBRARY_BOOT_KEY); } catch (_) { /* storage unavailable */ }
-    if (boot) {
+    if (boot && !bootStillStarting(boot)) {
       try { localStorage.setItem(LIBRARY_BOOT_KEY, 'crashed'); } catch (_) { /* this launch still skips it */ }
       libraryOff = 'crashed';
       return null;
@@ -337,16 +363,17 @@
     if (LIBRARY_CHECK.checkLibrary(bag).length) { libraryOff = 'unreadable'; return null; }
     if (Number(bag.meeple.schemaVersion) > LIBRARY_FILE_VERSION) { libraryOff = 'too-new'; return null; }
 
-    try { localStorage.setItem(LIBRARY_BOOT_KEY, 'pending'); } catch (_) { /* no net, but nothing worse */ }
+    try { localStorage.setItem(LIBRARY_BOOT_KEY, BOOT_TOKEN); } catch (_) { /* no net, but nothing worse */ }
     return bag;
   }
 
   // init() made it to the end on the stored compendium: stand the net down.
-  // Only 'pending' is cleared — a 'crashed' mark stays until the player
-  // installs or restores a compendium, or the next launch would try again.
+  // Only THIS launch's mark is cleared. A 'crashed' mark stays until the
+  // player installs or restores a compendium, or the next launch would try
+  // again; and a mark another tab wrote since is that tab's to clear.
   function libraryBooted() {
     try {
-      if (localStorage.getItem(LIBRARY_BOOT_KEY) === 'pending') localStorage.removeItem(LIBRARY_BOOT_KEY);
+      if (localStorage.getItem(LIBRARY_BOOT_KEY) === BOOT_TOKEN) localStorage.removeItem(LIBRARY_BOOT_KEY);
     } catch (_) { /* storage unavailable */ }
   }
 
