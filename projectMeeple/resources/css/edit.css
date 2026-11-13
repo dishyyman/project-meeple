@@ -1,0 +1,287 @@
+/* MEEPLE · edit.css
+   Edit character (§20) and portrait cropper (§21).
+   Part of the stylesheet loaded by style.css. Appearance only — no layout
+   decisions that belong to structure, and no values that belong in tokens.css. */
+
+/* ----------------------------------------------------------------- */
+/* 20. EDIT CHARACTER                                                 */
+/* Borrows the sheet's padding, rules and field styles wholesale —    */
+/* it is the same journal, opened to a page you write on.             */
+/* ----------------------------------------------------------------- */
+.edit__scroll { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+
+/* ---- tab strip ----
+   Sits OUTSIDE .edit__scroll, so which page you are on stays on screen while
+   a long dossier scrolls under it. flex-shrink guards that: without it the
+   strip is the one thing in a column layout that would give up its height to
+   the scroller below.
+
+   The chips themselves are .wiz-chip, defined in create.css — which imports
+   AFTER this file, so anything that has to beat it needs the compound
+   selector below rather than a copied rule. Nothing here does beat it: the
+   three chips only need to share the row evenly, which the picker's do not. */
+/* 18px is the app's screen gutter, written as a literal because that is how
+   it is written everywhere else it matters — .divider's margin and
+   .sheet__pad's padding both state it directly. There is no token for it, and
+   inventing one here would put the gutter in two places at once. */
+.edit-tabs {
+  flex-shrink: 0;
+  display: flex; gap: var(--space-1-5);
+  padding: var(--space-2-5) var(--space-4) var(--space-3);
+  border-bottom: 1px solid var(--line-hair);
+}
+/* Equal thirds. The picker's chips are content-width because its set follows
+   the library; these three are fixed and named, so an even split reads as a
+   tab bar rather than as a filter that happens to have three options. */
+.edit-tabs .wiz-chip { flex: 1; text-align: center; padding-left: 0; padding-right: 0; }
+
+/* ---- attributes ----
+   One per line, name left and number right. .attr-row carries the row itself
+   (create.css §22) — only the surround is this file's business: a hairline box
+   so the six of them read as one block of the dossier rather than six loose
+   lines, which is the job the sheet's stat cards do with their own borders. */
+/* 10px of side padding rather than the 13 a card would take. The skills below
+   are the widest thing on the dossier — a name, a category chip, a caret and a
+   stepper on one line — and the three pixels either side are real room there.
+   Applied to BOTH blocks, never just the tight one: they sit directly above
+   and below each other, so a different gutter on each would be visible as a
+   step in the left edge. */
+.attr-list {
+  border: 1px solid var(--line-hair); border-radius: var(--r-xs);
+  background: var(--bg-card); padding: var(--space-0-5) var(--space-2-5); margin-bottom: var(--space-4);
+}
+
+/* ---- skills, as dossier rows ----
+   A skill row is an attribute row that opens. The head IS .attr-row, borrowed
+   whole from the wizard rather than re-cut, so the two sections of the dossier
+   share one row rhythm, one name face and one right-hand column — which is the
+   whole point of putting them in the same framed block.
+
+   What moves is the hairline: it belongs to the wrapper here, not the head, so
+   an open row draws its rule under the description instead of stranding one
+   between a name and the prose that explains it. Two classes on the override
+   so it beats .attr-row's own border regardless of which file loads first —
+   create.css imports after this one.
+
+   The gap goes with it: there is only ONE gap in this head, between the title
+   and the stepper group, and the 12px a wizard row spends between four loose
+   controls is more air than an already flush-right group needs. */
+.dossier-row { border-bottom: 1px solid var(--line-hair); }
+.dossier-row:last-child { border-bottom: 0; }
+.dossier-row .attr-row { width: 100%; border-bottom: 0; text-align: left; gap: var(--space-2); }
+
+/* The name, its category chip and the caret are one press; the steppers
+   beside them are their own. flex:1 pushes the stepper group to the right
+   edge, so a skill row's controls land in the same column an attribute row's
+   do — which is the point of sharing .attr-row in the first place.
+   min-width:0 lets a long name shrink rather than shoving them off. */
+.dossier-row__title {
+  flex: 1; min-width: 0;
+  display: flex; align-items: baseline; gap: var(--space-2);
+  text-align: left;
+}
+/* A point down from the attributes' 17px, and the chip tightened with it.
+   Both are paid for by the same thing: a skill row carries a name, a category
+   and a caret in the space an attribute spends on a name alone, and the
+   longest pair the library holds — "Keep an Eye Out" under INSTINCT — is what
+   the row has to fit. Only the skill side moves, so the numbers opposite still
+   line up with the attributes above. */
+.dossier-row .attr-row__name { font-size: var(--fs-input); }
+.dossier-row__tag { letter-spacing: 0.06em; padding: var(--space-1) var(--space-1); }
+/* Hugs the name rather than being pushed to the far edge: it says "this name
+   opens", and parked against the stepper it would read as part of it. */
+.dossier-row__title .collapse__caret { align-self: center; flex-shrink: 0; }
+
+/* The stepper trio is grouped, borrowing the skills editor's own .skill-step
+   container so the three sit at ITS 5px rhythm rather than the row's 12px.
+   Not cosmetic: a skill row carries a name, a category chip and a caret that
+   an attribute row does not, and at the wider spacing "Keep an Eye Out"
+   wrapped to two lines. Grouping buys back roughly 30px, which is the
+   difference between every name fitting and three of them breaking.
+   The buttons stay .step-btn — the attributes' control, unchanged, because
+   the two blocks are meant to read as one column. */
+.dossier-row .skill-step { gap: var(--space-1); }
+/* Narrower than the 46px a value box takes elsewhere, which lands it on the
+   40px the attribute values opposite already occupy — so the two blocks share
+   a right-hand column instead of merely resembling one. The saved width goes
+   to the name. */
+.dossier-row .val-box { min-width: 40px; padding: 0 var(--space-1-5); }
+/* The caret is the shared primitive; only the turn is restated, because
+   .collapse.is-open is a class this row deliberately does not carry — the
+   same arrangement .note-row and .skill-pick already use. */
+.dossier-row.is-open .collapse__caret { transform: rotate(180deg); }
+
+/* The category shows in ONE place at a time. Closed, it rides beside the name,
+   where it is the only thing distinguishing two similarly-named skills at a
+   glance. Open, the fuller line below states it next to the rank, so keeping
+   the chip up here as well would print the same word twice on one row. */
+.dossier-row.is-open .dossier-row__tag { display: none; }
+
+/* Ruled off from the head, the way the skills editor rules its prose band
+   away from its decision band — and for the same reason: what the skill IS
+   sits above the line, what it DOES sits below it. */
+.dossier-row__body {
+  display: none;
+  padding: 0 var(--space-0-5) var(--space-3);
+  border-top: 1px solid var(--line-soft);
+}
+.dossier-row.is-open .dossier-row__body { display: block; }
+/* The category/rank line LEADS the body here, where on the sheet it trails the
+   prose — so its own top rule and the space above it would double the divider
+   this band already has. */
+.dossier-row .skill-rank { margin-top: 0; padding-top: var(--space-2-5); border-top: 0; }
+.dossier-row__desc {
+  margin-top: var(--space-2-5);
+  font-family: var(--font-body); font-size: var(--fs-note); line-height: 1.55;
+  color: var(--ink-soft);
+}
+
+/* A count in the rule's LEADING gutter. .rule--action already reserves 37px
+   on both sides so the label stays centred, and the trailing slot is taken by
+   the pen — both pieces of furniture are positioned into `right`, so they
+   cannot share it. The background gap flips with the text, masking the
+   hairline on the side it now breaks. */
+.rule__count--lead { right: auto; left: 2px; padding-left: 0; padding-right: var(--space-2); }
+
+/* ---- gear rows ----
+   The pen that marks a filled slot as openable. Greyed rather than gold: the
+   row is already the control — the whole thing is the press target — so this
+   is a hint about what a tap does, not a second button competing with it.
+   aria-hidden in the markup for the same reason; the row carries the label. */
+.slot-row__pen { display: flex; flex-shrink: 0; color: var(--ink-faint); }
+.slot-row__pen svg { display: block; }
+.slot-row[role="button"]:active .slot-row__pen { color: var(--accent-bright); }
+
+/* Face and name, side by side: they are the pair that identifies a character,
+   and reading them together is how you check you are editing the right one.
+   The name takes the remaining width rather than a fixed one, so the frame can
+   be resized here without the field needing to be told about it. */
+.bio__head { display: flex; gap: var(--space-3-5); align-items: center; margin-bottom: var(--space-3-5); }
+.bio__name { flex: 1; min-width: 0; margin-bottom: 0; }
+/* Optional descriptive fields, two to a row so five of them cost one screen
+   of scroll rather than five. Collapses to one column where a phone is too
+   narrow to keep both legible. */
+.bio__grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 var(--space-3); }
+@media (max-width: 340px) { .bio__grid { grid-template-columns: 1fr; } }
+/* A button, not a div: the portrait menu has to be reachable from the
+   keyboard, and "click the picture" is the affordance asked for. */
+.portrait-edit__frame {
+  display: block; padding: 0; position: relative;
+  width: 118px; height: 142px; flex-shrink: 0; overflow: hidden;
+  border: 1px solid var(--line-hair); border-radius: var(--r-xs);
+  background-color: var(--bg-parchment2);
+  background-image: repeating-linear-gradient(45deg, var(--hatch) 0 6px, transparent 6px 12px);
+  box-shadow: var(--shadow-hair);
+}
+.portrait-edit__frame img { width: 100%; height: 100%; display: none; }
+.portrait-edit__frame:active { transform: translateY(1px); }
+/* A hint that the thumbnail does something, shown only once there is a photo
+   to reposition — with none, the same button opens the picker instead. */
+.portrait-edit__hint {
+  position: absolute; left: 0; right: 0; bottom: 0; display: none;
+  font-family: var(--font-label); font-size: var(--fs-caption); letter-spacing: 0.12em;
+  text-transform: uppercase; text-align: center; padding: var(--space-1) 0;
+  color: var(--on-dark); background: var(--scrim);
+}
+.app[data-portrait="set"] .portrait-edit__hint { display: block; }
+.app[data-portrait="set"] .portrait-edit__frame img { display: block; }
+.app[data-portrait="set"] .portrait-edit__frame { background-image: none; }
+
+
+/* Off-screen but still focusable by the label/button that opens it — the
+   file input is driven by click(), never seen. */
+
+/* ----------------------------------------------------------------- */
+/* 21. PORTRAIT CROPPER — reposition & zoom                           */
+/* Nothing here crops pixels. The photo is stored once, at full        */
+/* quality, and this window only edits the three numbers that frame    */
+/* it (--pv-x / --pv-y / --pv-zoom) — which is why repositioning is    */
+/* free, reversible, and applies to every surface at once.             */
+/* ----------------------------------------------------------------- */
+
+/* The frame carries the HERO's proportions, because the hero is the surface
+   this is really being judged against. 402x376 is the device width by the
+   hero's resting height — the two tokens the sheet is built from. */
+.crop__frame {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 402 / 376;   /* device width : --hero-h, both stated in §1 */
+  overflow: hidden;
+  border: 1px solid var(--line-hair);
+  border-radius: var(--r-xs);
+  background: var(--bg-parchment2);
+  box-shadow: var(--shadow-hair);
+  /* The drag is handled in JS, so the browser must not also pan or zoom the
+     page underneath it. touch-action is what stops that at the source. */
+  touch-action: none;
+  cursor: grab;
+  user-select: none;
+}
+.crop__frame:active { cursor: grabbing; }
+/* Framing comes from the shared rule above. What is different here is only
+   WHERE the vars come from: JS sets the working copy on .crop__frame, which
+   these inherit, so the hero goes on showing the saved framing until Save is
+   pressed and Cancel has something to fall back to. Never transitioned — the
+   picture has to sit under the finger, not swim after it. */
+.crop__img {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  -webkit-user-drag: none;
+  pointer-events: none;
+}
+
+/* Rule-of-thirds guides. Faint, and only while actually dragging — a
+   permanent grid over a portrait is noise, but during the move it is the
+   thing that tells you where centre is. */
+.crop__grid { position: absolute; inset: 0; pointer-events: none; opacity: 0; transition: opacity 160ms ease; }
+.crop__frame.is-dragging .crop__grid { opacity: 1; }
+.crop__grid::before,
+.crop__grid::after {
+  content: ""; position: absolute; inset: 0;
+  background-repeat: no-repeat;
+}
+.crop__grid::before {
+  background-image:
+    linear-gradient(to right, var(--hairline) 1px, transparent 1px),
+    linear-gradient(to right, var(--hairline) 1px, transparent 1px);
+  background-position: 33.333% 0, 66.666% 0;
+  background-size: 1px 100%;
+}
+.crop__grid::after {
+  background-image:
+    linear-gradient(to bottom, var(--hairline) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--hairline) 1px, transparent 1px);
+  background-position: 0 33.333%, 0 66.666%;
+  background-size: 100% 1px;
+}
+
+.crop__zoom { display: block; margin: var(--space-3-5) 0 var(--space-1); }
+/* Range inputs cannot be restyled through the cascade alone — the track and
+   thumb are separate shadow pseudo-elements per engine, so each is painted
+   here from the same tokens the rest of the app uses. */
+.crop__slider {
+  -webkit-appearance: none; appearance: none;
+  width: 100%; height: 22px; background: transparent; cursor: pointer;
+}
+.crop__slider::-webkit-slider-runnable-track {
+  height: 6px; border-radius: 3px;
+  background: var(--bg-inset); border: 1px solid var(--line);
+}
+.crop__slider::-moz-range-track {
+  height: 6px; border-radius: 3px;
+  background: var(--bg-inset); border: 1px solid var(--line);
+}
+.crop__slider::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none;
+  width: 20px; height: 20px; margin-top: -8px;
+  border-radius: 50%; background: var(--accent);
+  border: 1.5px solid var(--accent-deep); box-shadow: var(--shadow-soft);
+}
+.crop__slider::-moz-range-thumb {
+  width: 20px; height: 20px;
+  border-radius: 50%; background: var(--accent);
+  border: 1.5px solid var(--accent-deep); box-shadow: var(--shadow-soft);
+}
+.crop__slider:focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; }
+.crop__frame:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+

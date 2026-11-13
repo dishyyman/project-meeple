@@ -1,0 +1,209 @@
+    <!-- ================= SETTINGS =================
+         A SCREEN, not a modal, for the reason Rules is one: it is longer than
+         a dialog should be, and it is a place you go rather than a question you
+         answer. Both doors into it — the Home tile and the drawer — are plain
+         data-nav, so the existing navigation branch carries them and closes the
+         drawer on the way, and neither needs a handler of its own.
+
+         Back always goes Home. The drawer can reach this from the sheet too,
+         but a back button whose destination depends on how you arrived is a
+         button that means two things; Rules settled that the same way.
+
+         Four sections under the app's own ✦ rules. The two that do something —
+         Backup and Compendium — are built on the export/import engine that
+         already carries a single character, so there is one file format and one
+         importer rather than three. Appearance is FRAME ONLY: the controls are
+         here and they show a selection, but nothing reads them yet (see
+         renderAppearance() in main.js). -->
+    <section class="screen screen--settings">
+      <div class="topbar topbar--between">
+        <button class="icon-btn icon-btn--back" data-nav="home" aria-label="Back to home">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+        </button>
+        <h2 class="title">Settings</h2>
+        <button class="icon-btn icon-btn--menu" data-menu="open" aria-label="Menu"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16"/><path d="M4 12h16"/><path d="M4 19h16"/></svg></button>
+      </div>
+      <div class="divider"></div>
+
+      <div class="settings__scroll">
+        <div class="section-pad">
+
+          <!-- ---------- BACKUP ---------- -->
+          <div class="rule"><span class="rule__label">&#10022; Backup &#10022;</span></div>
+          <p class="settings__lede">Save all characters on this device as one file and export it. Import
+            allows you to drop in characters from a previous export, which allows for cross-device
+            uploads.</p>
+          <div class="stack stack--tight">
+            <!-- Arrow out of a tray. Import below is the same glyph with the arrow
+                 flipped, because import and export are the same door both ways —
+                 the tray is identical in both, only the arrow turns. -->
+            <button class="set-row" data-backup-export>
+              <span class="set-row__icon">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m17 8-5-5-5 5"/></svg>
+              </span>
+              <span class="set-row__body">
+                <span class="set-row__name">Export All Characters</span>
+                <!-- Written by renderSettings(): how many, and what the file
+                     will weigh. The count is the honest answer to "did it get
+                     everything?", and the weight is the only useful thing to
+                     know before sending one anywhere. -->
+                <span class="set-row__note" data-bind="backupNote"></span>
+              </span>
+            </button>
+            <button class="set-row" data-file-open="characters">
+              <span class="set-row__icon">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V3"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/></svg>
+              </span>
+              <span class="set-row__body">
+                <span class="set-row__name">Import Characters</span>
+                <span class="set-row__note">Click to select file</span>
+              </span>
+            </button>
+          </div>
+
+          <!-- ---------- COMPENDIUM ---------- -->
+          <div class="rule"><span class="rule__label">&#10022; Compendium &#10022;</span></div>
+          <p class="settings__lede">A file including the games content, allowing for updates when content
+            updates.</p>
+          <!-- Which compendium is installed, written by renderSettings(). Sits
+               above the buttons because it is what both of them act on. -->
+          <div class="set-meta">
+            <span class="set-meta__title" data-bind="libTitle"></span>
+            <span class="set-meta__ver" data-bind="libVersion"></span>
+          </div>
+          <div class="stack stack--tight">
+            <button class="set-row" data-compendium-export>
+              <span class="set-row__icon">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m17 8-5-5-5 5"/></svg>
+              </span>
+              <span class="set-row__body">
+                <span class="set-row__name">Export Compendium</span>
+                <span class="set-row__note" data-bind="compendiumNote"></span>
+              </span>
+            </button>
+            <button class="set-row" data-file-open="compendium">
+              <span class="set-row__icon">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V3"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/></svg>
+              </span>
+              <span class="set-row__body">
+                <span class="set-row__name">Import Compendium</span>
+                <span class="set-row__note">Click to select file</span>
+              </span>
+            </button>
+            <!-- Only in the markup once there is something to undo:
+                 renderSettings() unhides it when a compendium has been
+                 installed over the built-in one. A permanent "reset" for a
+                 state most players will never be in is a button that only ever
+                 raises the question of what it would have done. -->
+            <button class="set-row set-row--quiet" data-compendium-reset hidden>
+              <span class="set-row__icon">
+                <svg width="18" height="18" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M16.2 10a6.2 6.2 0 1 1-1.9-4.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M16.6 2.4v3.7h-3.7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </span>
+              <span class="set-row__body">
+                <span class="set-row__name">Restore the Built-in Compendium</span>
+                <span class="set-row__note">Drop the imported compendium and go back to the one this app ships with.</span>
+              </span>
+            </button>
+          </div>
+
+          <!-- ---------- APPEARANCE ---------- -->
+          <!-- FRAME ONLY, deliberately. The controls below track a choice and
+               draw it, and nothing else in the app reads that choice — the
+               design tokens these would drive are expected to move before any
+               of this is wired up, and a half-applied theme is harder to finish
+               than an unstarted one. -->
+          <div class="rule"><span class="rule__label">&#10022; Appearance &#10022;</span></div>
+          <!-- Mode is three picture tiles rather than word chips: light, dark
+               and auto are the one setting here a player recognises faster by
+               shape than by reading. Exactly one is ever chosen — the handler
+               assigns rather than toggles, so the set cannot reach a state with
+               none or two picked. Painted by renderAppearance(). -->
+          <div class="tag-picks tag-picks--flush">
+            <div class="tag-picks__label">Mode</div>
+            <div class="mode-picks" data-list="apMode"></div>
+          </div>
+          <div class="tag-picks">
+            <div class="tag-picks__label">Color</div>
+            <div class="tag-picks__row" data-list="apTheme"></div>
+          </div>
+
+          <!-- ---------- FEEDBACK ---------- -->
+          <!-- Buttons only for now: neither destination exists yet, and a
+               mailto: pointing at nothing or an invite link that has expired is
+               worse than a button that says "soon". Both fall through to the
+               not-yet-implemented stub in wire(). -->
+          <div class="rule"><span class="rule__label">&#10022; Feedback &#10022;</span></div>
+          <p class="settings__lede">Found a bug, or a rule that reads wrong? Meeple is in progress and this
+            is how it gets better.</p>
+          <div class="stack stack--tight">
+            <button class="set-row" data-action="feedback-email">
+              <span class="set-row__icon">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M16 8v5a3 3 0 0 0 6 0v-1a10 10 0 1 0-4 8"/></svg>
+              </span>
+              <span class="set-row__body">
+                <span class="set-row__name">Send an E-mail</span>
+                <span class="set-row__note">Coming soon.</span>
+              </span>
+            </button>
+            <!-- A speech bubble rather than the Discord mark: a brand logo
+                 hand-drawn at 18px is a brand logo drawn wrong, and every other
+                 glyph in this app is a line drawing of the thing it means. -->
+            <button class="set-row" data-action="feedback-discord">
+              <span class="set-row__icon">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 17a2 2 0 0 1-2 2H6l-4 4V5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2z"/></svg>
+              </span>
+              <span class="set-row__body">
+                <span class="set-row__name">Join the Discord</span>
+                <span class="set-row__note">Coming soon.</span>
+              </span>
+            </button>
+          </div>
+
+
+          <!-- ---------- ACCOUNT ---------- -->
+          <!-- Last section on the screen: signing out is the most destructive
+               thing here and the least often wanted, so it sits where it is
+               found on purpose rather than met on the way past.
+
+               Both states are in the markup and CSS picks between them off
+               data-account on .app — the same arrangement the Home card uses,
+               for the same reason: there is no login flow behind any of this
+               yet, so state is one attribute and nothing renders. -->
+          <div class="rule"><span class="rule__label">&#10022; Account &#10022;</span></div>
+
+          <div class="acct-block acct-block--out">
+            <p class="settings__lede">You are not signed in. Meeple keeps everything in this
+              browser&rsquo;s storage either way &mdash; signing in is only about carrying it
+              between devices.</p>
+            <!-- The same control as the one on the Home card, down to the
+                 data-action: one handler, one state, two places to reach it. -->
+            <button class="account__btn" data-action="sign-in" type="button">Sign in</button>
+          </div>
+
+          <div class="acct-block acct-block--in">
+            <p class="settings__lede">Signed in as <b data-bind="accountName">John</b>.
+              Signing out leaves every character on this device untouched.</p>
+            <div class="stack stack--tight">
+              <!-- Door with an arrow leaving it — the same line-drawing idiom as
+                   every other glyph here, rather than a power symbol, which
+                   means "off" and not "leave". -->
+              <button class="set-row set-row--quiet" data-action="sign-out">
+                <span class="set-row__icon">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/></svg>
+                </span>
+                <span class="set-row__body">
+                  <span class="set-row__name">Sign out</span>
+                  <span class="set-row__note">Nothing is deleted from this device.</span>
+                </span>
+              </button>
+            </div>
+          </div>
+          <!-- One picker for both imports; which one asked is state, not a
+               second input. Kept out of view rather than display:none, so the
+               click that opens it is a real user gesture in every browser —
+               same reason the Characters screen's picker is. -->
+          <input class="visually-hidden" type="file" data-settings-file
+                 accept=".json,application/json" aria-label="Choose a Meeple file">
+        </div>
+      </div>
+    </section>

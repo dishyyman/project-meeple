@@ -1,0 +1,9 @@
+<script>
+// Simulate a save written before the gear catalog used the current ids.
+localStorage.setItem('meeple.character.aurelia', JSON.stringify({
+  health: 7, mana: 4, wounds: 1, notes: '', armorWorn: 'Light',
+  hands: ['w-1h-melee', 'shield-armor'],   // stale ids
+  inventory: [], effects: []
+}));
+document.title = 'seeded';
+</script>

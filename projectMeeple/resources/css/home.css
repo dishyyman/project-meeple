@@ -1,0 +1,142 @@
+/* MEEPLE · home.css
+   Home screen (§6).
+   Part of the stylesheet loaded by style.css. Appearance only — no layout
+   decisions that belong to structure, and no values that belong in tokens.css. */
+
+/* ----------------------------------------------------------------- */
+/* 6. HOME SCREEN                                                     */
+/* ----------------------------------------------------------------- */
+/* A flex COLUMN that SCROLLS. It used to be a fixed box whose nav grid
+   stretched to fill whatever the title left; with the account card added the
+   content can now exceed the frame, and the four destinations are worth more
+   as consistently-sized rows than as tiles squeezed to fit. So the column is
+   bounded by the screen and its overflow scrolls, the same shape Settings has.
+
+   `height`, NOT `min-height`: an auto-height box grows to fit its content, so
+   overflow-y would never have anything to act on and the surplus would simply
+   be clipped by .app. The scroll container has to be the bounded one. */
+.home {
+  height: 100%;
+  display: flex; flex-direction: column;
+  padding: var(--space-16) var(--space-6) var(--space-12);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.home__title {
+  font-family: var(--font-display); font-size: var(--fs-wordmark); color: var(--heading);
+  line-height: 1.02; margin-bottom: var(--space-6);
+  flex-shrink: 0;
+}
+
+/* ---- account card ----
+   ONE card holding both states. Which one paints is decided by
+   data-account on .app, exactly as data-view decides which screen paints —
+   see the block at the bottom of this section. Keeping both in the DOM is
+   what lets sign-in be an attribute flip with no render call behind it.
+
+   Quieter than a .navcard on purpose: it is a status line you read, not a
+   destination you aim at. Flat, no shadow, warm hairline. */
+.account {
+  flex-shrink: 0;
+  display: flex; align-items: center; gap: var(--space-3);
+  padding: var(--space-3-5);
+  margin-bottom: var(--space-6);
+  border: 1.5px solid var(--line-warm); border-radius: var(--r-md);
+  background: var(--bg-parchment2);
+}
+.account__avatar {
+  width: 42px; height: 42px; flex-shrink: 0;
+  border: 1.5px solid var(--line-gold); border-radius: 999px;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--ink-muted);
+  background: var(--bg-card);
+}
+.account__avatar svg { width: 24px; height: 24px; }
+/* Takes the middle so the Sign in button is pushed to the far edge. */
+.account__body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: var(--space-1); }
+.account__name {
+  font-family: var(--font-display); font-size: var(--fs-row); color: var(--ink);
+  line-height: 1.15;
+  /* A real account name is not length-checked by this app, so it truncates
+     rather than pushing the button off the card. */
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.account__note {
+  font-family: var(--font-body); font-size: var(--fs-small); color: var(--ink-muted);
+  line-height: 1.35;
+}
+/* The status line, under the name. Green rather than the app's rust: rust is
+   the accent every pressable thing already uses, and a confirmation should
+   not read as something to press. */
+.account__status {
+  display: flex; align-items: center; gap: var(--space-1);
+  font-family: var(--font-label); font-size: var(--fs-small);
+  letter-spacing: 0.04em; text-transform: uppercase;
+  color: var(--heal-border);
+}
+.account__check {
+  width: 15px; height: 15px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 999px;
+  background: var(--heal); color: var(--heal-text);
+}
+/* ---- destinations ----
+   A single column. The tiles used to divide the leftover height between them,
+   which made their size a function of the title and the frame; as rows they
+   are a fixed, equal height instead, and the list simply runs as long as it
+   runs. `flex-shrink: 0` so a scrolling column cannot compress them. */
+.navlist {
+  flex-shrink: 0;
+  display: flex; flex-direction: column;
+  gap: var(--space-3);
+}
+.navcard {
+  /* Icon, label, chevron — the same three-part row the Settings screen uses,
+     so Home introduces no new idiom. */
+  display: flex; flex-direction: row; align-items: center;
+  gap: var(--space-3-5); width: 100%; text-align: left;
+  border: 1px solid var(--line-hair); border-radius: var(--r-md);
+  background: var(--bg-card); padding: var(--space-4) var(--space-4);
+  box-shadow: var(--shadow-hair);
+}
+/* The press, matching every other pressable card in the app. */
+.navcard:active { transform: translate(1px, 1px); box-shadow: none; }
+.navcard__icon {
+  /* 44px: large enough to carry the glyph at a glance, small enough that the
+     row stays a row. The badge keeps the gold border it had as a tile. */
+  width: 44px; height: 44px; flex-shrink: 0;
+  border: 1.5px solid var(--line-gold); border-radius: var(--r-sm);
+  display: flex; align-items: center; justify-content: center;
+  /* Ink rather than the ember, which these badges used to take. Home is the
+     one screen that was overspending the 10%: four accent glyphs plus the
+     Sign In button meant five things competing to be the standout, and the
+     only one you can actually press was losing. White-ish in a gold badge
+     leaves the ember to the button, which is the whole point of a 10%. */
+  color: var(--ink);
+}
+/* The glyphs ship at 22px in the markup; scale them here so the sizing stays
+   a CSS decision and the SVGs stay untouched. */
+.navcard__icon svg { width: 24px; height: 24px; }
+.navcard__body { flex: 1; min-width: 0; }
+/* 19px now rather than 21px: in a row the label sits beside the badge instead
+   of under it, so it no longer has a tile's width to itself — and every label
+   still has to clear the chevron on one line. */
+.navcard__name { font-family: var(--font-display); font-size: var(--fs-row); color: var(--ink); line-height: 1.15; }
+/* Faint on purpose: it says "this goes somewhere", which the row already
+   implies. Loud enough to notice, quiet enough not to be the target. */
+.navcard__go { flex-shrink: 0; display: flex; align-items: center; color: var(--ink-faint); }
+
+/* ---- which account state paints ----
+   data-account lives on .app beside data-view and data-tab, and is written by
+   main.js. Signed out is the default, and is what shows if the attribute is
+   missing entirely — a corrupt or empty store can therefore only ever fail
+   toward "not signed in", never toward a name the player never entered. */
+.account__body--in,
+.account__avatar--in,
+.app[data-account="in"] .account__body--out,
+.app[data-account="in"] .account__avatar--out,
+.app[data-account="in"] .account .account__btn { display: none; }
+.app[data-account="in"] .account__body--in { display: flex; }
+/* Same specificity as .account__avatar's own display:flex, so source order is
+   what decides — these must stay below it, exactly as the bodies do. */
+.app[data-account="in"] .account__avatar--in { display: flex; }
