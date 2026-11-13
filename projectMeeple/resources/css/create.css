@@ -281,6 +281,11 @@
 .loadout-sec[data-done] .loadout-sec__state { color: var(--accent-bright); }
 .loadout-sec__caret { color: var(--line-warm); transition: transform 140ms ease; }
 .loadout-sec[data-open] .loadout-sec__caret { transform: rotate(90deg); }
+/* Both carets still turn to show state — at once, without the sweep. */
+@media (prefers-reduced-motion: reduce) {
+  .pick-card__caret,
+  .loadout-sec__caret { transition: none; }
+}
 .loadout-sec__body { display: none; padding: 0 var(--space-3-5) var(--space-3-5); }
 .loadout-sec[data-open] .loadout-sec__body { display: block; }
 /* Top padding is for the × badges, which sit 7px outside their slot's corner.

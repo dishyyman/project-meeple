@@ -551,6 +551,12 @@
   .die { transition: none; }
   .roll-card__total.is-settled,
   .dice-sheet__result.is-settled { animation: none; }
+  /* The sheet still arrives, but by fading in where it already sits — no
+     rise. Fade only, as the toast does (toast.css): a change of opacity is
+     not movement, and an instant pop would lose the cue that something
+     opened. */
+  .dice-sheet { animation-name: sheet-fade; }
 }
+@keyframes sheet-fade { from { opacity: 0; } to { opacity: 1; } }
 
 

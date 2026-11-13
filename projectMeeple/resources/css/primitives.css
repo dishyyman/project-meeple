@@ -207,6 +207,10 @@
   transition: transform 0.15s ease;
 }
 .collapse.is-open .collapse__caret { transform: rotate(180deg); }
+/* The caret still turns to say open or closed — it just turns at once. */
+@media (prefers-reduced-motion: reduce) {
+  .collapse__caret { transition: none; }
+}
 .collapse__body {
   display: none;
   padding: var(--space-3) var(--space-3-5) var(--space-3);

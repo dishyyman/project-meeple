@@ -155,3 +155,68 @@ test('a collapsible row: a tap on a roll box rolls, a tap elsewhere on the row o
   await tapAt(page, row.locator('.collapse__title'));
   await expect(row).toHaveClass(/is-open/);
 });
+
+/* Round-2 review, finding 8. Journal notes open and close like every other
+   collapsible, but did not SAY so — no aria-expanded — so a screen reader
+   heard a button with no state. Checked through every way a note's state
+   changes: a tap, a search that opens what it finds, and a re-render. */
+test('a journal note says whether it is open — after a tap, a search and a re-render', async ({ page }) => {
+  await openApp(page);
+  await openFirstCharacter(page);
+  await press(page, '[data-tab="notes"]');
+  const ford = page.locator('.note-row', { hasText: 'The Ford at Vespers' });
+  const head = ford.locator('.note-row__head');
+
+  await expect(head).toHaveAttribute('aria-expanded', 'false');
+  await head.click();
+  await expect(ford).toHaveClass(/is-open/);
+  await expect(head).toHaveAttribute('aria-expanded', 'true');
+  await head.click();
+  await expect(head).toHaveAttribute('aria-expanded', 'false');
+
+  // A search opens its matches — and the heading says so.
+  await page.fill('[data-note-search]', 'bandits');
+  await expect(page.locator('.note-row')).toHaveCount(1);
+  await expect(head).toHaveAttribute('aria-expanded', 'true');
+  // Clearing it re-renders the whole list; the open note stays open, and says so.
+  await page.fill('[data-note-search]', '');
+  await expect(page.locator('.note-row')).toHaveCount(2);
+  await expect(head).toHaveAttribute('aria-expanded', 'true');
+  await expect(page.locator('.note-row', { hasText: 'Debts' }).locator('.note-row__head'))
+    .toHaveAttribute('aria-expanded', 'false');
+});
+
+/* Round-2 review, finding 9. The dice sheet slid up on open even with Reduce
+   Motion on. Read from the stylesheet rather than watched, because a 0.22s
+   animation can be over before a test looks: whatever animation the sheet
+   is given, none of its keyframes may move it. A fade is allowed — opacity
+   is not motion. */
+for (const reduce of [true, false]) {
+  test(`the dice sheet ${reduce ? 'fades in without moving under Reduce Motion' : 'still rises in ordinarily'}`, async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: reduce ? 'reduce' : 'no-preference' });
+    await openApp(page);
+    await openFirstCharacter(page);
+    await press(page, '.hero__btn-dice');
+    await expect.poll(() => appAttr(page, 'data-modal')).toBe('dice');
+
+    const { name, found, moves } = await page.evaluate(() => {
+      const anim = getComputedStyle(document.querySelector('.dice-sheet')).animationName;
+      // style.css is an index of @imports, so imported sheets are followed
+      // (CSSImportRule.styleSheet), as are @media blocks (cssRules).
+      const walk = (list) => [...list].flatMap((r) => (
+        r instanceof CSSImportRule ? walk(r.styleSheet.cssRules)
+          : r.cssRules && !(r instanceof CSSKeyframesRule) ? walk(r.cssRules)
+            : [r]));
+      // The app's own sheets; a cross-origin one (the web fonts) cannot be
+      // read, and holds no animations of ours.
+      const rules = [...document.styleSheets].flatMap((sh) => {
+        try { return walk(sh.cssRules); } catch (_) { return []; }
+      });
+      const kf = rules.find((r) => r instanceof CSSKeyframesRule && r.name === anim);
+      return { name: anim, found: !!kf, moves: !!kf && [...kf.cssRules].some((k) => k.style.transform && k.style.transform !== 'none') };
+    });
+    expect(name).not.toBe('none');            // it still arrives with a cue either way
+    expect(found, `@keyframes ${name}`).toBe(true);
+    expect(moves).toBe(!reduce);
+  });
+}

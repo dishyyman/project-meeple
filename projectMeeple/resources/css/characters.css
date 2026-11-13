@@ -136,6 +136,11 @@
   transition: transform 140ms ease;
   transform: translateY(var(--shift-y, 0px));
 }
+/* With reduced motion the rows still move out of the way — that is where
+   the dragged row will land — but they jump there rather than slide. */
+@media (prefers-reduced-motion: reduce) {
+  .persona-card[data-shift] { transition: none; }
+}
 .app[data-dragging-roster] { -webkit-user-select: none; user-select: none; }
 
 /* A roster with nothing in it. Reachable now that the last character can be

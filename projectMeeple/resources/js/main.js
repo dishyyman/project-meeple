@@ -3604,7 +3604,7 @@
     const open = !!state.open[n.id];
     const preview = notePreview(n);
     return `<div class="note-row${open ? ' is-open' : ''}" data-collapse="${esc(n.id)}">
-      <button class="note-row__head" data-toggle="${esc(n.id)}">
+      <button class="note-row__head" data-toggle="${esc(n.id)}" aria-expanded="${open}">
         <span class="note-row__lines">
           <span class="note-row__title">${highlight(n.title, q)}</span>
           ${preview ? `<span class="note-row__preview">${highlight(preview, q)}</span>` : ''}
@@ -4539,7 +4539,9 @@
      delete a character just because focus happened to start on Delete. A
      screen reader announces the dialog's name, and Tab goes on to its first
      control. Found missing in the Codex second-opinion review (finding 5). */
-  const modalFocus = { back: null, backSel: null, lastOutside: null };
+  // `shell`: elements OUTSIDE .app made inert while a modal is open — kept so
+  // closing releases exactly those and nothing that was inert for its own reasons.
+  const modalFocus = { back: null, backSel: null, lastOutside: null, shell: [] };
 
   const openModalEl = () => {
     const m = app.getAttribute('data-modal');
@@ -4574,6 +4576,26 @@
        storage alert hides itself under a modal, so neither can take focus. */
     for (const el of app.children) {
       el.inert = opening && el !== modal && !el.classList.contains('notices');
+    }
+
+    /* And everything OUTSIDE .app too — the shell around it, which today is
+       the FULL/PHONE frame toggle (index.html puts it outside on purpose,
+       and frame.js owns it). Named by position, not by name: every sibling of
+       .app and of each of its ancestors, up to <body>. That is the standard
+       "everything but the dialog" walk, and it means main.js does not need
+       to know what the shell contains — anything added there later is
+       covered too. Only elements that were NOT already inert are taken, and
+       only those are given back, so this never undoes someone else's inert. */
+    for (const el of modalFocus.shell) el.inert = false;
+    modalFocus.shell = [];
+    if (opening) {
+      for (let node = app; node.parentElement && node !== document.body; node = node.parentElement) {
+        for (const sib of node.parentElement.children) {
+          if (sib === node || sib.inert || sib.tagName === 'SCRIPT') continue;
+          sib.inert = true;
+          modalFocus.shell.push(sib);
+        }
+      }
     }
 
     if (opening) {
