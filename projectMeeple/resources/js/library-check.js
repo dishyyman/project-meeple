@@ -155,6 +155,19 @@
     formerIds.forEach(function (pair) {
       if (seen[pair[1]]) problems.push(pair[0] + ': formerIds names ' + pair[1] + ', which is still in use');
     });
+    /* One owner per former id, across the WHOLE compendium. Two entries
+       claiming the same old id is an ambiguous redirect: a character saved
+       under it would be moved to whichever entry happened to come last in the
+       file, and reordering the file would move it again. Both claimants are
+       named, so the author knows which rows to look at. Counted across
+       collections as well as within one — an old id means one thing. */
+    var owners = Object.create(null);
+    formerIds.forEach(function (pair) {
+      var was = owners[pair[1]];
+      if (was === undefined) { owners[pair[1]] = pair[0]; return; }
+      if (was === pair[0]) return;      // listed twice on one entry: redundant, not ambiguous
+      problems.push(pair[1] + ' is a former id of both ' + was + ' and ' + pair[0]);
+    });
     return problems;
   }
 

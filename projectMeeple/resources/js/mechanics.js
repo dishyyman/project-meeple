@@ -456,6 +456,27 @@
       return { downed: !wasDowned && isDowned(ch), boonsLost };
     }
 
+    /* LOADING — a standing character never sits at an empty bar.
+
+       In play it cannot happen: damage that empties the bar takes a Wound and
+       refills it, and only the LAST Wound leaves it at 0 (see damage()). But a
+       save can still hold it. Before HEALTH_MAX_FLOOR, a heavy Constitution
+       penalty gave a negative maximum, and a rest wrote that negative number
+       into current health; loading clamps it to 0, which left a character
+       standing on 0/1 that no rule could have produced.
+
+       Designer ruling 2026-11-13: such a character loads at FULL health. No
+       Wound is added — they never took that damage; the number came from a
+       bug. A downed character keeps its empty bar (that 0 is the rule), and a
+       sheet with no subclass yet keeps 0/0 (there is no pool to fill).
+
+       Returns whether it changed anything. */
+    function settleHealth(ch) {
+      const max = healthMax(ch);
+      if (max > 0 && !isDowned(ch) && ch.health <= 0) { ch.health = max; return true; }
+      return false;
+    }
+
     /* Health cascade: each time damage empties the bar, take a Wound and
        refill. The refill is what makes a Wound survivable.
 
@@ -623,7 +644,7 @@
       woundPenalty, stacksOf, wornArmor, shieldBonus,
       evasion, armor, fortitude, speed,
       // play rules
-      heal, damage, setWounds, rest, patchGain, canSpendPatch, spendPatch, setPatches,
+      heal, damage, setWounds, settleHealth, rest, patchGain, canSpendPatch, spendPatch, setPatches,
       clearBoons, clearEffects, stackCap, addEffect, bumpEffect, applyTick,
     };
   }

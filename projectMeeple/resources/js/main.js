@@ -1233,6 +1233,16 @@
           .map((e) => ({ id: e.id, stacks: clampStacks(e.stacks, stackCap(e.id)) }))
           .filter((e) => e.stacks > 0);
       }
+      /* Health, settled LAST. The clamp above runs before the inventory and
+         effects are in, and both can move Constitution — so the maximum it
+         clamped against may not be the character's. Wounds stay where they
+         are, above: setWounds() clears Boons when the count rises, which is
+         harmless before effects load and would wipe them after. So health is
+         clamped again here against the real maximum, and then made legal for
+         a character who is standing (settleHealth() in mechanics.js — a save
+         from before the health floor can hold 0 or less). */
+      character.health = Math.min(character.health, healthMax());
+      M.settleHealth(character);
     } catch (_) { /* ignore corrupt save */ }
   };
 

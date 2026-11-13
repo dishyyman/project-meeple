@@ -480,10 +480,16 @@ function deriveSubclassIds(rows) {
      of this scheme that corrupts data rather than losing it, so it is an
      error rather than a warning. */
   const live = new Set(rows.map((sc) => sc.id));
+  // And one owner per former id: two rows claiming the same old id would send
+  // a character saved under it to whichever row comes last in the sheet.
+  // library-check.js refuses the same thing in an imported compendium.
+  const owner = new Map();
   for (const sc of rows) {
     for (const f of sc.formerIds || []) {
       if (!/^[a-z]+\.[a-z0-9-]+$/.test(f)) err(sc.__where, `formerId "${f}" is not a valid id`);
       if (live.has(f)) err(sc.__where, `formerId "${f}" is also a live subclass id — it would redirect a working reference`);
+      if (owner.has(f) && owner.get(f) !== sc.id) err(sc.__where, `formerId "${f}" is already a former id of ${owner.get(f)} — an old id can only lead to one subclass`);
+      else owner.set(f, sc.id);
     }
   }
 }

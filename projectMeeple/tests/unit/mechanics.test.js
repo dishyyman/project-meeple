@@ -162,6 +162,47 @@ describe('maximum health never drops below the floor', () => {
   });
 });
 
+/* Round-2 review, finding 5. The floor fixed new arithmetic, but a save from
+   before it could still hold a negative current health — loaded, clamped to
+   0, and left standing at 0/1. Designer ruling 2026-11-13: full health, no
+   Wound added. */
+describe('a save cannot load a standing character on an empty bar', () => {
+  const sunk = (con) => char({ inventory: [{ mods: [{ stat: 'Constitution', value: con }] }] });
+
+  test('legacy negative health while standing: loads at full', () => {
+    const ch = { ...sunk(-20), health: 0, wounds: 1 };   // −10 after the load clamp
+    assert.equal(M.settleHealth(ch), true);
+    assert.deepEqual([ch.health, ch.wounds], [1, 1]);   // full; no Wound added
+  });
+
+  test('zero health while standing, ordinary Constitution: loads at full', () => {
+    const ch = { ...char(), health: 0, wounds: 0 };
+    M.settleHealth(ch);
+    assert.equal(ch.health, M.healthMax(ch));
+    assert.ok(ch.health > 1);
+  });
+
+  test('zero health at maximum Wounds stays zero — that is what downed is', () => {
+    const ch = { ...char(), health: 0 };
+    ch.wounds = M.woundsMax(ch);
+    assert.equal(M.settleHealth(ch), false);
+    assert.equal(ch.health, 0);
+  });
+
+  test('a draft with no subclass stays 0/0 rather than being given the floor', () => {
+    const ch = { ...char({ build: { origin: null } }), health: 0, wounds: 0 };
+    assert.equal(M.healthMax(ch), 0);
+    assert.equal(M.settleHealth(ch), false);
+    assert.equal(ch.health, 0);
+  });
+
+  test('a standing character with health on the bar is left alone', () => {
+    const ch = { ...char(), health: 3, wounds: 1 };
+    assert.equal(M.settleHealth(ch), false);
+    assert.equal(ch.health, 3);
+  });
+});
+
 describe('base stats', () => {
   test('the base block is Evasion 8 / Armor 0 / Fortitude 8 / Speed 5', () => {
     const ch = char();

@@ -596,6 +596,25 @@ test.describe('while storage refuses writes, nothing on the sheet is lost', () =
   });
 });
 
+/* Round-2 review, finding 5: a save from before the health floor, holding the
+   negative health that the old negative maximum let a rest write. It loads
+   standing at full health — 1, the floor — not on 0/1 (designer ruling
+   2026-11-13; settleHealth() in mechanics.js). */
+test('a legacy save with negative health while standing loads at full health', async ({ page }) => {
+  const fs = require('fs');
+  const elara = JSON.parse(fs.readFileSync(fixture('backup.meeple.json'), 'utf8')).characters[0];
+  const { id: _id, portrait: _p, ...save } = elara;
+  save.inventory = [{ id: 'inv-curse', title: 'Leaden Heart', desc: '', mods: [{ stat: 'Constitution', value: -20 }] }];
+  save.health = -10;
+  save.wounds = 1;
+  await openApp(page, { saves: { aurelia: save } });
+  await openFirstCharacter(page);
+
+  await expect(page.locator('[data-bind="healthMax"]').first()).toHaveText('1');
+  await expect(healthNow(page)).toHaveText('1');
+  expect(await page.locator('[data-wound].is-on').count()).toBe(1);   // no Wound added
+});
+
 /* An install from before the roster existed, holding a save from before the
    gear catalog used library ids: armour stored as the bare proficiency name
    ("Light") and held items under ids that no longer exist. applySave() must

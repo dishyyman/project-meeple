@@ -109,6 +109,28 @@ test('a formerId naming a live id is refused — it would redirect a working ref
   assert.match(checkLibrary(bag).join('\n'), /formerIds names subclass\.hunter, which is still in use/);
 });
 
+/* Round-2 review, finding 6: two entries claiming one former id. The alias
+   map in main.js keeps the last one it sees, so a character saved under the
+   old id changed subclass with the order of the file. */
+test('a former id claimed by two subclasses is refused, naming both', () => {
+  const bag = base();
+  bag.subclasses.push({ id: 'subclass.warden', name: 'Warden', classId: 'class.ranger', formerIds: ['subclass.hunter'] });
+  assert.match(checkLibrary(bag).join('\n'),
+    /subclass\.hunter is a former id of both subclass\.kindred and subclass\.warden/);
+});
+
+test('a former id claimed across two collections is refused too', () => {
+  const bag = base();
+  bag.weapons[0].formerIds = ['subclass.hunter'];
+  assert.match(checkLibrary(bag).join('\n'), /subclass\.hunter is a former id of both/);
+});
+
+test('several different former ids on one entry are fine, and so is one listed twice', () => {
+  const bag = base();
+  bag.subclasses[0].formerIds = ['subclass.hunter', 'subclass.marksman', 'subclass.hunter'];
+  assert.deepEqual(checkLibrary(bag), []);
+});
+
 test('every problem is reported, not just the first', () => {
   const bag = base();
   bag.subclasses = {};
