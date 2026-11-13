@@ -718,12 +718,19 @@ same file.
 
 **Import** validates the envelope (§1), refuses a `schemaVersion` higher than
 the app understands, refuses a character file with a message naming it as one,
-and then asks:
+refuses a file whose **shape** the app can't run on (`resources/js/library-check.js`:
+non-list collections, malformed or misplaced ids, duplicates, wrongly typed
+fields — the first problem is named), and then asks:
 
 | Mode | What happens | Takes effect |
 |---|---|---|
 | **Add** | entries this device does not have are folded in; every id it already has is **left alone** | immediately |
 | **Replace** | the whole file is stored under `meeple.library` and becomes this device's content | on the next load — the app reloads |
+
+The stored compendium is shape-checked again at **every launch**. One that fails —
+or one the previous launch never finished starting on — is set aside: the app
+boots on the built-in content and Settings says why, with Restore Built-in to
+clear it.
 
 Add exists for the common case of filling gaps, and the local-wins rule is the
 same one a character file's `entries` snapshot follows (`docs/character-file.md`

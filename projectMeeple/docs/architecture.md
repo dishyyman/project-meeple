@@ -135,7 +135,7 @@ Server-side database: **Open** — see `database.md` when it exists.
                                                                  ▼
  Player ──► Browser ──► index.html ──► boot.js ──fetch──► pages/*.html  (injected into .app)
                             │
-                            ├── dice.js · mechanics.js · portrait.js · library.js · rules.js   (globals)
+                            ├── dice.js · mechanics.js · portrait.js · library.js · library-check.js · rules.js   (globals)
                             └── main.js
                                   │  wire()  ◄── clicks (one delegated handler)
                                   ▼
@@ -158,7 +158,7 @@ Server-side database: **Open** — see `database.md` when it exists.
 **Loading the app**
 1. Browser loads `index.html` over `http://` and runs `frame.js` (applies the stored frame mode before first paint).
 2. `boot.js` fetches all screen fragments in parallel and inserts them in order, then resolves `MEEPLE_READY`.
-3. `dice.js`, `mechanics.js`, `portrait.js`, `library.js`, and `rules.js` define their globals.
+3. `dice.js`, `mechanics.js`, `portrait.js`, `library.js`, `library-check.js`, and `rules.js` define their globals.
 4. `main.js` waits on `MEEPLE_READY`, then `init()` loads imported entries, the roster (opening a character), and the account flag; renders everything; wires the click handler; and lands on Home.
 
 **A change during play** (e.g. taking damage)
@@ -200,6 +200,7 @@ project-meeple/
     │   │   ├── mechanics.js     # the one game-mechanics engine (also used by tests/)
     │   │   ├── portrait.js      # the one image pipeline
     │   │   ├── library.js       # GENERATED — game content
+    │   │   ├── library-check.js # the one compendium/entry shape check (also used by tests/)
     │   │   ├── rules.js         # GENERATED — Player's Guide
     │   │   └── main.js          # model, content indexes, render, wiring
     │   └── images/              # portrait assets
@@ -287,7 +288,7 @@ project-meeple/
 **Context:** the app needed automated tests, and browser tests need a browser driver.
 **Alternatives:** manual testing only; a test framework that runs inside the app.
 **Reason:** Node's built-in runner for unit tests (no install) and Playwright for browser tests, declared in a **dev-only** `package.json`. Playwright drives the Chrome already installed (`channel: 'chrome'`), so no browser download. Nothing in `package.json` loads in the app, so "no runtime dependencies" still holds.
-**Constraint:** `package.json` must **not** declare `"type": "module"` — `dice.js` and `mechanics.js` are loaded by Node as CommonJS.
+**Constraint:** `package.json` must **not** declare `"type": "module"` — `dice.js`, `mechanics.js` and `library-check.js` are loaded by Node as CommonJS.
 
 ### Decision 11 — Game mechanics extracted into `mechanics.js` (2026-10-05)
 **Context:** the rules lived inside `main.js`'s closure, reading a shared `character` — impossible to unit-test without a browser page.

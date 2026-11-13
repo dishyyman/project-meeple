@@ -93,6 +93,8 @@ With no server, nothing can be stolen from *us*. What can go wrong happens on th
 - **File type is checked by content, not name.** A character file must have the `meepleCharacter` envelope; a compendium must have the `meeple` block. The wrong kind is refused with a message naming it.
 - **Newer schema versions are refused**, never half-imported.
 - **Content ids are whitelisted by collection.** Imported entries are merged only when their id matches its own key and starts with a known collection (`class.`, `skill.`, `gear.`…); anything else is ignored.
+- **Compendiums and library entries are shape-checked** by `library-check.js`, one check used at every door: a compendium on import (refused whole, nothing stored) and again at every launch; every entry on its way into the live library (`mergeEntries()` — character-file snapshots, compendium Add, entries restored at boot). Collections must be lists; entries need a well-formed id that belongs in their collection and a name; ids are unique; `formerIds` can't name a live id; every field the app reads has the type it reads it as. Without this a crafted compendium installed with Replace could crash every launch before Settings was reachable — an availability attack on the device.
+- **Launch safety net.** If a launch on an installed compendium never finishes, the next one sets that compendium aside, boots on the built-in content, and Settings explains and offers Restore Built-in (`LIBRARY_BOOT_KEY` in `main.js`).
 - **Portraits from files** are accepted only as image data URLs (`data:image/…;base64,`); anything else is dropped.
 - **Dice expressions** are parsed by a hand-written parser — never `eval()` — with limits (1–100 dice, 2–1000 sides).
 

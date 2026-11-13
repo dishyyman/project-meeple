@@ -97,14 +97,16 @@ projectMeeple/
     ├── unit/                # node --test
     │   ├── dice.test.js       # 17 — arithmetic, limits, refusals, never eval
     │   ├── mechanics.test.js  # 56 — every rules-gaps §6 rule + §7 rulings
-    │   └── content.test.js    #  7 — the real compendium vs the guide
+    │   ├── content.test.js    #  7 — the real compendium vs the guide
+    │   └── library-check.test.js # 11 — the compendium/entry shape check
     ├── e2e/                 # Playwright — every test runs in Chrome AND Safari
     │   ├── helpers/test.js    # the `test` to import: fails on any page error
     │   ├── helpers/app.js     # openApp, press, seed storage, files, downloads
     │   ├── characterization.spec.js  # 2 — the whole sheet, step by step
     │   ├── characterization.spec.js-snapshots/   # the recorded baselines
     │   ├── smoke.spec.js      # 2 — Flows 1, 2
-    │   ├── data-safety.spec.js # 5 — Flows 6, 7, 7b, 8, 11
+    │   ├── data-safety.spec.js # 9 — Flows 6, 7, 7b, 8, 11; storage refusing writes
+    │   ├── compendium.spec.js # 6 — Flow 9; malformed compendiums; launch safety net
     │   ├── rules.spec.js      # 1 — Flow 10 (marked known bug, §10)
     │   └── security.spec.js   # 9 — Flow 12, CSP, size limit
     └── fixtures/
@@ -202,6 +204,8 @@ Each flow lists the steps and the result that must hold. These are the E2E suite
 | Dice engine | `unit/dice.test.js` |
 | Every rules-gaps §6 rule and §7 ruling | `unit/mechanics.test.js` |
 | Compendium content vs the guide | `unit/content.test.js` |
+| Compendium / library entry shape check | `unit/library-check.test.js` |
+| Flow 9 (compendium Add/Replace/Restore), malformed compendiums, launch safety net | `e2e/compendium.spec.js` |
 | Flows 1, 2 (first run, creation) | `e2e/smoke.spec.js` |
 | Flows 3, 4, 5 (damage, rolls, effects) | `e2e/characterization.spec.js` (as recorded output, not readable assertions) |
 | Flows 6, 7, 8, 11 (edit, export/import, backup, delete) | `e2e/data-safety.spec.js` |
@@ -210,7 +214,7 @@ Each flow lists the steps and the result that must hold. These are the E2E suite
 | Flow 10 (rules lookup) — written, marked known bug | `e2e/rules.spec.js`, §10 |
 | No JavaScript errors during any browser test | `e2e/helpers/test.js` (every test, automatically) |
 | Chrome and Safari (WebKit) | every browser test runs in both |
-| **Not yet:** Flow 9 (compendium Add/Replace/Restore), accessibility | §9 |
+| **Not yet:** accessibility | §9 |
 
 **Prioritize:**
 1. **Data mutations** — save, load, delete, import, export, backup. Losing a character is the worst failure this app can have.
@@ -269,7 +273,7 @@ A change is done when:
 5. ~~**Extract the mechanics**~~ into `mechanics.js` — done; baselines unchanged.
 6. ~~**Unit-test every rules-gaps §6 rule**~~ — done.
 7. ~~**E2E for data safety and hostile files**~~ (Flows 6, 7, 8, 11, 12) — done, along with `security.md` Gaps 1–3.
-8. **Open — Flow 9:** compendium Add, Replace (reloads) and Restore Built-in.
+8. ~~**Flow 9**~~ — done 2026-11-13: Add, Replace and Restore with real reloads, plus malformed compendiums and the launch safety net (`compendium.spec.js`).
 9. **Open — readable play tests:** Flows 3, 4, 5 as plain assertions ("health reads 4 / 9"), so a failure names the rule rather than a snapshot diff.
 10. **Open — extract save/load validation** (`applySave()`, file parsers) from `main.js` and unit-test the clamping in `database.md` A6.
 11. ~~**Flow 10**~~ — test written 2026-11-04, marked as a known bug until the Rules back button is fixed (§10).

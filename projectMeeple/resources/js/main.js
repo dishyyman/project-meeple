@@ -286,17 +286,68 @@
      exported back out. */
   const LIBRARY_KEY = 'meeple.library';
   const LIBRARY_FILE_VERSION = 1;
+  // The one shape check, shared with every other door content comes in by —
+  // see library-check.js for why it is a file of its own.
+  const LIBRARY_CHECK = window.MEEPLE_LIBRARY_CHECK;
+
+  /* ---- the launch safety net ------------------------------------------
+     The shape check below stops every malformed compendium we know how to
+     describe. This catches the ones we don't: a file that passes the check
+     and still throws somewhere during start-up.
+
+     Before booting on a stored compendium, LIBRARY_BOOT_KEY is set to
+     'pending'; init() clears it as its last act (libraryBooted()). If the
+     next launch finds it still 'pending', the last launch on this compendium
+     never finished — so this one sets it aside, marks the key 'crashed' so
+     the launch after does too, and boots on the built-in content. Settings
+     says what happened and offers Restore Built-in; installing or restoring
+     a compendium clears the mark.
+
+     The cost of a false alarm (a tab closed in the instant between the two
+     writes, or two tabs opened at once) is a compendium switched off with
+     an explanation and a one-file remedy. The cost of no net is an app that
+     never starts. */
+  const LIBRARY_BOOT_KEY = 'meeple.library-boot';
+
+  /* Why an installed compendium is NOT in use this launch — 'unreadable',
+     'too-new' or 'crashed' — or null when it is in use or none is installed.
+     Read by renderCompendiumNote(), which tells the player. */
+  let libraryOff = null;
 
   function storedLibrary() {
+    let raw = null;
+    try { raw = localStorage.getItem(LIBRARY_KEY); } catch (_) { /* storage unavailable */ }
+    if (raw === null) return null;
+
+    let boot = null;
+    try { boot = localStorage.getItem(LIBRARY_BOOT_KEY); } catch (_) { /* storage unavailable */ }
+    if (boot) {
+      try { localStorage.setItem(LIBRARY_BOOT_KEY, 'crashed'); } catch (_) { /* this launch still skips it */ }
+      libraryOff = 'crashed';
+      return null;
+    }
+
     let bag = null;
-    try { bag = JSON.parse(localStorage.getItem(LIBRARY_KEY) || 'null'); } catch (_) { /* corrupt */ }
-    // Checked, not trusted — a hand-edited or half-written key must not take
-    // the app down on launch, and falling back to the shipped library is a
-    // recoverable state where a thrown error at load is not.
-    if (!bag || typeof bag !== 'object' || Array.isArray(bag)) return null;
-    if (!bag.meeple || typeof bag.meeple !== 'object') return null;
-    if (Number(bag.meeple.schemaVersion) > LIBRARY_FILE_VERSION) return null;
+    try { bag = JSON.parse(raw); } catch (_) { /* corrupt — the check below says so */ }
+    // Checked, not trusted — a hand-edited, half-written or hostile key must
+    // not take the app down on launch, and falling back to the shipped
+    // library is a recoverable state where a thrown error at load is not.
+    // checkLibrary() runs first, so bag.meeple is an object by the time the
+    // version is read.
+    if (LIBRARY_CHECK.checkLibrary(bag).length) { libraryOff = 'unreadable'; return null; }
+    if (Number(bag.meeple.schemaVersion) > LIBRARY_FILE_VERSION) { libraryOff = 'too-new'; return null; }
+
+    try { localStorage.setItem(LIBRARY_BOOT_KEY, 'pending'); } catch (_) { /* no net, but nothing worse */ }
     return bag;
+  }
+
+  // init() made it to the end on the stored compendium: stand the net down.
+  // Only 'pending' is cleared — a 'crashed' mark stays until the player
+  // installs or restores a compendium, or the next launch would try again.
+  function libraryBooted() {
+    try {
+      if (localStorage.getItem(LIBRARY_BOOT_KEY) === 'pending') localStorage.removeItem(LIBRARY_BOOT_KEY);
+    } catch (_) { /* storage unavailable */ }
   }
 
   const LIBRARY = storedLibrary() || window.MEEPLE_LIBRARY || { classes: [], subclasses: [] };
@@ -5155,6 +5206,14 @@
     const added = [];
     for (const [id, entry] of Object.entries(bag || {})) {
       if (!entry || typeof entry !== 'object' || entry.id !== id) continue;
+      /* Shape-checked here because this is the ONE way an entry joins the
+         live library after launch — a character file's snapshot, a
+         compendium Add, and the entries restored at boot all come through.
+         A malformed one is skipped exactly like an unknown type below: the
+         character that needed it reports it as not restored (see
+         referencedLoss()), and it never reaches storage to be read back at
+         the next launch. */
+      if (LIBRARY_CHECK.checkEntry(entry)) continue;
       if (byLibraryId(id)) continue;
       const e = markImported ? { ...entry, imported: true } : entry;
       const kind = id.slice(0, id.indexOf('.'));
@@ -5938,7 +5997,16 @@
     // The undo only exists once there is something to undo.
     const reset = $('[data-compendium-reset]');
     if (reset) reset.hidden = !hasStoredLibrary();
+    // Why the installed compendium is not the one in use, when it isn't.
+    // Empty otherwise, and .status:empty takes the line out of the layout.
+    setText('libOff', LIBRARY_OFF_TEXT[libraryOff] || '');
   }
+
+  const LIBRARY_OFF_TEXT = {
+    unreadable: 'Your installed compendium can’t be read, so Meeple is using the built-in one. Restore the built-in compendium to clear it, or import a fixed copy.',
+    crashed:    'Meeple didn’t finish starting with your installed compendium, so it has been switched off and the built-in one is in use. Restore the built-in compendium to clear it, or import a fixed copy.',
+    'too-new':  'Your installed compendium was made for a newer version of Meeple, so the built-in one is in use until the app is updated.',
+  };
 
   /* Whether a compendium has been installed over the built-in one. Asks
      whether the KEY is there rather than whether storedLibrary() could use it:
@@ -5980,6 +6048,17 @@
     if (Number(bag.meeple.schemaVersion) > LIBRARY_FILE_VERSION) {
       return { error: { title: 'Made for a newer Meeple',
         text: `This compendium is schema version ${bag.meeple.schemaVersion}; this app understands version ${LIBRARY_FILE_VERSION}. Update the app, then import it again.` } };
+    }
+    /* The full shape check, before anything is written. Add would only take
+       the entries it is missing and Replace would store the lot, but either
+       way a file this broken is one nobody should be building on: it is
+       refused whole, and the first problem is named so the person who made
+       it knows where to look. */
+    const problems = LIBRARY_CHECK.checkLibrary(bag);
+    if (problems.length) {
+      const more = problems.length - 1;
+      return { error: { title: 'This compendium has problems',
+        text: `${filename} can’t be used: ${problems[0]}${more ? ` — and ${more} more ${more === 1 ? 'problem' : 'problems'}` : ''}. Nothing on this device was changed.` } };
     }
     if (!Object.keys(entriesOf(bag)).length) {
       return { error: { title: 'Nothing to import',
@@ -6045,6 +6124,9 @@
   function installCompendium(bag) {
     try {
       localStorage.setItem(LIBRARY_KEY, JSON.stringify(bag));
+      // A fresh compendium gets a fresh chance: whatever the safety net
+      // decided about the last one does not apply to this one.
+      localStorage.removeItem(LIBRARY_BOOT_KEY);
     } catch (_) {
       showImportResult({ ok: false, title: 'No room for it',
         text: 'This browser\'s storage is full, so the compendium could not be saved. Deleting a character portrait or two is usually enough to make room.' });
@@ -6077,7 +6159,9 @@
   function askCompendiumReset() {
     askFile({
       title: 'Restore the built-in compendium?',
-      text: `${LIBRARY.meeple?.title || 'The imported compendium'} will be removed and Meeple will go back to the content it ships with.`,
+      // When the installed compendium was set aside at launch, LIBRARY is the
+      // built-in one, and its title is not the thing being removed.
+      text: `${(!libraryOff && LIBRARY.meeple?.title) || 'The imported compendium'} will be removed and Meeple will go back to the content it ships with.`,
       notes: [
         { text: 'Your characters are stored apart from the compendium and are not touched.' },
         { warn: true, text: 'The imported compendium itself is discarded. If you cannot get that file again, export it first.' },
@@ -6088,7 +6172,7 @@
   }
 
   function resetCompendium() {
-    try { localStorage.removeItem(LIBRARY_KEY); }
+    try { localStorage.removeItem(LIBRARY_KEY); localStorage.removeItem(LIBRARY_BOOT_KEY); }
     catch (_) { /* nothing else to try; the reload below will show the truth */ }
     showImportResult({
       ok: true,
@@ -8299,6 +8383,8 @@
     // whenever a character is opened.
     app.setAttribute('data-view', 'home');
     app.setAttribute('data-tab', 'action');
+    // Last: start-up has finished, so the compendium it ran on is safe.
+    libraryBooted();
   }
 
   /* Not DOMContentLoaded: the screens are fetched into .app by boot.js and

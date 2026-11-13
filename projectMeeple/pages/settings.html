@@ -71,6 +71,10 @@
             <span class="set-meta__title" data-bind="libTitle"></span>
             <span class="set-meta__ver" data-bind="libVersion"></span>
           </div>
+          <!-- Only ever filled when an installed compendium has been set aside
+               at launch (renderCompendiumNote()); .status:empty hides it the
+               rest of the time. -->
+          <p class="status status--warn" data-bind="libOff"></p>
           <div class="stack stack--tight">
             <button class="set-row" data-compendium-export>
               <span class="set-row__icon">
