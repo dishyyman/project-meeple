@@ -131,3 +131,117 @@ test('Flow 11 — a deleted character stays deleted after reload (the seed inclu
   const keys = await page.evaluate(() => Object.keys(localStorage).filter((k) => k.startsWith('meeple.character.')));
   expect(keys).toEqual([]);
 });
+
+/* ---------------------------------------------------------------------
+   When storage refuses writes
+   ---------------------------------------------------------------------
+   A full quota (usually portraits) or storage blocked by the browser. Play
+   carries on in memory, so what is under test is that the app SAYS SO: a
+   standing alert while writes fail, no "saved" claim that is not true, and
+   an import that does not report characters a reload will not bring back.
+
+   failWrites() makes localStorage.setItem throw the way a full quota does,
+   for keys matching `pattern`, from the moment it is called. localStorage
+   only — sessionStorage carries the test seeding flag and must keep working.
+   --------------------------------------------------------------------- */
+async function breakableStorage(page) {
+  await page.addInitScript(() => {
+    const real = Storage.prototype.setItem;
+    Storage.prototype.setItem = function (key, value) {
+      const p = window.__failWrites;
+      if (this === window.localStorage && p && new RegExp(p).test(key)) {
+        throw new DOMException('The quota has been exceeded.', 'QuotaExceededError');
+      }
+      return real.call(this, key, value);
+    };
+  });
+}
+const failWrites = (page, pattern = '^meeple\\.') =>
+  page.evaluate((p) => { window.__failWrites = p; }, pattern);
+const healWrites = (page) => page.evaluate(() => { window.__failWrites = null; });
+const alertCard = (page) => page.locator('.storage-alert__card');
+
+test.describe('when storage refuses writes', () => {
+  test('a refused write raises a standing alert; the next write that lands clears it', async ({ page }) => {
+    await breakableStorage(page);
+    await openApp(page);
+    await openFirstCharacter(page);
+    await expect(alertCard(page)).toBeHidden();
+
+    await failWrites(page);
+    await applyCalc(page, 'health', 'damage', 1);                 // 7 → 6, in memory only
+    await expect(page.locator('[data-bind="healthCur"]').first()).toHaveText('6');
+    await expect(alertCard(page)).toBeVisible();
+    await expect(page.locator('[data-storage-alert-text]')).toContainText('aren’t being saved');
+
+    // Still up after another change — it is not a toast that times out.
+    await applyCalc(page, 'health', 'damage', 1);                 // 6 → 5
+    await expect(alertCard(page)).toBeVisible();
+
+    // Storage recovers; the next save writes the whole character, so the
+    // alert has nothing left to warn about.
+    await healWrites(page);
+    await applyCalc(page, 'health', 'damage', 1);                 // 5 → 4, saved
+    await expect(alertCard(page)).toBeHidden();
+    await reloadApp(page);
+    await openFirstCharacter(page);
+    await expect(page.locator('[data-bind="healthCur"]').first()).toHaveText('4');
+  });
+
+  test('the alert stays out of the way of an open modal, and leads to Settings', async ({ page }) => {
+    await breakableStorage(page);
+    await openApp(page);
+    await openFirstCharacter(page);
+    await failWrites(page);
+    await applyCalc(page, 'health', 'damage', 1);
+    await expect(alertCard(page)).toBeVisible();
+
+    await press(page, '[data-calc="health"]');                     // a modal opens over the sheet
+    await expect(alertCard(page)).toBeHidden();
+    await closeModal(page);
+    await expect(alertCard(page)).toBeVisible();
+
+    await alertCard(page).click();                                 // a real tap: it must be reachable
+    await expect.poll(() => appAttr(page, 'data-view')).toBe('settings');
+  });
+
+  test('Edit Character does not claim "saved" when the save was refused', async ({ page }) => {
+    await breakableStorage(page);
+    await openApp(page);
+    await openFirstCharacter(page);
+    await press(page, '[data-nav="edit"]');
+    await failWrites(page);
+
+    await page.fill('[data-id-name]', 'Elara the Unsaved');
+    await page.locator('[data-id-name]').dispatchEvent('input');
+    await press(page, '[data-id-save]');
+    await expect(page.locator('[data-toast-text]')).toHaveText('Updated for this session only — not saved.');
+    await expect(page.locator('[data-toast-text]')).toHaveClass(/status--warn/);
+
+    await reloadApp(page);
+    await press(page, '[data-nav="characters"]');
+    expect(await rosterNames(page)).toEqual(['Elara Starwhisper']);
+  });
+
+  test('an import storage refuses is reported as not imported, and leaves nothing behind', async ({ page }) => {
+    await breakableStorage(page);
+    await openApp(page);
+    await press(page, '[data-nav="characters"]');
+    // Only character records fail, so the roster index still writes — the
+    // case where a careless import would leave a row with no save behind it.
+    await failWrites(page, '^meeple\\.character\\.');
+
+    await chooseFile(page, '[data-import-open]', fixture('elara.meeple.json'));
+    const result = await readResult(page);
+    expect(result.state).toBe('error');
+    expect(result.title).toBe('Not imported');
+    expect(result.text).toContain('could not be imported');
+    await closeModal(page);
+    expect(await rosterNames(page)).toEqual(['Elara Starwhisper']);
+
+    await healWrites(page);
+    await reloadApp(page);
+    await press(page, '[data-nav="characters"]');
+    expect(await rosterNames(page)).toEqual(['Elara Starwhisper']);
+  });
+});

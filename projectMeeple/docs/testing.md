@@ -42,7 +42,7 @@ Test pieces working together:
 - **Backup → restore** of a whole roster.
 - **Compendium import** — Add fills gaps without overwriting; Replace reloads; Restore drops it; characters referencing missing ids lose them with a warning.
 - **Files across versions** — older files still import; newer `schemaVersion` is refused (`character-file.md` §6).
-- **Storage full** — portrait that won't fit is kept in memory with a message; play continues.
+- **Storage full** — portrait that won't fit is kept in memory with a message; play continues. A refused save raises the standing storage alert, Edit doesn't claim "saved", and a refused import is undone and reported (`data-safety.spec.js`, "when storage refuses writes").
 - **Future (Open):** APIs, database interactions, authentication flows, sync conflicts.
 
 ### End-to-End Testing
@@ -205,6 +205,7 @@ Each flow lists the steps and the result that must hold. These are the E2E suite
 | Flows 1, 2 (first run, creation) | `e2e/smoke.spec.js` |
 | Flows 3, 4, 5 (damage, rolls, effects) | `e2e/characterization.spec.js` (as recorded output, not readable assertions) |
 | Flows 6, 7, 8, 11 (edit, export/import, backup, delete) | `e2e/data-safety.spec.js` |
+| Storage refusing writes (alert, no false "saved", import undone) | `e2e/data-safety.spec.js` |
 | Flow 12 (hostile files), CSP, import size limit | `e2e/security.spec.js` |
 | Flow 10 (rules lookup) — written, marked known bug | `e2e/rules.spec.js`, §10 |
 | No JavaScript errors during any browser test | `e2e/helpers/test.js` (every test, automatically) |

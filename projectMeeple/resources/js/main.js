@@ -738,12 +738,39 @@
   const saveKey      = (id) => `meeple.character.${id}`;
   const portraitKey  = (id) => `${saveKey(id)}.portrait`;
 
+  /* ---- is this device actually keeping what we write? ----------------
+     Every write below can fail — a full quota (usually portraits), or storage
+     blocked outright by the browser. Play deliberately CONTINUES when that
+     happens: the character in memory is still right, and refusing to take
+     damage because the disk is full would be worse than the disease. What
+     must not happen is the player finding out at the next launch. So a failed
+     write puts up a standing notice (pages/toast.html) that stays until a
+     later write gets through, and the callers that announce success —
+     "Character saved.", the import window — ask first.
+
+     Idempotent, and the text is written only on the way INTO the failed
+     state: the notice's live region announces when its text changes, and a
+     player taking ten points of damage one tap at a time should hear it once,
+     not ten times. */
+  let storageFailing = false;
+  function noteStorage(ok) {
+    if (ok === !storageFailing) return;
+    storageFailing = !ok;
+    const text = $('[data-storage-alert-text]');
+    if (text) text.textContent = ok ? ''
+      : 'Changes aren’t being saved — this browser’s storage is full or blocked. Tap to export a backup.';
+    app.setAttribute('data-storage', ok ? 'ok' : 'failing');
+  }
+
+  // Returns whether the character AND the roster index both reached storage —
+  // the pair a reload reads back. True when there is nothing to write.
   const save = () => {
     // Only a character in the roster is persisted. Deleting the last one
     // leaves a blank bound to `character` so that every render and rule keeps
     // working without a null check; this is what stops that placeholder from
     // being written to storage and reappearing as a nameless roster row.
-    if (!roster.some((r) => r.id === character.id)) return;
+    if (!roster.some((r) => r.id === character.id)) return true;
+    let written = false;
     try {
       localStorage.setItem(saveKey(character.id), JSON.stringify({
         // Identity is editable now (Edit Character), so it has to round-trip.
@@ -773,12 +800,19 @@
         effects: character.effects,
         skills: character.skills,
       }));
-    } catch (_) { /* storage unavailable — play continues in-memory */ }
+      written = true;
+    } catch (_) { /* storage unavailable — play continues in-memory; see noteStorage() */ }
     // The Personae row is refreshed on every save rather than at the handful
     // of call sites that change something it shows. Saves already happen on
     // exactly those edits, so this is the one place that cannot be forgotten.
     refreshRosterEntry();
-    saveRoster();
+    // writeRoster(), not saveRoster(): the notice is settled ONCE, below, on
+    // both writes together. Letting the roster write report on its own would
+    // clear the notice for a moment whenever the roster fits and the
+    // character does not.
+    const ok = writeRoster() && written;
+    noteStorage(ok);
+    return ok;
   };
 
   const IDENTITY_MAX = 60;   // matches the maxlength on the Edit Character fields
@@ -1087,13 +1121,24 @@
     };
   };
 
-  const saveRoster = () => {
+  // The bare write, reporting whether it landed. save() uses this directly so
+  // that it can settle the storage notice once for both of its writes.
+  const writeRoster = () => {
     try {
       localStorage.setItem(ROSTER_KEY, JSON.stringify({
         ids: roster.map((r) => r.id),
         activeId: character.id,
       }));
-    } catch (_) { /* storage unavailable — the roster lives for this session */ }
+      return true;
+    } catch (_) { return false; }   // storage unavailable — the roster lives for this session
+  };
+
+  // The roster on its own: a reorder, a delete, a switch. Reports to the
+  // storage notice like every other write that a reload depends on.
+  const saveRoster = () => {
+    const ok = writeRoster();
+    noteStorage(ok);
+    return ok;
   };
 
   /* Build the roster at boot, and seed or migrate as needed.
@@ -3313,13 +3358,18 @@
     idField('error').hidden = true;
     renderContent();     // hero caption, roster row and meta lines all follow
     renderPortrait();    // the alt text quotes the name, so it is restated too
-    save();
+    const saved = save();
     // Stays on the screen. The edit is confirmed by Save going inert, which
     // leaves you where you were rather than making a saved field impossible to
     // glance at without navigating back — and by a toast, because an inert
     // button on its own is easy to miss.
+    //
+    // Save goes inert EITHER WAY: the form now matches the character, which
+    // is what the button tracks. Only the toast changes — "saved" is a claim
+    // about storage, and when storage refused it the honest word is that the
+    // edit lasts for this session (the standing notice says why).
     refreshBioSave();
-    showToast('Character saved.');
+    showToast(saved ? 'Character saved.' : 'Updated for this session only — not saved.', saved ? 'ok' : 'warn');
   }
 
   /* ------------------------------------------------------------------ */
@@ -5536,8 +5586,17 @@
     const at = roster.findIndex((r) => r.id === id);
     if (at === -1) roster.push(row); else roster[at] = row;
 
-    savePortrait();
-    save();
+    /* The character first, and the portrait ONLY if the character landed.
+       Reported separately, because they fail separately: a portrait is the big
+       write and can be refused by a quota the character itself fits in.
+
+       The order matters for an overwrite. If the save is refused, storage
+       still holds the OLD character — and writing the new portrait anyway
+       would hang this file's photo on that old save. Skipping it leaves the
+       stored pair exactly as it was, which is what lets importCharacters()
+       treat a refused character as never imported. */
+    const saved = save();
+    return { saved, portraitOk: saved && savePortrait() };
   }
 
   /* Import every character in a parsed file.
@@ -5563,7 +5622,7 @@
     const wanted = {};
     for (const [id, e] of Object.entries(file.entries || {})) if (!byLibraryId(id)) wanted[id] = e;
     const restored = mergeEntries(wanted, { markImported: true });
-    rememberImportedEntries(restored, wanted);
+    const entriesKept = rememberImportedEntries(restored, wanted);
 
     save();                          // the character being left
     const wasOpen = character.id;
@@ -5571,6 +5630,12 @@
     const added = [];
     const replaced = [];
     const lost = [];
+    // Names whose save or portrait storage refused. An import that reports
+    // success for a character a reload will not bring back is the exact
+    // failure the result window exists to prevent, so these are collected
+    // and the window's wording is decided by them below.
+    const unsaved = [];
+    const noPortrait = [];
     /* "Knight 3", for a file holding exactly one character. Captured INSIDE
        the loop because buildLabel() reads the open character, and by the time
        the result is written the loop has moved on and the sheet has been
@@ -5581,7 +5646,23 @@
       const claimed = typeof source.id === 'string' ? source.id.trim() : '';
       const keepId  = mode === 'overwrite' && claimed;
       const existed = keepId && roster.some((r) => r.id === claimed);
-      adoptCharacter(source, keepId ? claimed : freshCharacterId());
+      // Kept so a refused write can be undone — see below.
+      const before = existed ? { ...roster.find((r) => r.id === claimed) } : null;
+      const stored = adoptCharacter(source, keepId ? claimed : freshCharacterId());
+      /* Storage refused this one, so it is UNDONE rather than left in the
+         list. Only the open character lives in memory; every other row is
+         re-read from storage when it is opened, so a row with no save behind
+         it would open as a blank. Taking the row back out (or putting the
+         replaced one back) means what the list shows is what a reload shows.
+         Storage was left untouched — see adoptCharacter() — and the roster
+         index is rewritten by the saveRoster() after this loop. */
+      if (!stored.saved) {
+        unsaved.push(character.name);
+        const at = roster.findIndex((r) => r.id === character.id);
+        if (before) roster[at] = before; else if (at !== -1) roster.splice(at, 1);
+        continue;
+      }
+      if (!stored.portraitOk) noPortrait.push(character.name);
       if (file.characters.length === 1) soleLabel = buildLabel();
       (existed ? replaced : added).push(character.name);
       /* What did not survive: ids that were neither in the library nor in the
@@ -5616,11 +5697,28 @@
         : `${nameList(replaced)} ${replaced.length === 1 ? 'was' : 'were'} overwritten with the version in the file.`);
     }
 
+    /* Storage refused at least one character, and the loop took those back
+       out. Shown as a failure — the window's error state — whenever any were
+       refused, even if others made it: the player has to act (make room and
+       import again), and a green "imported" heading over that instruction
+       would be skimmed past. The sentences above still name the ones that
+       did arrive, so a partial import reads as exactly that. */
+    if (unsaved.length) {
+      sentences.push(`${nameList(unsaved)} could not be imported — this browser’s storage is full or blocked. Delete a portrait or two to make room, then import again.`);
+    }
+
     showImportResult({
-      ok: true,
-      title: file.characters.length === 1 ? 'Character imported' : 'Characters imported',
+      ok: !unsaved.length,
+      title: unsaved.length
+        ? (added.length || replaced.length ? 'Partly imported' : 'Not imported')
+        : file.characters.length === 1 ? 'Character imported' : 'Characters imported',
       text: sentences.join(' '),
       notes: [
+        noPortrait.length
+          ? { warn: true, text: `${nameList(noPortrait)}’s portrait${noPortrait.length === 1 ? '' : 's'} could not be stored — browser storage is full. Shown for this session only.` }
+          : null,
+        entriesKept ? null
+          : { warn: true, text: 'The library entries restored from this file could not be stored, so they will be missing after a reload.' },
         restored.length
           ? { text: `${restored.length} library ${restored.length === 1 ? 'entry was' : 'entries were'} restored from the file, because this device's compendium does not have ${restored.length === 1 ? 'it' : 'them'}.` }
           : null,
@@ -5635,13 +5733,16 @@
   /* Library entries restored from a file, kept for next launch. Without this
      an import against an older compendium would look right once and then lose
      the same gear on the next reload — see IMPORTED_KEY. */
+  // Returns whether they were kept (true when there was nothing to keep), so
+  // the window reporting the import can say when they will not survive.
   function rememberImportedEntries(ids, bag) {
-    if (!ids.length) return;
+    if (!ids.length) return true;
     try {
       const stored = JSON.parse(localStorage.getItem(IMPORTED_KEY) || '{}');
       for (const id of ids) stored[id] = bag[id];
       localStorage.setItem(IMPORTED_KEY, JSON.stringify(stored));
-    } catch (_) { /* the entries still work this session */ }
+      return true;
+    } catch (_) { return false; }   // the entries still work this session
   }
 
   /* "Elara", "Elara and Grimm", "Elara, Grimm and Vex", then "Elara, Grimm,
@@ -5899,7 +6000,7 @@
     const wanted = {};
     for (const [id, e] of Object.entries(all)) if (!byLibraryId(id)) wanted[id] = e;
     const added = mergeEntries(wanted, { markImported: true });
-    rememberImportedEntries(added, wanted);
+    const kept = rememberImportedEntries(added, wanted);
     const skipped = Object.keys(all).length - added.length;
     const title = bag.meeple.title || 'that compendium';
 
@@ -5919,9 +6020,13 @@
         : `Every entry in ${title} is already on this device.`,
       // Not a failure, and worth saying plainly: an entry this device already
       // has is the one its own spreadsheet describes, and it wins.
-      notes: skipped
-        ? [{ text: `${skipped} ${skipped === 1 ? 'entry was' : 'entries were'} already here and ${skipped === 1 ? 'was' : 'were'} left alone.` }]
-        : [],
+      notes: [
+        kept ? null
+          : { warn: true, text: 'This browser’s storage is full, so these entries work for this session only and will be gone after a reload.' },
+        skipped
+          ? { text: `${skipped} ${skipped === 1 ? 'entry was' : 'entries were'} already here and ${skipped === 1 ? 'was' : 'were'} left alone.` }
+          : null,
+      ].filter(Boolean),
     });
   }
 

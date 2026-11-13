@@ -1,20 +1,47 @@
-    <!-- ================= TOAST ================= -->
-    <!-- A short confirmation after an action that has no other visible result
-         — a save that leaves you on the same screen, a file sent to downloads.
-         Never carries a decision: anything that needs one is a modal.
+    <!-- ================= NOTICES ================= -->
+    <!-- The two things that speak over every screen, stacked at the foot of
+         the app in one column so they can never overlap each other. Last in
+         PAGES so they paint above the screens without a z-index fight.
 
-         The live region is ALWAYS in the tree, and only its text and the
-         data-toast attribute on .app change. A region that is inserted or
-         unhidden at the same moment its text arrives is announced unreliably,
-         so this one sits here empty and silent until showToast() fills it.
-         role="status" is polite: it is read when the reader is free, and it
-         never takes focus away from what the player was doing.
+         Both follow the same rule for screen readers: the live region is
+         ALWAYS in the tree, and only its text and a data-* attribute on .app
+         change. A region that is inserted or unhidden at the same moment its
+         text arrives is announced unreliably, so each sits here empty and
+         silent until main.js fills it. -->
+    <div class="notices">
 
-         The card is a button so a tap dismisses it early; it times out on its
-         own regardless (see showToast() in main.js). Last in PAGES so it
-         paints above the screens without a z-index fight. -->
-    <div class="toast" role="status" aria-live="polite">
-      <button class="toast__card" type="button" data-toast-dismiss tabindex="-1">
-        <span class="toast__text" data-toast-text></span>
-      </button>
+      <!-- TOAST — a short confirmation after an action that has no other
+           visible result — a save that leaves you on the same screen, a file
+           sent to downloads. Never carries a decision: anything that needs
+           one is a modal.
+
+           role="status" is polite: it is read when the reader is free, and it
+           never takes focus away from what the player was doing. The card is
+           a button so a tap dismisses it early; it times out on its own
+           regardless (see showToast() in main.js). -->
+      <div class="toast" role="status" aria-live="polite">
+        <button class="toast__card" type="button" data-toast-dismiss tabindex="-1">
+          <span class="toast__text" data-toast-text></span>
+        </button>
+      </div>
+
+      <!-- STORAGE ALERT — standing, not transient. Shown while browser
+           storage is refusing writes, so changes are living in memory only,
+           and cleared by the next write that gets through (noteStorage() in
+           main.js). It is the one notice that cannot time out: a player who
+           missed it would find out at the next launch, with their session
+           gone.
+
+           role="alert" rather than the toast's polite status: this is news
+           the player needs before they do anything else. It is a real button
+           (no tabindex override) because it carries the one useful thing to
+           do about it — Settings, where Export All Characters writes a file
+           that needs no browser storage at all. Hidden while a modal is open
+           (see toast.css) so it never sits over a modal's own controls. -->
+      <div class="storage-alert" role="alert">
+        <button class="storage-alert__card" type="button" data-nav="settings">
+          <span class="storage-alert__text status status--warn" data-storage-alert-text></span>
+        </button>
+      </div>
+
     </div>

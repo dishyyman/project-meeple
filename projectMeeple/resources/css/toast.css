@@ -1,22 +1,26 @@
 /* MEEPLE · toast.css
-   Toast (§26) — the transient confirmation. Mirrors pages/toast.html.
+   Notices (§26) — the transient toast and the standing storage alert, both
+   stacked at the foot of the app. Mirrors pages/toast.html.
    Part of the stylesheet loaded by style.css. Appearance only — no layout
    decisions that belong to structure, and no values that belong in tokens.css. */
 
 /* ----------------------------------------------------------------- */
 /* 26. TOAST                                                          */
 /* ----------------------------------------------------------------- */
-/* Pinned to the foot of the app and centred. Positioned high enough to clear
-   the sheet's tab bar (its height is roughly the home inset plus one 64px
-   row), so a toast never covers the controls the player just used. The
-   container ignores the pointer — only the card itself takes a tap. */
-.toast {
+/* The column both notices live in. Pinned to the foot of the app and
+   centred, high enough to clear the sheet's tab bar (its height is roughly
+   the home inset plus one 64px row), so neither covers the controls the
+   player just used. The toast comes first in the markup, so when both are up
+   it sits ABOVE the alert and the alert keeps the spot nearest the thumb. The
+   column ignores the pointer — only the cards themselves take a tap. */
+.notices {
   position: absolute; left: var(--space-4); right: var(--space-4);
   bottom: calc(var(--home-clear) + var(--space-16));
   z-index: 60;
-  display: flex; justify-content: center;
+  display: flex; flex-direction: column;
   pointer-events: none;
 }
+.toast { display: flex; justify-content: center; }
 .toast__card {
   max-width: 100%;
   background: var(--bg-card);
@@ -45,8 +49,48 @@
 .toast__text.status--ok::before   { background: var(--success-bright); }
 .toast__text.status--warn::before { background: var(--warning-bright); }
 
-/* Off the sheet there is no tab bar to clear, so the toast sits lower. */
-.app:not([data-view="sheet"]) .toast { bottom: calc(var(--home-clear) + var(--space-4)); }
+/* Off the sheet there is no tab bar to clear, so the notices sit lower. */
+.app:not([data-view="sheet"]) .notices { bottom: calc(var(--home-clear) + var(--space-4)); }
+
+/* ----------------------------------------------------------------- */
+/* 26b. STORAGE ALERT                                                 */
+/* ----------------------------------------------------------------- */
+/* The toast's card, held up for as long as storage is refusing writes
+   (data-storage, set by noteStorage() in main.js). Told apart from a toast by
+   its amber edge as well as its glyph — it is the one notice that is not
+   going away on its own, and it should not read as one that will.
+
+   Only the CARD is hidden. The role="alert" region around it is always
+   rendered (and takes no height while empty), because a live region that
+   appears at the same moment its text does is announced unreliably — the
+   same reason the toast's region never moves.
+
+   Hidden while a modal is open. The column sits above every modal (z-index
+   60 against their 50), and the dice sheet and several confirmations put
+   their buttons exactly where this would land. The alert is back the moment
+   the modal closes, and storage is still failing then or it would have
+   cleared. display rather than visibility, so a hidden alert leaves no gap
+   under a toast. */
+.storage-alert { display: flex; justify-content: center; }
+.storage-alert__card {
+  display: none;
+  max-width: 100%;
+  margin-top: var(--space-2);
+  background: var(--bg-card);
+  border: 1px solid var(--warning-bright); border-radius: var(--r-sm);
+  box-shadow: var(--shadow-modal);
+  padding: var(--space-2-5) var(--space-3-5);
+  text-align: left;
+  pointer-events: auto;
+}
+.app[data-storage="failing"][data-modal="closed"] .storage-alert__card { display: block; }
+/* Words in ink, glyph in amber — the toast's reasoning, the toast's weight. */
+.storage-alert__text {
+  display: block;
+  font-family: var(--font-body); font-size: var(--fs-body); line-height: 1.45;
+}
+.storage-alert__text.status { color: var(--ink); }
+.storage-alert__text.status--warn::before { background: var(--warning-bright); }
 
 @media (prefers-reduced-motion: reduce) {
   /* Fade only — no slide. */

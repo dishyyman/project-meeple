@@ -161,11 +161,15 @@ Functions should:
 ## 7. Error Handling
 
 **Use:**
-- **`try/catch` around every storage read and write**, with a comment saying what happens on failure. The pattern: play continues in memory.
+- **`try/catch` around every storage read and write**, with a comment saying what happens on failure. The pattern: play continues in memory, **and the player is told.** A write a reload depends on returns whether it landed (`save()`, `saveRoster()`, `savePortrait()` all do), feeds `noteStorage(ok)` so the standing storage alert goes up or comes down, and anything that would announce success checks the result first.
   ```js
-  try { localStorage.setItem(KEY, value); }
-  catch (_) { /* storage unavailable — play continues in-memory */ }
+  let written = false;
+  try { localStorage.setItem(KEY, value); written = true; }
+  catch (_) { /* storage unavailable — play continues in-memory; see noteStorage() */ }
+  noteStorage(written);
+  return written;
   ```
+  Never show "saved" for a write you didn't check.
 - **Check, don't trust** anything from storage or a file: validate shape and type, clamp numbers, drop unknown fields, fall back to a safe default (`database.md` A6).
 - **Player-facing messages in plain language**, saying what happened and what to do: *"That image is larger than 25 MB — try a smaller one."* Thrown errors meant for players are written to be shown verbatim.
 - **Errors go where the player is looking:** an error status line under the field, a result window for imports, the boot-error screen if the app can't start.

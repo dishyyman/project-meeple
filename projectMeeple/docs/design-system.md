@@ -429,7 +429,14 @@ Amber sits between the gold and the ember, so it is close to both. **A warning i
 - Under reduced motion it fades without sliding.
 - Never carries an action — anything that needs a decision is a modal. Never used for errors.
 
-**Current triggers:** character saved (Edit → Dossier), character exported, backup saved, compendium exported. Imports already show a result window with notes, so they don't also toast.
+**Current triggers:** character saved (Edit → Dossier), character exported, backup saved, compendium exported. Imports already show a result window with notes, so they don't also toast. When storage refuses the Edit → Dossier save, the same toast says *"Updated for this session only — not saved."* with the `--warn` glyph instead.
+
+**Storage alert — `pages/toast.html`, `toast.css`, `noteStorage(ok)` in `main.js`**
+- The one notice that doesn't time out. Up while browser storage is refusing writes (full quota or blocked), so changes are living in memory only; down after the next write that gets through.
+- Shares the toast's column at the foot of the app and its card styling, with an amber border so it doesn't read as something that will go away by itself. A toast stacks above it.
+- Hidden while a modal is open, so it never covers a modal's buttons; back as soon as the modal closes.
+- The card is a button to Settings, where Export All Characters writes a file that needs no browser storage.
+- The live region (`role="alert"`) is always in the page and only its text changes, set once on the way into the failing state.
 
 ---
 
