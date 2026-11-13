@@ -102,7 +102,7 @@
   display: flex; align-items: center; gap: var(--space-3); width: 100%;
   text-align: left; padding: var(--space-3) var(--space-3-5); background: transparent;
 }
-/* Ring inside the card, for the reason .collapse__head gives (primitives.css):
+/* Ring inside the card, for the reason .collapse__toggle gives (primitives.css):
    the head fills an overflow: hidden card, so a ring outside it is cut away.
    Rounded to the card's radius less its border. */
 .pick-card__head:focus-visible { outline-offset: -3px; border-radius: calc(var(--r-md) - 1px); }

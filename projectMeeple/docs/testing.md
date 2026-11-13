@@ -57,6 +57,7 @@ Drive the real app in a real browser through the critical journeys (§5): first 
 
 ### Accessibility & Visual Checks
 
+- **Automated:** `a11y.spec.js` — axe-core on every screen and the main modals; must stay at zero violations. A new screen or modal gets a line in its `SCREENS` / `MODALS` list.
 - **Keyboard:** every control reachable and operable; focus always visible (`--focus`).
 - **Contrast:** every new color pair clears WCAG AA (`design-system.md` §4).
 - **Reduced motion:** animations stop or soften.
@@ -74,12 +75,12 @@ Chosen to keep the app itself dependency-free. **Test tools are development-only
 | **Unit** | **Node's built-in test runner** (`node --test`, `node:assert`) | Zero dependencies; Node 24 is already installed; `dice.js` already loads in Node |
 | **Integration** | Node test runner for file-format logic once extracted; **Playwright** for anything that needs the browser (storage, files, rendering) | |
 | **E2E** | **Playwright** (`@playwright/test`), every test in two projects: **chrome** (the installed Chrome, `channel: 'chrome'`) and **safari** (Playwright's WebKit) | Chrome and Safari are what players use. WebKit is the engine inside Safari and every iPhone browser — it is not the Safari app itself, so it catches engine bugs, not every Safari quirk; real-device QA still matters |
-| **Accessibility** | Manual keyboard pass; **Open:** automated checks (e.g. axe-core via Playwright) | |
+| **Accessibility** | **axe-core** (`@axe-core/playwright`, pinned exactly, dev-only) scans every screen and the main modals against WCAG 2.1 A/AA, strictly — any violation fails (`a11y.spec.js`). Keyboard and dialog behaviour by real key presses (`keyboard.spec.js`, `dialogs.spec.js`). A manual screen-reader pass on a real device still matters | Added 2026-11-13. axe runs in Chrome only (it reads the DOM, which both engines agree on) and with `bypassCSP` in that one file, because axe injects inline styles to measure contrast — see the file header |
 | **Visual** | Manual visual QA in the app. Playwright saves a screenshot of a **failed** test only — there are no screenshot baselines | Decided 2026-11-04: baselines would need re-approving on every deliberate look change; visual issues are noted by hand instead |
 | **Error capture** | `tests/e2e/helpers/test.js` — every browser test fails on any uncaught exception or console error | Automatic, so no test can forget the check |
 | **When it runs** | Locally, with `npm test`, before committing | Decided 2026-11-04: no pre-commit hook (would slow and block every commit) and no CI on push (would only report problems after they are pushed) |
 
-**Decided 2026-10-05** (`architecture.md` Decision 10): Playwright is a **dev-only** dependency in `projectMeeple/package.json`. The app never loads it.
+**Decided 2026-10-05** (`architecture.md` Decision 10): Playwright is a **dev-only** dependency in `projectMeeple/package.json`. The app never loads it. Neither does it load `@axe-core/playwright` (added 2026-11-13), which is pinned to an exact version so a scan can't start failing on an upgrade nobody chose.
 
 **Do not add `"type": "module"` to `package.json`.** Node would then treat `dice.js` and `mechanics.js` as ES modules and the converter and unit tests would break.
 
@@ -110,6 +111,7 @@ projectMeeple/
     │   ├── compendium.spec.js # 6 — Flow 9; malformed compendiums; launch safety net
     │   ├── keyboard.spec.js   # 6 — Enter/Space on custom buttons, Shift+Enter holds
     │   ├── dialogs.spec.js    # 5 — dialog markup, focus in/kept/back, Escape
+    │   ├── a11y.spec.js       # 19 — axe on every screen and main modal (Chrome); collapsible tap targets (both)
     │   ├── rules.spec.js      # 1 — Flow 10 (marked known bug, §10)
     │   └── security.spec.js   # 9 — Flow 12, CSP, size limit
     └── fixtures/
@@ -219,7 +221,7 @@ Each flow lists the steps and the result that must hold. These are the E2E suite
 | Chrome and Safari (WebKit) | every browser test runs in both |
 | Keyboard: custom buttons, the hold gestures, Wound pips | `e2e/keyboard.spec.js` (real key presses, never `press()`) |
 | Modals as dialogs: semantics, focus in/kept/returned, Escape | `e2e/dialogs.spec.js` |
-| **Not yet:** an automated accessibility scan (axe-core) | §9 |
+| Automated accessibility (axe-core, WCAG 2.1 A/AA) on every screen and main modal | `e2e/a11y.spec.js` |
 
 **Prioritize:**
 1. **Data mutations** — save, load, delete, import, export, backup. Losing a character is the worst failure this app can have.
@@ -282,7 +284,7 @@ A change is done when:
 9. **Open — readable play tests:** Flows 3, 4, 5 as plain assertions ("health reads 4 / 9"), so a failure names the rule rather than a snapshot diff.
 10. **Open — extract save/load validation** (`applySave()`, file parsers) from `main.js` and unit-test the clamping in `database.md` A6.
 11. ~~**Flow 10**~~ — test written 2026-11-04, marked as a known bug until the Rules back button is fixed (§10).
-12. **Open — automated accessibility:** an axe-core pass. Keyboard operation of custom buttons and holds (`keyboard.spec.js`) and modal focus (`dialogs.spec.js`) are done, 2026-11-13.
+12. ~~**Automated accessibility**~~ — done 2026-11-13: axe-core, strict, zero violations (`a11y.spec.js`); keyboard (`keyboard.spec.js`) and modal focus (`dialogs.spec.js`).
 13. ~~**Fail on any page error, Safari, failure reports**~~ — done 2026-11-04: `helpers/test.js`, the `safari` project, HTML report + failure screenshots.
 14. ~~**Modals as dialogs**~~ — done 2026-11-13: dialog role and name, focus moved in on open, kept inside, returned on close (`dialogs.spec.js`).
 

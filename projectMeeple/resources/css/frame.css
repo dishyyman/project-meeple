@@ -145,11 +145,15 @@
   border: 1px solid color-mix(in srgb, var(--accent) 50%, transparent);
   border-radius: 999px;
   cursor: pointer;
-  opacity: 0.45;
-  transition: opacity 120ms ease, border-color 120ms ease;
+  /* No resting dimness. It used to sit at opacity 0.45, which put its label
+     at 2.1:1 — a control people press, readable by almost nobody (axe,
+     2026-11-13; it clears 4.5:1 only from 0.9 up). It stays quiet through
+     --ink-muted and its half-strength border instead; hover and focus light
+     the border. */
+  transition: border-color 120ms ease;
 }
 .frame-toggle:hover,
-.frame-toggle:focus-visible { opacity: 1; border-color: var(--focus); }
+.frame-toggle:focus-visible { border-color: var(--focus); }
 .frame-toggle__icon { width: 11px; height: 16px; border: 1.5px solid currentColor; border-radius: 2.5px; }
 :root[data-frame="full"] .frame-toggle__icon { width: 18px; height: 13px; border-radius: 2px; }
 

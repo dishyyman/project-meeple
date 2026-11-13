@@ -154,6 +154,12 @@
   border-color: var(--accent); background: var(--bg-parchment2);
   color: var(--accent-bright);
 }
+/* The selected WORD goes back to ink; the frame and the glyph keep the ember.
+   --accent-bright on the selected tile's parchment2 is 4.29:1 — short of the
+   4.5:1 small type needs (axe, 2026-11-13) — while the glyph is an icon and
+   needs only 3:1. One ember standout per screen is easier to keep this way
+   too. */
+.mode-pick.is-on .mode-pick__label { color: var(--ink); }
 
 /* ---- account ----
    Centred because it is the only thing in its block: a small button left-

@@ -14,7 +14,11 @@
         </div>
         <div class="calc-row">
           <button class="calc-step" data-calc-step="-1" aria-label="Decrease">−</button>
-          <input class="calc-input" type="number" inputmode="numeric" data-calc-input value="0">
+          <!-- Named by the card's title plus a hidden word, so a screen reader
+               says "Health, amount" rather than a bare "edit text". -->
+          <span class="visually-hidden" id="calc-amount">amount</span>
+          <input class="calc-input" type="number" inputmode="numeric" data-calc-input value="0"
+                 aria-labelledby="calc-title calc-amount">
           <button class="calc-step" data-calc-step="1" aria-label="Increase">+</button>
         </div>
         <!-- The same control as the roll card's, for the same rule: healing

@@ -1772,12 +1772,19 @@
   // Shared collapsible; `right` is optional HTML shown before the caret, and
   // `footer` is optional HTML placed under the description INSIDE the body.
   //
-  // The footer slot exists because the head is a single <button>: any control
-  // with its own press — a stepper, say — cannot live up there without nesting
-  // buttons. (valBox() works around the same constraint the other way, with
-  // role="button" on a span, which only works because a value box has nothing
-  // to press.) Putting real controls in the body keeps the markup valid and
-  // keeps one tab stop per collapsed row.
+  // The head is a plain row, and the toggle is a <button> holding only the
+  // NAME. Its ::after stretches over the whole head (primitives.css), so a tap
+  // anywhere on the row still opens it — the same target the row always had.
+  // `right` sits BESIDE the button rather than inside it. It used to be inside:
+  // the head was one big <button>, and the roll boxes in it (role="button"
+  // spans, see valBox()) were buttons nested in a button — invalid, and on
+  // VoiceOver the inner ones could be folded into the head's label and never
+  // reached. Flagged by axe as nested-interactive (2026-11-13). Now the roll
+  // boxes are siblings, lifted above the stretched target so a tap on one
+  // rolls instead of toggling.
+  //
+  // The footer slot is still where a control with real markup of its own — a
+  // stepper, say — belongs: it keeps one tab stop per collapsed row.
   //
   // `item.sub` is an optional second line under the title — a cost, so far.
   // It reads as part of the name rather than as a value, which is why it sits
@@ -1787,13 +1794,15 @@
     const open = state.open[item.id] ? ' is-open' : '';
     const sub = item.sub ? `<span class="collapse__sub">${esc(item.sub)}</span>` : '';
     return `<div class="collapse${light ? ' collapse--light' : ''}${open}" data-collapse="${item.id}">
-      <button class="collapse__head" data-toggle="${item.id}">
-        <span class="collapse__name">
-          <span class="collapse__title">${esc(item.title)}</span>
-          ${sub}
-        </span>
+      <div class="collapse__head">
+        <button class="collapse__toggle" data-toggle="${item.id}" aria-expanded="${open ? 'true' : 'false'}">
+          <span class="collapse__name">
+            <span class="collapse__title">${esc(item.title)}</span>
+            ${sub}
+          </span>
+        </button>
         <span class="collapse__right">${right}<span class="collapse__caret"></span></span>
-      </button>
+      </div>
       <div class="collapse__body">${esc(item.desc || '')}${footer}</div>
     </div>`;
   }

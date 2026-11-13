@@ -155,19 +155,36 @@
    rows are already inside a bordered container (equipment on the Gear tab),
    and a shadow inside a box reads as a seam. */
 .collapse--light { box-shadow: none; }
+/* The row. Not itself a control — the toggle inside it is (see collapsible()
+   in main.js) — but laid out exactly as the old one-button head was, and the
+   containing block for the toggle's stretched target. */
 .collapse__head {
+  position: relative;
   width: 100%;
   display: flex; align-items: center; justify-content: space-between; gap: var(--space-3);
   padding: var(--space-3) var(--space-3-5);
   text-align: left;
+  cursor: pointer;
 }
-/* The focus ring goes INSIDE the head. The head fills the .collapse card edge
-   to edge, and the card is overflow: hidden (for its rounded corners), so the
-   app-wide ring drawn outside the control (base.css) would be cut away
-   entirely. Inset by 3px and rounded one pixel tighter than the card — the
-   card's radius minus its 1px border — so the ring sits concentric with the
-   corners rather than being nicked by them. */
-.collapse__head:focus-visible { outline-offset: -3px; border-radius: calc(var(--r-sm) - 1px); }
+/* The toggle holds the name and nothing else, so its accessible name is the
+   row's title. min-width: 0 so a long name still shrinks rather than pushing
+   the value boxes off the row — the job .collapse__name did when it was the
+   head's direct child. */
+.collapse__toggle { display: flex; min-width: 0; text-align: left; }
+/* Stretched over the whole head, so a tap anywhere on the row is a tap on the
+   toggle — the target the row has always had. */
+.collapse__toggle::after { content: ""; position: absolute; inset: 0; border-radius: calc(var(--r-sm) - 1px); }
+/* Anything you can press in `right` (the roll boxes) is lifted above the
+   stretched target, so it takes its own tap. Static content there (labels,
+   the caret) stays under it and still opens the row. */
+.collapse__right [role="button"], .collapse__right button { position: relative; }
+/* The focus ring is drawn on the stretched target, so it frames the whole row
+   as it always did — and INSIDE it: the row fills the .collapse card edge to
+   edge, and the card is overflow: hidden (for its rounded corners), so a ring
+   outside would be cut away. Inset 3px, rounded to the card's radius less its
+   1px border. The button itself draws none; this is its ring. */
+.collapse__toggle:focus-visible { outline: none; }
+.collapse__toggle:focus-visible::after { outline: 2px solid var(--focus); outline-offset: -3px; }
 /* The name cell. A column, so a row that has a cost line stacks it under the
    title; min-width:0 lets a long name shrink rather than shoving the value
    boxes off the row. */
