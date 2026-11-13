@@ -89,6 +89,71 @@ test('a malicious character file: nothing runs, nothing becomes markup', async (
   expect(portraits).toEqual([]);
 });
 
+/* The round-2 review found the ids — not the visible text — were the way
+   in: an ability id went into data-collapse and data-toggle unescaped, so a
+   file could write its own elements into the Action tab. The policy stops
+   scripts, not a link that looks like part of the app, so the DOM is
+   checked for the payloads' own elements by id. Every id here also has to
+   survive being put in a selector, which is what the toggle handler does
+   with it — a quote or backslash there used to throw. */
+test('hostile ability, passive and note ids: no markup, and every row still opens', async ({ page }) => {
+  await watchCsp(page);
+  const fs = require('fs');
+  const file = JSON.parse(fs.readFileSync(fixture('elara.meeple.json'), 'utf8'));
+  const c = file.characters[0];
+  const LINK = 'x"><a id="pwn-ability" href="https://example.com">Injected link</a><span data-x="';
+  c.abilities[0].id = LINK;
+  c.abilities[1].id = 'a\\"]';                         // backslash, quote, bracket
+  c.abilities[2].id = "it's [data-toggle] > *";       // selector metacharacters
+  c.abilities[3].id = 'ps1';                          // a duplicate of a passive's id
+  c.passives[0].id = '"><b id="pwn-passive">bold</b>';
+  c.passives[1].id = { nested: true };                // not even a string
+  c.notes[0].id = 'n"><i id="pwn-note">x</i><s data-y="';
+  c.notes[1].id = 'n\\';
+  const name = 'hostile-ids.meeple.json';
+
+  await openApp(page);
+  await press(page, '[data-nav="characters"]');
+  await chooseFile(page, '[data-import-open]', { name, mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(file)) });
+  expect((await readResult(page)).state).toBe('ok');
+  await closeModal(page);
+  const id = await page.$$eval('[data-open-character]', (els) => els.at(-1).dataset.openCharacter);
+  await press(page, `[data-open-character="${id}"]`);
+
+  // Nothing the payloads tried to create exists.
+  expect(await page.locator('#pwn-ability, #pwn-passive, #pwn-note, .app a[href^="https://example"]').count()).toBe(0);
+
+  // Every id on the sheet is plain and unique — rows open and close alone.
+  const ids = await page.$$eval('.screen--sheet [data-collapse]', (els) => els.map((e) => e.dataset.collapse));
+  const freeForm = ids.filter((i) => !i.includes('.') && !i.includes('#'));
+  for (const i of freeForm) expect(i).toMatch(/^[A-Za-z0-9_-]+$/);
+  expect(new Set(freeForm).size).toBe(freeForm.length);
+
+  // And every one of them still works: open it, see it open, close it.
+  for (const tab of ['action', 'character', 'notes']) {
+    await press(page, `[data-tab="${tab}"]`);
+    const toggles = await page.$$eval('.screen--sheet [data-toggle]', (els) => els
+      .filter((e) => e.getClientRects().length)
+      .map((e) => e.dataset.toggle));
+    expect(toggles.length).toBeGreaterThan(0);
+    for (const t of toggles) {
+      const was = await page.evaluate((v) => [...document.querySelectorAll('.screen--sheet [data-collapse]')]
+        .find((e) => e.dataset.collapse === v).classList.contains('is-open'), t);
+      await page.evaluate((v) => [...document.querySelectorAll('.screen--sheet [data-toggle]')]
+        .find((e) => e.dataset.toggle === v && e.getClientRects().length).click(), t);
+      const now = await page.evaluate((v) => [...document.querySelectorAll('.screen--sheet [data-collapse]')]
+        .find((e) => e.dataset.collapse === v).classList.contains('is-open'), t);
+      expect(now, `toggle ${t}`).toBe(!was);
+    }
+  }
+
+  // The visible text came through untouched — only the ids were replaced.
+  await press(page, '[data-tab="action"]');
+  await expect(page.locator('.screen--sheet')).toContainText('Ictus Findens');
+  expect(await injectedElements(page)).toEqual([]);
+  expect(await page.evaluate(() => window.__violations)).toEqual([]);
+});
+
 /* Wrapped in a describe only so the error allowance below covers this one
    test. The browser REPORTS each script it refuses as a console error —
    here that report is the policy working, not the app failing. The pattern

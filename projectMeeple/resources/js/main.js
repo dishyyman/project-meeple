@@ -1028,10 +1028,37 @@
       // an action on: which sub-list it belongs to, whether it is an attack,
       // and what it costs. Passives take none of them — a passive with an AP
       // cost is a contradiction, not a value worth preserving.
+      /* IDS FROM A FILE ARE UNTRUSTED. An ability, passive or note id is
+         free-form, and it goes into the page as an attribute value
+         (data-collapse, data-toggle) and into a selector when its row is
+         opened. A file that a friend sent can carry anything there — the round
+         2 review built one whose ability id closed the attribute and wrote a
+         link into the Action tab. Escaping at those sites (collapsible(), the
+         toggle handler) stops that; this stops the id being strange at all.
+
+         So an id is kept only if it is plain — letters, digits, _ and -, as
+         every id this app has ever minted is — and not already taken by
+         another row on this sheet. The three lists share one set because they
+         share one namespace: state.open and the toggle handler find a row by
+         id alone, so two rows with one id open and close together. Anything
+         else gets a plain id from its list and position, which is stable
+         across loads so a row stays open the way the player left it. */
+      const usedIds = new Set();
+      const SAFE_ID = /^[A-Za-z0-9_-]{1,64}$/;
+      const safeId = (raw, prefix, i) => {
+        let id = typeof raw === 'string' || typeof raw === 'number' ? String(raw) : '';
+        if (!SAFE_ID.test(id) || usedIds.has(id)) {
+          id = `${prefix}-${i}`;
+          while (usedIds.has(id)) id += '-1';
+        }
+        usedIds.add(id);
+        return id;
+      };
+
       const freeForm = (list, extra, usable = false) => list
         .filter((a) => a && typeof a.title === 'string')
         .map((a, i) => ({
-          id: String(a.id || `${extra}-${i}-${Date.now()}`),
+          id: safeId(a.id, extra, i),
           title: a.title.slice(0, IDENTITY_MAX),
           desc: typeof a.desc === 'string' ? a.desc : '',
           ...(typeof a.dmg === 'string' && !validateDice(a.dmg) ? { dmg: a.dmg } : {}),
@@ -1112,7 +1139,7 @@
         character.notes = s.notes
           .filter((n) => n && typeof n.title === 'string')
           .map((n, i) => ({
-            id: String(n.id || `note-${i}-${Date.now()}`),
+            id: safeId(n.id, 'note', i),
             title: String(n.title),
             body: typeof n.body === 'string' ? n.body : '',
             created: Number(n.created) || 0,
@@ -1882,9 +1909,13 @@
   function collapsible(item, right = '', light = false, footer = '') {
     const open = state.open[item.id] ? ' is-open' : '';
     const sub = item.sub ? `<span class="collapse__sub">${esc(item.sub)}</span>` : '';
-    return `<div class="collapse${light ? ' collapse--light' : ''}${open}" data-collapse="${item.id}">
+    // Escaped like every other value written into markup. Ability and passive
+    // ids come from files (see safeId() in applySave), and a library id can
+    // only be plain because library-check.js insists on it — but this is the
+    // one function every row goes through, so it does not rely on either.
+    return `<div class="collapse${light ? ' collapse--light' : ''}${open}" data-collapse="${esc(item.id)}">
       <div class="collapse__head">
-        <button class="collapse__toggle" data-toggle="${item.id}" aria-expanded="${open ? 'true' : 'false'}">
+        <button class="collapse__toggle" data-toggle="${esc(item.id)}" aria-expanded="${open ? 'true' : 'false'}">
           <span class="collapse__name">
             <span class="collapse__title">${esc(item.title)}</span>
             ${sub}
@@ -8126,7 +8157,9 @@
       if (t.dataset.toggle) {
         const id = t.dataset.toggle;
         state.open[id] = !state.open[id];
-        const box = app.querySelector(`[data-collapse="${id}"]`);
+        // CSS.escape: an id with a quote or bracket in it would otherwise end
+        // the selector early and throw — an uncaught error on a tap.
+        const box = app.querySelector(`[data-collapse="${CSS.escape(id)}"]`);
         if (box) box.classList.toggle('is-open', state.open[id]);
         // The class is for the stylesheet; this is for a screen reader. Only
         // heads that declare the state get it written back, so the rows that
