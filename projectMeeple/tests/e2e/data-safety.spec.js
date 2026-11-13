@@ -320,3 +320,45 @@ test.describe('when storage refuses writes', () => {
     expect(await rosterNames(page)).toEqual(['Elara Starwhisper']);
   });
 });
+
+/* An install from before the roster existed, holding a save from before the
+   gear catalog used library ids: armour stored as the bare proficiency name
+   ("Light") and held items under ids that no longer exist. applySave() must
+   upgrade what it can (the armour resolves through the library's own `prof`)
+   and drop what it can't (the dead ids), and loadRoster() must index the
+   lone save — all without an error. This scenario used to live in a manual
+   page, _seed_tmp.html, that nothing ran; it runs on every `npm test` now. */
+test('an old pre-roster save with stale gear ids loads, upgraded', async ({ page }) => {
+  await page.addInitScript(() => {
+    if (sessionStorage.getItem('legacy-seeded')) return;
+    sessionStorage.setItem('legacy-seeded', '1');
+    // Exactly what _seed_tmp.html wrote. No meeple.roster key: pre-roster.
+    localStorage.setItem('meeple.character.aurelia', JSON.stringify({
+      health: 7, mana: 4, wounds: 1, notes: '', armorWorn: 'Light',
+      hands: ['w-1h-melee', 'shield-armor'],     // stale ids
+      inventory: [], effects: [],
+    }));
+  });
+  await openApp(page);
+  await openFirstCharacter(page);
+
+  // Resources carried over.
+  await expect(page.locator('[data-bind="healthCur"]').first()).toHaveText('7');
+  await expect(page.locator('[data-bind="manaCur"]').first()).toHaveText('4');
+  await expect(page.locator('[data-wound].is-on')).toHaveCount(1);
+
+  // Armour upgraded to its library entry; the dead hand ids dropped, not
+  // rendered as blank rows.
+  await press(page, '[data-tab="gear"]');
+  await expect(page.locator('.screen--sheet [data-detail="armor"]')).toContainText('Light Armor');
+  await expect(page.locator('.screen--sheet [data-detail^="hands:"]')).toHaveCount(0);
+
+  // And the next save writes the upgraded shape, indexed in a roster.
+  await press(page, '[data-step="health:-1"]');
+  const stored = await page.evaluate(() => ({
+    save: JSON.parse(localStorage.getItem('meeple.character.aurelia')),
+    roster: JSON.parse(localStorage.getItem('meeple.roster')),
+  }));
+  expect(stored.save).toMatchObject({ armorWorn: 'armor.light', hands: [], health: 6 });
+  expect(stored.roster.ids).toEqual(['aurelia']);
+});
