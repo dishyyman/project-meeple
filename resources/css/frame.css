@@ -127,6 +127,18 @@
   border-radius: 0;
   box-shadow: none;
 }
+/* Launched from the home screen, iOS gets inset: 0 wrong. With the
+   black-translucent status bar (index.html), the box a fixed element is
+   placed in ends short of the bottom of the screen by about the TOP safe
+   area, so the app stopped ~50–60px up with the tab bar floating above
+   a dark strip (WebKit bugs 236445, 254868). In standalone, 100vh is the
+   whole screen, so the height is stated outright instead of being left to
+   the bottom edge. Scoped to standalone because in a Safari tab 100vh is
+   the screen BEHIND the toolbars and would push the tab bar under them —
+   there inset: 0 is right. */
+@media (display-mode: standalone) {
+  :root[data-frame="full"] .device { bottom: auto; height: 100vh; }
+}
 /* The 32px above and below the drawn phone (base.css) is room for its
    shadow. With no phone drawn there is nothing to make room for. */
 :root[data-frame="full"] body { padding: 0; }
