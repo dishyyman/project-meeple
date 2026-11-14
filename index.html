@@ -12,15 +12,20 @@
   <!-- Home-screen app. The manifest (name, icons, standalone display) is
        what Android and current iOS read; the apple-* tags are what older
        iOS reads, and the only way to set the status bar style on iOS.
-       black-translucent draws the app UNDER the clock and battery, which is
-       why the top inset must come from env() rather than a fixed 54px.
+       "black", an opaque bar, and NOT black-translucent: on iOS 26 a
+       home-screen app drawn under a translucent status bar is given a
+       viewport about one status-bar height (~60pt) too short, and iOS
+       paints nothing in the strip left at the bottom — it covered the tab
+       bar's labels, and no CSS can reach it (tried: 100vh in standalone).
+       With an opaque bar the app starts below the clock and runs to the
+       bottom edge. Do not switch it back without testing on a device.
        The manifest loads under default-src 'self' in the policy below —
        no new source is needed. -->
   <link rel="manifest" href="manifest.webmanifest">
   <meta name="theme-color" content="#232323">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
   <meta name="apple-mobile-web-app-title" content="Meeple">
   <link rel="apple-touch-icon" href="resources/images/icons/apple-touch-icon.png">
   <link rel="icon" type="image/png" sizes="32x32" href="resources/images/icons/favicon-32.png">

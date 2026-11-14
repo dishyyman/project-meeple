@@ -332,11 +332,14 @@
 /* Full mode: the layout constants become the real screen's safe area.
    In the drawn phone, 54px and 30px are the drawn status bar and home
    indicator. On an actual device those are wherever iOS says they are —
-   about 59px under a Dynamic Island, 47px under a notch, 20px on an SE,
    34px for the home indicator — and env() is how the page asks. (It
    reports anything at all only because index.html sets viewport-fit=cover.)
-   max() keeps a floor for when it reports 0: a desktop window, or Safari
-   in a tab, where the browser's own bars already sit outside the page.
+   The top is 0 on a phone in practice: the home-screen app has an opaque
+   status bar and starts below it (index.html says why), and Safari's own
+   bars sit outside the page. It is still read rather than assumed, for
+   landscape and for any context that does draw under the clock.
+   max() keeps a floor for when it reports 0: a desktop window, Safari in
+   a tab, or the top of the home-screen app.
    Filed here, not in frame.css, because these are tokens: every screen
    reads them and none of them needs to know which mode it is in. */
 :root[data-frame="full"] {

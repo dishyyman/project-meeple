@@ -84,3 +84,13 @@ test('the home-screen manifest and every icon it names resolve', async ({ page, 
     expect(icon.headers()['content-type']).toContain('image/png');
   }
 });
+
+/* Found on a real iPhone (iOS 26), 2026-11-13: with black-translucent, the
+   home-screen app's viewport came up ~60pt short and iOS painted nothing in
+   the strip left at the bottom, covering the tab bar. No emulator shows it,
+   so this guards the one line that caused it (index.html explains). */
+test('the home-screen status bar is opaque, not black-translucent', async ({ page }) => {
+  await openApp(page);
+  const style = await page.locator('meta[name="apple-mobile-web-app-status-bar-style"]').getAttribute('content');
+  expect(style).toBe('black');
+});

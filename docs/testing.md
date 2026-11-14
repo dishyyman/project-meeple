@@ -114,7 +114,7 @@ project-meeple/
     │   ├── dialogs.spec.js    # 7 — dialog markup, focus in/kept/back, Escape, the shell made inert
     │   ├── a11y.spec.js       # 22 — axe on every screen and main modal (Chrome); collapsible tap targets, note state, reduced motion (both)
     │   ├── rules.spec.js      # 1 — Flow 10 (marked known bug, §10)
-    │   ├── frame.spec.js      # 4 — desktop frame: default, toggle remembered, full mode fits, narrow window locks; manifest + icons resolve
+    │   ├── frame.spec.js      # 5 — desktop frame: default, toggle remembered, full mode fits, narrow window locks; manifest + icons resolve; opaque iOS status bar
     │   ├── phone.spec.js      # 5 — iphone project ONLY: fills the screen, no toggle, page never scrolls, tab bar on screen, fields ≥16px
     │   └── security.spec.js   # 10 — Flow 12, hostile ids, CSP, size limit
     └── fixtures/
