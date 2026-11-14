@@ -114,10 +114,11 @@ project-meeple/
     │   ├── compendium.spec.js # 8 — Flow 9; malformed compendiums; launch safety net and its grace period
     │   ├── keyboard.spec.js   # 6 — Enter/Space on custom buttons, Shift+Enter holds
     │   ├── dialogs.spec.js    # 7 — dialog markup, focus in/kept/back, Escape (Cancel on sheets and alerts), the shell made inert
-    │   ├── a11y.spec.js       # 32 — axe on every screen and main modal, incl. the Rest sheet, Downed notice, portrait sheet, the Undo toast, the campaign screens, the Party tab with a hero and its popups (Chrome); collapsible tap targets, note state, reduced motion (both)
+    │   ├── a11y.spec.js       # 33 — axe on every screen and main modal, incl. the Rest sheet, Downed notice, portrait sheet, the Undo toast, the campaign screens, the Party tab with a hero and its popups (Chrome); collapsible tap targets, note state, reduced motion (both)
     │   ├── rules.spec.js      # 1 — Flow 10 (marked known bug, §10)
     │   ├── frame.spec.js      # 5 — desktop frame: default, toggle remembered, full mode fits, narrow window locks; manifest + icons resolve; opaque iOS status bar
     │   ├── phone.spec.js      # 6 — iphone project ONLY: fills the screen, no toggle, page never scrolls (campaign screens too), both tab bars on screen, fields ≥16px, Add a Portrait takes a tap
+    │   ├── enemies.spec.js    # 7 — Flows 16, 17: stat cards made and checked, an enemy crits on a natural 20 only, edit/duplicate/delete, monster files (export, import as copies, refusals, hostile), backups carrying campaigns (restore in place, as copies, campaigns-only)
     │   ├── party.spec.js      # 9 — Flow 15: a file's hero matches the sheet, Armor and Armor Piercing, Wounds and Boons move the defences, downed, a newer file keeps the vitals, several characters ask who, hostile file, typed-in hero edit/notes/remove/reload; the open character and the GM's compendium never change
     │   ├── popups.spec.js     # 6 — sheet / alert / notice: Rest, Advantage, Patch, tick, Downed; every one has a way out; Escape is Cancel
     │   ├── portrait.spec.js   # 5 — Flow 13: real clicks on the sheet's uploader and the Edit frame, the icon menu, Remove → Undo
@@ -185,7 +186,7 @@ Each flow lists the steps and the result that must hold. These are the E2E suite
 **Expected:** "Character exported." toast; the copy is identical with a new id; overwrite replaces in place; portrait, notes, and gear survive.
 
 ### Flow 8 — Back up and restore
-**Steps:** Settings → Export All Characters → delete a character → import the backup.
+**Steps:** Settings → Export Backup → delete a character → import the backup.
 **Expected:** "Backup saved." toast; the restore brings every character back with a result window listing them.
 
 ### Flow 9 — Update content
@@ -211,6 +212,14 @@ Each flow lists the steps and the result that must hold. These are the E2E suite
 ### Flow 15 — The Party (Game Master Tools)
 **Steps:** in a campaign, **From a File** → a player's `.meeple.json`. Tap the hero's Health → Damage 5; again with **Armor Piercing**. Tap their last Wound pip. Add a Condition with the "+". Options → **Update from File** with a newer file. **Add Hero** → type one in → Edit, Notes, Remove.
 **Expected:** the card shows exactly what the player's sheet shows (HP, Wounds, Evasion, Armor, Fortitude, Speed, Boons & Conditions); damage has the hero's Armor taken off unless Armor Piercing is on; a Wound clears Boons and lowers Armor and Speed; the last Wound marks the card Downed with the downed profile; the newer file updates the card and keeps the HP the GM was tracking; a file of several characters asks who is joining; a hostile file's text stays text. The open character's save and the GM's compendium (`meeple.imported-entries`) never change.
+
+### Flow 16 — Enemies (Game Master Tools)
+**Steps:** Enemies tab → **New Enemy** → name, tags (Boss), turns, stats, an attack with bad dice, then good dice → open the card → roll its To-Hit. ⋯ → Edit, Duplicate, Delete. **Export all** → import the file into another campaign, twice.
+**Expected:** a missing name and bad dice are said where they are, and nothing is written until both are right. Closed, the card reads "HP 40 · Evasion 10 · Armor +3 · 2 turns"; open, the Boss tag is red, the stats are the sheet's boxes, and the attacks roll through the sheet's roll card labelled "Ogre Brute · Greatclub". An enemy crits on a natural 20 only — never on the open character's Lethality. A duplicate is "(copy)"; delete asks. The monster file imports as copies (twice = two cards); a character file is refused as "Not a monster file"; a hostile one is text with its bad dice dropped.
+
+### Flow 17 — Backups carry campaigns
+**Steps:** with a campaign, Settings → **Export Backup** → delete the campaign → **Import Backup** → Overwrite Matching; again → Add All as New. Import a backup with campaigns and no characters, from Settings and from the Characters list.
+**Expected:** the backup line counts characters and campaigns; the file keeps `schemaVersion: 1` and carries `campaigns`; restoring in place brings the campaign back under its own id, adding makes a copy under a new one. A campaigns-only backup restores from Settings ("Campaign imported") and is declined by the Characters list's Import.
 
 ### Flow 14 — Campaigns (Game Master Tools)
 **Steps:** Home → **Game Master Tools** → **New Campaign** → name and subtitle → Create. Switch Party / Enemies / Combat. Options → Edit Name. Back to the list → make two more → Edit → reorder with the arrow keys → delete one → reload.
@@ -247,6 +256,7 @@ Each flow lists the steps and the result that must hold. These are the E2E suite
 | Flow 13 (portrait add / adjust / remove → Undo), by real clicks so a covered control fails | `e2e/portrait.spec.js`; the tap on a phone in `e2e/phone.spec.js` |
 | Flow 14 (campaigns: create, rename, tabs, reorder, delete, tampered save, storage refusing writes) | `e2e/campaigns.spec.js` |
 | Flow 15 (the Party: heroes from files and typed in, Armor, Wounds, effects, updates) | `e2e/party.spec.js` |
+| Flows 16, 17 (enemies and monster files; backups carrying campaigns) | `e2e/enemies.spec.js`; the file shapes in `unit/campaign.test.js` |
 | No JavaScript errors during any browser test | `e2e/helpers/test.js` (every test, automatically) |
 | Chrome and Safari (WebKit) | every browser test runs in both |
 | Keyboard: custom buttons, the hold gestures, Wound pips | `e2e/keyboard.spec.js` (real key presses, never `press()`) |

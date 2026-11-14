@@ -457,7 +457,7 @@ Amber sits between the gold and the ember, so it is close to both. **A warning i
 - The one notice that doesn't time out. Up while any character's changes are held in memory because storage refused them (full quota or blocked), or the roster index write failed; down only once every held change has been written. A write that lands for one thing (say, the roster index) doesn't clear it while another character's changes are still held.
 - Shares the toast's column at the foot of the app and its card styling, with an amber border so it doesn't read as something that will go away by itself. A toast stacks above it.
 - Hidden while a modal is open, so it never covers a modal's buttons; back as soon as the modal closes.
-- The card is a button to Settings, where Export All Characters writes a file that needs no browser storage.
+- The card is a button to Settings, where Export Backup writes a file that needs no browser storage.
 - The live region (`role="alert"`) is always in the page and only its text changes, set once on the way into the failing state.
 
 ---

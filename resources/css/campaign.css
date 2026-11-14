@@ -139,3 +139,52 @@
 /* The form is the tallest card in the app: bounded by the frame, and the
    card scrolls rather than pushing Save off the bottom. */
 .modal--hero-form .modal__card { max-height: 100%; overflow-y: auto; }
+
+/* ---- the Enemies tab: stat cards ----
+   The sheet's expandable rows (.collapse, primitives.css): closed, a name and
+   a summary line; open, the whole block. Attacks are the sheet's own gear
+   rows with its own roll boxes (.gear-row, .mini, .val-box), so an enemy's
+   Greatclub reads — and rolls — exactly as a player's weapon does. */
+.enemies { display: flex; flex-direction: column; gap: var(--space-2-5); }
+/* The ⋯ in the row's head: an .icon-btn a size down, like a hero card's. */
+.enemy__more { width: 32px; height: 32px; }
+.enemy__tags { display: flex; flex-wrap: wrap; gap: var(--space-1-5); margin-bottom: var(--space-3); }
+.enemy__tag {
+  padding: var(--space-0-5) var(--space-2);
+  border: 1px solid var(--line-warm); border-radius: var(--r-xs);
+  font-family: var(--font-label); font-size: var(--fs-caption);
+  letter-spacing: 0.1em; text-transform: uppercase; color: var(--gold);
+}
+/* "Boss" is the one tag the GM scans for, so it takes the danger edge. */
+.enemy__tag--boss { border-color: var(--danger-bright); color: var(--danger-bright); }
+.enemy__body .combat-grid { margin-top: 0; }
+.enemy__body .combat-cell__value { font-size: var(--fs-display); }
+.enemy__attacks { display: flex; flex-direction: column; gap: var(--space-2); margin-top: var(--space-3); }
+.enemy__notes {
+  margin: var(--space-3) 0 0; white-space: pre-line;
+  font-family: var(--font-body); font-style: italic; font-size: var(--fs-note);
+  line-height: 1.5; color: var(--ink-muted);
+}
+
+/* ---- the enemy editor ---- */
+.modal--enemy-form .modal__card { max-height: 100%; overflow-y: auto; }
+.enemy-attacks { display: flex; flex-direction: column; gap: var(--space-2-5); }
+/* One attack: name across the top, then to-hit, damage and Armor Piercing,
+   then its note. An inset block, so each reads as one thing among several. */
+.enemy-attack {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--space-2) var(--space-2);
+  padding: var(--space-2-5); border: 1px solid var(--line-soft); border-radius: var(--r-sm);
+  background: var(--bg-inset);
+}
+.enemy-attack .field { margin-bottom: 0; }
+.enemy-attack__nums { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-2); }
+.enemy-attack__wide { grid-column: 1 / -1; }
+.enemy-attack__remove { align-self: end; }
+.enemy-attack__pierce {
+  grid-column: 1 / -1;
+  display: flex; align-items: center; gap: var(--space-2);
+  font-family: var(--font-body); font-size: var(--fs-body); color: var(--ink-soft);
+}
+.enemy-attack__pierce input { width: 20px; height: 20px; margin: 0; accent-color: var(--accent); }
+.enemy-attack__error { grid-column: 1 / -1; margin: 0; }
+.enemy-attack__error[hidden] { display: none; }

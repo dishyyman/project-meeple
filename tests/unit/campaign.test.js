@@ -291,3 +291,65 @@ describe('combat — pick who acts next, round by round', () => {
     assert.equal(C.upNext(combat).some((f) => f.kind === 'enemy'), true);
   });
 });
+
+describe('enemies: duplicates and the monster file', () => {
+  const ogre = () => {
+    const e = C.newEnemy({ name: 'Ogre Brute' }, NOW);
+    Object.assign(e, { turns: 2, tags: ['Boss', 'Large'] });
+    Object.assign(e.stats, { hp: 40, armor: 3, wounds: 2 });
+    e.attacks.push(C.normalizeAttack({ name: 'Greatclub', toHit: 5, damage: '2d8+3', desc: 'Knockback 2' }, new Set()));
+    return e;
+  };
+
+  test('a duplicate is the same monster under fresh ids, and says it is a copy', () => {
+    const a = ogre();
+    const b = C.duplicateEnemy(a, NOW);
+    assert.notEqual(b.id, a.id);
+    assert.notEqual(b.attacks[0].id, a.attacks[0].id);
+    assert.equal(b.name, 'Ogre Brute (copy)');
+    assert.deepEqual([b.stats, b.turns, b.tags, b.attacks[0].damage], [a.stats, a.turns, a.tags, '2d8+3']);
+  });
+
+  test('a monster file round-trips as copies, without device bookkeeping', () => {
+    const a = ogre();
+    const file = C.bestiaryFile([a], { title: 'The Ashen Road', now: NOW });
+    assert.deepEqual(file.meepleBestiary, { schemaVersion: C.BESTIARY_VERSION, exported: '2026-11-13', title: 'The Ashen Road' });
+    assert.equal('rev' in file.enemies[0], false);
+    const back = C.readBestiary(JSON.parse(JSON.stringify(file)), NOW);
+    assert.equal(back.title, 'The Ashen Road');
+    assert.equal(back.enemies.length, 1);
+    const e = back.enemies[0];
+    assert.notEqual(e.id, a.id);                         // a copy, never a claim on the original
+    assert.deepEqual([e.name, e.stats, e.turns, e.attacks[0].damage, e.attacks[0].desc],
+      [a.name, a.stats, a.turns, '2d8+3', 'Knockback 2']);
+  });
+
+  test('what is not a monster file is refused, and why', () => {
+    for (const junk of [null, 42, [], {}, { enemies: [] }, { meepleBestiary: 1, enemies: [] }]) {
+      assert.equal(C.readBestiary(junk, NOW).error, 'shape');
+    }
+    assert.deepEqual(C.readBestiary({ meepleBestiary: { schemaVersion: 99 }, enemies: [{}] }, NOW), { error: 'newer', version: 99 });
+    assert.equal(C.readBestiary({ meepleBestiary: { schemaVersion: 1 }, enemies: ['x', null] }, NOW).error, 'empty');
+  });
+
+  test('a hostile monster file is rebuilt: bad ids replaced, bad dice dropped', () => {
+    const back = C.readBestiary({ meepleBestiary: { schemaVersion: 1 }, enemies: [{
+      id: '"><script>', name: 'x'.repeat(500), stats: { hp: 1e9, evasion: 'high' },
+      attacks: [{ id: 'a"b', name: 'Bite', damage: '1d6+;alert(1)' }], evil: true,
+    }] }, NOW);
+    const e = back.enemies[0];
+    assert.match(e.id, C.SAFE_ID);
+    assert.match(e.attacks[0].id, C.SAFE_ID);
+    assert.equal(e.name.length, C.LIMITS.NAME);
+    assert.deepEqual([e.stats.hp, e.stats.evasion, e.attacks[0].damage, 'evil' in e], [C.LIMITS.STAT, 0, '', false]);
+  });
+
+  test('a campaign restored as a copy gets a fresh id; its insides keep theirs', () => {
+    const c = campaignWith({ enemies: [{ name: 'Goblin' }] });
+    const copy = C.copyCampaign(JSON.parse(JSON.stringify(c)), NOW);
+    assert.notEqual(copy.id, c.id);
+    assert.equal(copy.heroes[0].id, c.heroes[0].id);
+    assert.equal(copy.enemies[0].id, c.enemies[0].id);
+    assert.equal(C.copyCampaign('junk', NOW), null);
+  });
+});

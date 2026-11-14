@@ -341,6 +341,67 @@
     };
   }
 
+  /* A second of an enemy — "Goblin, but bigger". A fresh id for it and for
+     each attack, and "(copy)" on the name so the two can be told apart until
+     the GM renames one. Rebuilt through normalizeEnemy(), like everything. */
+  function duplicateEnemy(enemy, now = nowIso()) {
+    const raw = JSON.parse(JSON.stringify(enemy));
+    raw.id = null;
+    for (const a of arr(raw.attacks)) a.id = null;
+    raw.name = `${str(raw.name, LIMITS.NAME - 7)} (copy)`;
+    const copy = normalizeEnemy(raw, new Set(), now);
+    copy.rev = 1;
+    copy.updated = now;
+    return copy;
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* THE MONSTER FILE — enemies, carried between campaigns and GMs      */
+  /* ------------------------------------------------------------------ */
+  /* The start of the monster compendium (docs/bestiary-file.md):
+
+       { "meepleBestiary": { schemaVersion, exported, title },
+         "enemies": [ …stat blocks, the shape normalizeEnemy() keeps… ] }
+
+     Versioned like the character file, with the same promise: a file is
+     refused only if it is NEWER than this app understands, and every older
+     one stays readable. Pretty-printed JSON, so a GM can read one without
+     the app. */
+  const BESTIARY_VERSION = 1;
+
+  function bestiaryFile(enemies, { title = 'Enemies', now = nowIso() } = {}) {
+    return {
+      meepleBestiary: { schemaVersion: BESTIARY_VERSION, exported: now.slice(0, 10), title: str(title, LIMITS.NAME) },
+      // Without rev/updated: those are facts about one device's copy, not
+      // about the monster, and must not travel as though they were.
+      enemies: arr(enemies).map((e) => {
+        const { rev, updated, ...rest } = e;
+        return JSON.parse(JSON.stringify(rest));
+      }),
+    };
+  }
+
+  /* Read a parsed monster file. Returns { enemies, title } — every enemy a
+     COPY with fresh ids, rebuilt by normalizeEnemy() — or { error } naming
+     what is wrong ('shape', 'newer', 'empty') for the app to put in words.
+     Importing the same file twice gives two copies: a monster file is a
+     catalogue to draw from, not a claim on any card already here. */
+  function readBestiary(raw, now = nowIso()) {
+    const head = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw.meepleBestiary : null;
+    if (!head || typeof head !== 'object' || !Array.isArray(raw.enemies)) return { error: 'shape' };
+    if (Number(head.schemaVersion) > BESTIARY_VERSION) return { error: 'newer', version: Number(head.schemaVersion) };
+    const enemies = raw.enemies.filter((e) => e && typeof e === 'object' && !Array.isArray(e))
+      .slice(0, LIMITS.ENEMIES)
+      .map((e) => {
+        const copy = normalizeEnemy({ ...e, id: null, attacks: arr(e.attacks).map((a) => ({ ...obj(a), id: null })) }, new Set(), now);
+        copy.rev = 1;
+        copy.updated = now;
+        return copy;
+      });
+    if (!enemies.length) return { error: 'empty' };
+    return { enemies, title: str(head.title, LIMITS.NAME) };
+  }
+
   /* ------------------------------------------------------------------ */
   /* COMBAT — who has acted this round                                  */
   /* ------------------------------------------------------------------ */
@@ -498,13 +559,27 @@
     return c;
   }
 
+  /* A campaign from a backup, restored ALONGSIDE what is here rather than
+     over it: the same campaign under a fresh id. Its heroes, enemies and fight
+     keep their own ids — those only have to be unique inside the campaign,
+     and keeping them is what keeps a fight pointing at its fighters. */
+  function copyCampaign(raw, now = nowIso()) {
+    const c = normalizeCampaign(raw, now);
+    if (!c) return null;
+    c.id = newId('cmp');
+    return c;
+  }
+
   const api = {
     LIMITS, SAFE_ID, CONTENT_ID,
     newId, touch,
     // cards and vitals
     normalizeCard, manualCard, enemyCard, freshVitals, normalizeVitals,
     // records
-    newCampaign, normalizeCampaign, newHero, refreshHero, newEnemy, normalizeEnemy, normalizeAttack,
+    newCampaign, normalizeCampaign, copyCampaign, newHero, refreshHero,
+    newEnemy, normalizeEnemy, normalizeAttack, duplicateEnemy,
+    // the monster file
+    BESTIARY_VERSION, bestiaryFile, readBestiary,
     // combat
     startCombat, turnsLeft, canAct, upNext, pick, endTurn, roundOver, nextRound,
   };

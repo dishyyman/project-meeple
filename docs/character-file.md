@@ -219,10 +219,21 @@ share sheet.
 
 ## 4b. Backups — the whole roster in one file
 
-Settings → Backup → **Export All Characters** writes every character on the
+Settings → Backup → **Export Backup** writes every character on the
 device into one file of this same schema, with `characters` holding all of
 them and `entries` the union of everything they reference. Gear two characters
 share is snapshotted once.
+
+**Campaigns ride along** (Game Master Tools): an optional top-level
+`campaigns` array holds every campaign whole, in the shape `database.md` A3b
+describes. Optional, so **no `schemaVersion` bump** (§6): an older app reads the
+characters and ignores the rest. A backup may hold campaigns and no characters
+(a GM's device). On **Import Backup**, each campaign passes through
+`normalizeCampaign()`: **Overwrite Matching / Restore in Place** keeps its id
+(replacing one already here), **Add All as New** gives it a fresh one. A
+campaign storage refuses is taken back and reported, as a character is. The
+Characters list's own Import, and a campaign's "From a File", read characters
+only — a campaigns-only backup is pointed back to Settings.
 
 There is no separate backup format, and that was the point of making
 `characters` an array in v1. One exporter (`characterFile()`, which takes a
@@ -285,7 +296,7 @@ in order to ask a question about it.
 
 ## 5a. Add, or overwrite
 
-A file arriving from Settings → Backup → **Import Characters** is read and
+A file arriving from Settings → Backup → **Import Backup** is read and
 validated first, then the player is asked what to do with it. The question can
 only be put usefully once the file has been read — "this holds four characters,
 three of which you already have" is what makes the answer an informed one — so

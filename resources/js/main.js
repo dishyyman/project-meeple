@@ -650,6 +650,9 @@
     heroNotes: null,             // hero id whose notes are open
     heroDeleting: null,          // hero id awaiting the remove confirmation
     heroFileFor: null,           // hero id an "Update from File" is for, while the picker is open
+    enemyForm: null,             // { id, attacks } while the enemy editor is open; id null = new
+    enemyMenu: null,             // enemy id whose options sheet is open
+    enemyDeleting: null,         // enemy id awaiting the delete confirmation
     // Character creation. `null` when the wizard is not running — the draft is
     // deliberately NOT a half-built entry in the roster, so abandoning creation
     // leaves nothing behind to clean up. See startCreate().
@@ -1859,6 +1862,7 @@
     setText('campaignSub', c.subtitle);
     renderCampaignTabs();
     renderParty();
+    renderEnemies();
   }
 
   const CAMPAIGN_TABS = ['party', 'enemies', 'combat'];
@@ -2221,6 +2225,11 @@
     const read = parseCharacterFile(text, filename);
     if (read.error) { showImportResult({ ok: false, ...read.error }); return; }
     const { file } = read;
+    if (!file.characters.length) {
+      showImportResult({ ok: false, title: 'No characters in that file',
+        text: `${filename} is a backup of campaigns only. Heroes come from a player's character file.` });
+      return;
+    }
     const c = activeCampaign();
     if (!c) return;
 
@@ -2369,6 +2378,341 @@
     c.heroes.splice(at, 1);
     saveCampaign(c);
     renderParty();
+  }
+
+  /* ---- the Enemies tab --------------------------------------------------
+     Stat cards: TEMPLATES. Each goblin in a fight gets its own health in the
+     Combat tab; the card here is what they are all made from. Drawn with the
+     sheet's own expandable rows and roll boxes, so an enemy's Greatclub reads
+     and rolls the way a player's weapon does. */
+  const enemyIn = (c, id) => (c ? c.enemies.find((e) => e.id === id) || null : null);
+  const enemyOf = (el) => {
+    const card = el && el.closest('[data-enemy]');
+    return card ? enemyIn(activeCampaign(), card.dataset.enemy) : null;
+  };
+
+  // "HP 40 · Evasion 10 · Armor +3" — enough, closed, to pick one for a fight.
+  const enemySummary = (e) => [
+    `HP ${e.stats.hp}`, `Evasion ${e.stats.evasion}`, `Armor ${modLabel(e.stats.armor)}`,
+    e.turns > 1 ? `${e.turns} turns` : '',
+  ].filter(Boolean).join(' · ');
+
+  /* An attack row: the sheet's gear row, with the sheet's roll boxes. The
+     boxes carry data-roll-source="enemy", which is what tells the roll card
+     an ENEMY is rolling — no Lethality, so a crit only on a natural 20 — and
+     never the open character. */
+  function enemyAttackRow(e, a) {
+    const label = `${e.name} · ${a.name}`;
+    const box = (roll, value, expr) => `<div class="mini">
+        <span class="mini__label">${roll === 'tohit' ? 'To-Hit' : 'Damage'}</span>
+        <span class="val-box val-box--roll${roll === 'damage' ? ' val-box--dice' : ''}" role="button" tabindex="0"
+              data-roll="${roll}" data-roll-source="enemy" data-roll-label="${esc(label)}" data-roll-expr="${esc(expr)}"${roll === 'tohit' ? ' aria-keyshortcuts="Shift+Enter"' : ''}>${esc(value)}</span>
+      </div>`;
+    const type = [a.piercing ? 'Armor Piercing' : '', a.desc].filter(Boolean).join(' · ');
+    return `<div class="gear-row">
+      <div>
+        <div class="gear-row__name">${esc(a.name)}</div>
+        ${type ? `<div class="gear-row__type">${esc(type)}</div>` : ''}
+      </div>
+      <div class="gear-row__boxes">
+        ${box('tohit', formatMod(a.toHit), `d20${a.toHit < 0 ? '' : '+'}${a.toHit}`)}
+        ${a.damage ? box('damage', a.damage, a.damage) : ''}
+      </div>
+    </div>`;
+  }
+
+  function enemyCardHtml(e) {
+    const stats = [
+      { label: 'Health', value: String(e.stats.hp) },
+      e.stats.mana ? { label: 'Mana', value: String(e.stats.mana) } : null,
+      e.stats.wounds ? { label: 'Wounds', value: String(e.stats.wounds) } : null,
+      { label: 'Evasion', value: String(e.stats.evasion) },
+      { label: 'Armor', value: modLabel(e.stats.armor) },
+      { label: 'Fortitude', value: String(e.stats.fortitude) },
+      { label: 'Speed', value: String(e.stats.speed) },
+    ].filter(Boolean);
+    const tags = e.tags.length ? `<div class="enemy__tags">${e.tags.map((t) =>
+      `<span class="enemy__tag${/^boss$/i.test(t) ? ' enemy__tag--boss' : ''}">${esc(t)}</span>`).join('')}</div>` : '';
+    const turns = e.turns > 1 ? `<p class="enemy__notes">${e.turns} turns a round.</p>` : '';
+    const body = `<div class="enemy__body">${tags}
+      <div class="combat-grid">${stats.map(combatCell).join('')}</div>
+      ${e.attacks.length ? `<div class="enemy__attacks">${e.attacks.map((a) => enemyAttackRow(e, a)).join('')}</div>` : ''}
+      ${turns}${e.notes ? `<p class="enemy__notes">${esc(e.notes)}</p>` : ''}
+    </div>`;
+    const more = `<button class="icon-btn enemy__more" data-enemy-menu aria-label="Options for ${esc(e.name)}">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
+    </button>`;
+    // The row is the sheet's collapsible; [data-enemy] around it tells every
+    // control inside which enemy it belongs to.
+    return `<div data-enemy="${esc(e.id)}">${collapsible({ id: `enemy:${e.id}`, title: e.name, sub: enemySummary(e) }, more, false, body)}</div>`;
+  }
+
+  function renderEnemies() {
+    const c = activeCampaign();
+    const list = c ? c.enemies : [];
+    showBlock('enemiesEmpty', !list.length);
+    const exp = $('[data-enemies-export]');
+    if (exp) exp.hidden = !list.length;
+    fillList('enemies', list.map(enemyCardHtml).join(''));
+  }
+
+  /* ---- the editor ------------------------------------------------------
+     Attack rows live in state.enemyForm.attacks while the form is open, and
+     are read back from the inputs before every add or remove, so a row being
+     typed in is never lost to a repaint. */
+  const enemyField = (k) => $(`[data-enemy-field="${k}"]`);
+  // The app's round trash, at the same 16px the Equipment rows carry it.
+  // (TRASH_SVG itself is scoped inside the inventory renderer.)
+  const ATTACK_TRASH_SVG = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>';
+  const ENEMY_NUMBERS = ['hp', 'mana', 'wounds', 'evasion', 'armor', 'fortitude', 'speed'];
+
+  function enemyAttackFormRow(a, i) {
+    return `<div class="enemy-attack" data-attack-row="${i}">
+      <label class="field"><span class="field__label">Name</span>
+        <input class="field__input" data-attack-field="name" type="text" maxlength="60" value="${esc(a.name)}" placeholder="Greatclub" autocomplete="off"></label>
+      <button class="icon-act icon-act--delete enemy-attack__remove" data-enemy-attack-remove="${i}" aria-label="Remove ${esc(a.name || 'this attack')}">${ATTACK_TRASH_SVG}</button>
+      <div class="enemy-attack__nums">
+        <label class="field"><span class="field__label">To-Hit</span>
+          <input class="field__input" data-attack-field="toHit" type="number" inputmode="numeric" min="-99" max="99" value="${esc(String(a.toHit))}"></label>
+        <label class="field"><span class="field__label">Damage <span class="field__optional">dice</span></span>
+          <input class="field__input" data-attack-field="damage" type="text" maxlength="40" value="${esc(a.damage)}" placeholder="2d8+3" autocomplete="off" spellcheck="false"></label>
+      </div>
+      <label class="enemy-attack__pierce"><input type="checkbox" data-attack-field="piercing"${a.piercing ? ' checked' : ''}> Armor Piercing</label>
+      <label class="field enemy-attack__wide"><span class="field__label">Note <span class="field__optional">optional</span></span>
+        <input class="field__input" data-attack-field="desc" type="text" maxlength="200" value="${esc(a.desc)}" placeholder="Knockback 2, Range 6&hellip;" autocomplete="off"></label>
+      <p class="field__error status status--error enemy-attack__error" data-attack-error="${i}" hidden></p>
+    </div>`;
+  }
+
+  function renderEnemyAttackRows() {
+    const f = state.enemyForm;
+    fillList('enemyAttacks', f ? f.attacks.map(enemyAttackFormRow).join('') : '');
+  }
+
+  // The rows as typed, back into state — before any repaint, and on save.
+  function readEnemyAttackRows() {
+    const f = state.enemyForm;
+    if (!f) return;
+    f.attacks = $$('[data-attack-row]').map((row) => {
+      const v = (k) => row.querySelector(`[data-attack-field="${k}"]`);
+      return {
+        id: f.attacks[Number(row.dataset.attackRow)]?.id || null,
+        name: v('name').value.trim(),
+        toHit: parseInt(v('toHit').value, 10) || 0,
+        damage: v('damage').value.trim(),
+        piercing: v('piercing').checked,
+        desc: v('desc').value.trim(),
+      };
+    });
+  }
+
+  function openEnemyForm(e = null) {
+    const base = window.MEEPLE_MECHANICS.RULES.BASE_STATS;
+    const s = e ? e.stats : { hp: 10, mana: 0, wounds: 0, evasion: 10, armor: base.armor, fortitude: base.fortitude, speed: base.speed };
+    state.enemyForm = {
+      id: e ? e.id : null,
+      attacks: e ? e.attacks.map((a) => ({ ...a })) : [{ id: null, name: '', toHit: 0, damage: '', piercing: false, desc: '' }],
+    };
+    setText('enemyFormTitle', e ? 'Edit Enemy' : 'New Enemy');
+    setText('enemyFormSave', e ? 'Save' : 'Create');
+    enemyField('name').value = e ? e.name : '';
+    enemyField('tags').value = e ? e.tags.join(', ') : '';
+    enemyField('turns').value = String(e ? e.turns : 1);
+    for (const k of ENEMY_NUMBERS) enemyField(k).value = String(s[k] ?? 0);
+    enemyField('notes').value = e ? e.notes : '';
+    $('[data-enemy-error]').hidden = true;
+    renderEnemyAttackRows();
+    app.setAttribute('data-modal', 'enemy-form');
+    enemyField('name').focus();
+  }
+
+  function addEnemyAttackRow() {
+    readEnemyAttackRows();
+    state.enemyForm.attacks.push({ id: null, name: '', toHit: 0, damage: '', piercing: false, desc: '' });
+    renderEnemyAttackRows();
+    $$('[data-attack-row]').pop()?.querySelector('[data-attack-field="name"]')?.focus();
+  }
+
+  function removeEnemyAttackRow(i) {
+    readEnemyAttackRows();
+    state.enemyForm.attacks.splice(i, 1);
+    renderEnemyAttackRows();
+  }
+
+  /* Checked here, said where it happened: a missing name under the form, a
+     damage expression the dice engine refuses under its own row. Nothing is
+     written until all of it is right. */
+  function saveEnemyForm() {
+    const f = state.enemyForm;
+    const c = activeCampaign();
+    if (!f || !c) return;
+    readEnemyAttackRows();
+    const err = $('[data-enemy-error]');
+    const name = enemyField('name').value.trim();
+    if (!name) { err.textContent = 'An enemy needs a name.'; err.hidden = false; enemyField('name').focus(); return; }
+
+    let bad = false;
+    f.attacks.forEach((a, i) => {
+      const line = $(`[data-attack-error="${i}"]`);
+      const problem = a.damage ? validateDice(a.damage) : null;
+      if (line) { line.textContent = problem ? `Damage: ${problem}` : ''; line.hidden = !problem; }
+      if (problem) bad = true;
+    });
+    if (bad) { err.textContent = 'Fix the damage dice marked above.'; err.hidden = false; return; }
+
+    const raw = {
+      id: f.id,
+      name,
+      tags: enemyField('tags').value.split(',').map((t) => t.trim()).filter(Boolean),
+      turns: enemyField('turns').value,
+      stats: Object.fromEntries(ENEMY_NUMBERS.map((k) => [k, enemyField(k).value])),
+      // A row with nothing in it is a row the GM added and did not use.
+      attacks: f.attacks.filter((a) => a.name || a.damage).map((a) => ({ ...a, name: a.name || 'Attack' })),
+      notes: enemyField('notes').value,
+    };
+    const used = new Set(c.enemies.filter((e) => e.id !== f.id).map((e) => e.id));
+    const clean = CMP.normalizeEnemy(raw, used);
+    if (f.id) {
+      const at = c.enemies.findIndex((e) => e.id === f.id);
+      if (at !== -1) { clean.rev = (c.enemies[at].rev || 0); CMP.touch(clean); c.enemies[at] = clean; }
+    } else if (c.enemies.length < CMP.LIMITS.ENEMIES) {
+      clean.rev = 1;
+      c.enemies.push(clean);
+    }
+    closeModal();
+    saveCampaign(c);
+    renderEnemies();
+  }
+
+  /* ---- options: duplicate, export, delete ------------------------------ */
+
+  function openEnemyMenu(e) {
+    state.enemyMenu = e.id;
+    setText('enemyMenuName', e.name);
+    app.setAttribute('data-modal', 'enemy-menu');
+  }
+
+  function copyEnemy(e) {
+    const c = activeCampaign();
+    closeModal();
+    if (!c || c.enemies.length >= CMP.LIMITS.ENEMIES) return;
+    const copy = CMP.duplicateEnemy(e);
+    c.enemies.splice(c.enemies.indexOf(e) + 1, 0, copy);
+    // Opened, so the GM sees which one is the copy.
+    state.open[`enemy:${copy.id}`] = true;
+    saveCampaign(c);
+    renderEnemies();
+  }
+
+  function askDeleteEnemy(e) {
+    state.enemyDeleting = e.id;
+    setText('enemyDelName', e.name);
+    app.setAttribute('data-modal', 'enemy-del');
+  }
+
+  function deleteEnemy() {
+    const c = activeCampaign();
+    const id = state.enemyDeleting;
+    closeModal();
+    if (!c) return;
+    const at = c.enemies.findIndex((e) => e.id === id);
+    if (at === -1) return;
+    c.enemies.splice(at, 1);
+    saveCampaign(c);
+    renderEnemies();
+  }
+
+  /* A monster file: one enemy from its menu, or every enemy from the
+     heading's Export all. Saved, not shared — it is for another campaign or
+     another GM's device, and the browser's download is the one way out that
+     every device has. */
+  /* `whole`: the heading's Export all — named for the CAMPAIGN however many
+     enemies it holds ("the-ashen-road-enemies"), the way a backup is named
+     for when it was taken. One enemy's own Export is named for the enemy. */
+  function exportEnemies(list, title, { whole = false } = {}) {
+    closeModal();
+    if (!list.length) return;
+    const file = CMP.bestiaryFile(list, { title });
+    const blob = new Blob([JSON.stringify(file, null, 2)], { type: 'application/json' });
+    const name = whole ? `${fileSlug(title)}-enemies` : fileSlug(list[0].name);
+    saveBlob(blob, `${name}.meeple.json`);
+    showToast(whole ? `${list.length} ${list.length === 1 ? 'enemy' : 'enemies'} exported.` : 'Monster file saved.');
+  }
+
+  function openEnemiesFilePicker() {
+    const input = $('[data-enemies-file]');
+    if (!input) return;
+    input.value = '';
+    input.click();
+  }
+
+  function readEnemiesFile(input) {
+    const file = input.files && input.files[0];
+    if (!file) return;
+    readMeepleFile(file, (text) => importEnemies(text, file.name));
+  }
+
+  // Every enemy in the file, added as COPIES — a monster file is a catalogue
+  // to draw from, never a claim on a card already here.
+  function importEnemies(text, filename) {
+    const c = activeCampaign();
+    if (!c) return;
+    let raw;
+    try { raw = JSON.parse(text); } catch (_) { raw = null; }
+    const read = CMP.readBestiary(raw);
+    if (read.error) {
+      const msg = {
+        shape: { title: 'Not a monster file', text: `${filename} is not a Meeple monster file. Character files are added from the Party tab.` },
+        newer: { title: 'Made by a newer Meeple', text: `This file is version ${read.version}; this app understands version ${CMP.BESTIARY_VERSION}. Update the app, then import it again.` },
+        empty: { title: 'Nothing to import', text: `${filename} holds no enemies.` },
+      }[read.error];
+      showImportResult({ ok: false, ...msg });
+      return;
+    }
+    const room = CMP.LIMITS.ENEMIES - c.enemies.length;
+    const taken = read.enemies.slice(0, Math.max(0, room));
+    c.enemies.push(...taken);
+    saveCampaign(c);
+    renderEnemies();
+    showToast(taken.length === 1 ? `${taken[0].name} added.` : `${taken.length} enemies added.`);
+  }
+
+  /* ---- campaigns in a backup -------------------------------------------
+     Settings → Backup carries every campaign beside every character, in the
+     same file: `campaigns` is an OPTIONAL array, so an older app reading the
+     file simply ignores it and no version bump is needed
+     (docs/character-file.md §6). On restore, each campaign goes through
+     normalizeCampaign() — the one door in — and:
+       add        — a copy under a fresh id (copyCampaign)
+       overwrite  — same id: replaces the one here, in place; else added
+     A write storage refuses is TAKEN BACK and reported, as a character's is:
+     an import is not play, and holding it would turn "not imported" into an
+     import behind the player's back. */
+  function importBackupCampaigns(list, mode) {
+    const out = { added: [], replaced: [], unsaved: [] };
+    for (const raw of Array.isArray(list) ? list : []) {
+      const c = mode === 'overwrite' ? CMP.normalizeCampaign(raw) : CMP.copyCampaign(raw);
+      if (!c) continue;
+      const at = campaigns.findIndex((x) => x.id === c.id);
+      if (!writeCampaign(c.id, JSON.stringify(c))) { out.unsaved.push(c.name); continue; }
+      heldCampaigns.delete(c.id);
+      if (at !== -1) { campaigns[at] = c; out.replaced.push(c.name); }
+      else { campaigns.push(c); out.added.push(c.name); }
+    }
+    campaignsIndexFailing = !writeCampaignsIndex();
+    settleStorage();
+    renderCampaigns();
+    if (activeCampaign()) renderCampaign();
+    return out;
+  }
+
+  // One sentence for the import window, or ''.
+  function campaignsSentence(out) {
+    const parts = [];
+    if (out.added.length) parts.push(`${nameList(out.added)} ${out.added.length === 1 ? 'was' : 'were'} added to your campaigns.`);
+    if (out.replaced.length) parts.push(`${nameList(out.replaced)} ${out.replaced.length === 1 ? 'was' : 'were'} replaced with the version in the file.`);
+    if (out.unsaved.length) parts.push(`${nameList(out.unsaved)} could not be imported — this browser’s storage is full or blocked.`);
+    return parts.join(' ');
   }
 
   /* ------------------------------------------------------------------ */
@@ -5260,6 +5604,9 @@
     state.heroForm = null;
     state.heroNotes = null;
     state.heroDeleting = null;
+    state.enemyForm = null;
+    state.enemyMenu = null;
+    state.enemyDeleting = null;
     // Same reasoning for the creation slot picker: while this is set, every
     // data-pick row is routed into the draft rather than the live character.
     state.wizPick = null;
@@ -6024,7 +6371,7 @@
        Read off the KEPT die, so a 20 discarded by Disadvantage announces
        nothing and a 19 kept by Advantage announces a crit. */
     const face = isToHit ? attackFace(view, adv) : null;
-    const crit = settled && face !== null && isCrit(face);
+    const crit = settled && face !== null && rollIsCrit(face);
 
     /* Which index in the attack pool survived. -1 for every roll that is not
        a to-hit, and for a straight d20 it is 0 — in both cases nothing is
@@ -6079,11 +6426,17 @@
      the plain 20 every player already knows, and saying so would be the app
      explaining a rule nobody was surprised by. At Lethality 2 a natural 18
      critting needs the explanation, and this is where it is read. */
+  // The crit test for the roll on the card: the player's window, or a
+  // natural 20 for an enemy (see showRoll()).
+  const rollIsCrit = (face) => (state.lastRoll && state.lastRoll.source === 'enemy'
+    ? face >= CRIT_BASE : isCrit(face));
+
   function paintCrit(on) {
     const el = $('[data-crit]');
     if (!el) return;
     el.hidden = !on;
-    const leth = statValue('Lethality');
+    // An enemy's window is always the plain 20 — nothing to explain.
+    const leth = state.lastRoll && state.lastRoll.source === 'enemy' ? 0 : statValue('Lethality');
     setText('critWindow', leth > 0
       ? `Lethality ${leth} · crits on ${critThreshold()}\u2013${CRIT_BASE}`
       : '');
@@ -6116,7 +6469,12 @@
     return g.rolls[keptIndex(g, adv)].v + view.mod;
   }
 
-  function showRoll(label, kind, expr, adv = 0) {
+  /* `source` is 'player' (the open character) or 'enemy' (a stat card in
+     Game Master Tools). It decides one thing: whose Critical Strike window
+     applies. An enemy has no Lethality (designer ruling, 2026-11-13), so it
+     crits on a natural 20 and nothing else — the player's Lethality must
+     never widen a goblin's. */
+  function showRoll(label, kind, expr, adv = 0, source = 'player') {
     // Advantage only ever widens an attack pool. A damage or healing roll with
     // a stray `adv` would silently roll the wrong dice, so it is dropped here
     // rather than trusted from the caller.
@@ -6132,7 +6490,7 @@
 
     // `expr` is stored UNWIDENED, so Reroll can rebuild the pool from the mode
     // rather than widening an already-widened expression into 4d20.
-    state.lastRoll = { label, kind, expr, adv };
+    state.lastRoll = { label, kind, expr, adv, source: source === 'enemy' ? 'enemy' : 'player' };
 
     setText('outSource', label);
     setText('outKind', KIND_LABEL[kind] || 'Roll');
@@ -6202,7 +6560,7 @@
     // What the chooser will roll when a row is picked. Read now, while the box
     // that was held is still in hand — the menu itself has no idea which of
     // the sheet's To-Hit boxes opened it.
-    state.advFor = { label: box.dataset.rollLabel, expr: box.dataset.rollExpr };
+    state.advFor = { label: box.dataset.rollLabel, expr: box.dataset.rollExpr, source: box.dataset.rollSource };
 
     // A sheet now, not a popover hung off the box — so it says in words which
     // roll it is about, where the old menu said it by where it sat.
@@ -6217,7 +6575,7 @@
     const f = state.advFor;
     if (!f) return;
     closeModal();
-    showRoll(f.label, 'tohit', f.expr, adv);
+    showRoll(f.label, 'tohit', f.expr, adv, f.source);
   }
 
   /* ================================================================== */
@@ -6336,11 +6694,13 @@
   /* `ids` is a LIST, and the one-character case is a list of one. The envelope
      already declares `characters` an array for exactly this reason, so a whole
      roster is the same file and the same importer rather than a second format
-     — Settings' Export All Characters and the Personae list's Export are one
+     — Settings' Export Backup and the Personae list's Export are one
      code path, and a backup can be opened by anything that could already open
      a single card. `entries` is the union across everyone in the file, so gear
      two characters share is snapshotted once. */
-  function characterFile(ids, { portrait = true } = {}) {
+  // `allowEmpty`: a backup on a device with campaigns but no characters
+  // still needs the envelope to carry them in.
+  function characterFile(ids, { portrait = true, allowEmpty = false } = {}) {
     // readSave() and readPortrait(), not localStorage: they return a HELD copy
     // where storage refused the latest version, so a file made while storage
     // is failing still carries what the player last saw.
@@ -6353,7 +6713,7 @@
       // the worse answer by far.
       if (stored) list.push({ ...stored, id, portrait: portrait ? readPortrait(id) : null });
     }
-    if (!list.length) return null;
+    if (!list.length && !allowEmpty) return null;
 
     const entries = {};
     for (const c of list) {
@@ -6652,7 +7012,9 @@
     // concerned, and says so now rather than after the player has chosen how
     // to import it.
     const sources = file.characters.filter((c) => c && typeof c === 'object');
-    if (!sources.length) {
+    // A backup from a GM with campaigns and no characters is still a backup.
+    const hasCampaigns = Array.isArray(file.campaigns) && file.campaigns.some((c) => c && typeof c === 'object');
+    if (!sources.length && !hasCampaigns) {
       return { error: { title: 'Nothing to import', text: 'That file holds no characters.' } };
     }
     return { file: { ...file, characters: sources } };
@@ -6661,6 +7023,11 @@
   function importCharacterFile(text, filename) {
     const read = parseCharacterFile(text, filename);
     if (read.error) { showImportResult({ ok: false, ...read.error }); return; }
+    if (!read.file.characters.length) {
+      showImportResult({ ok: false, title: 'No characters in that file',
+        text: `${filename} holds campaigns but no characters. Restore it from Settings → Backup.` });
+      return;
+    }
     // The Characters screen's own Import button ADDS, and never asks. Its
     // comment in index.html says why: you reach for it when you have nothing
     // yet, and an import there is an addition to the list. Restoring over
@@ -6757,7 +7124,10 @@
                     list; one this device has never seen is added under it.
                     Characters the file says nothing about are left alone, so
                     restoring a backup cannot delete work that postdates it. */
-  function importCharacters(file, mode) {
+  // `extra`: a sentence from the same import about something else in the
+  // file (its campaigns), reported in this one window. `extraFailed` turns the
+  // window to its error state the way a refused character does.
+  function importCharacters(file, mode, { extra = '', extraFailed = false } = {}) {
     const head = file.meepleCharacter;
 
     /* Entries first, so the characters below resolve against them. Those the
@@ -6895,9 +7265,10 @@
       sentences.push(`${nameList(unsaved)} could not be imported — this browser’s storage is full or blocked. Delete a portrait or two to make room, then import again.`);
     }
 
+    if (extra) sentences.push(extra);
     showImportResult({
-      ok: !unsaved.length,
-      title: unsaved.length
+      ok: !unsaved.length && !extraFailed,
+      title: unsaved.length || extraFailed
         ? (added.length || replaced.length ? 'Partly imported' : 'Not imported')
         : file.characters.length === 1 ? 'Character imported' : 'Characters imported',
       text: sentences.join(' '),
@@ -7046,9 +7417,12 @@
      decides whether an attachment will send. */
   function renderBackupNote() {
     const count = roster.length;
-    setText('backupNote', count
-      ? `${count} character${count === 1 ? '' : 's'}`
-      : 'No characters yet — nothing to export.');
+    const camps = campaigns.length;
+    const parts = [
+      count ? `${count} character${count === 1 ? '' : 's'}` : '',
+      camps ? `${camps} campaign${camps === 1 ? '' : 's'}` : '',
+    ].filter(Boolean);
+    setText('backupNote', parts.length ? parts.join(' · ') : 'Nothing yet — nothing to export.');
   }
 
   /* The whole roster, in roster order, portraits and all. Photos are NOT
@@ -7056,15 +7430,20 @@
      getting a character through an attachment limit, and this one is a backup
      — a backup that quietly drops every portrait is not a backup. */
   function exportBackup() {
-    if (!roster.length) return;
+    if (!roster.length && !campaigns.length) return;
     /* Unsaved edits belong in the backup — and this is the button the storage
        notice sends the player to, so it is MOST needed exactly when storage
        refuses the save below. That is fine: a refused save is held, and
        characterFile() reads through readSave(), which returns the held copy.
        So the file carries what is on the sheet, written or not. */
     save();
-    const file = characterFile(roster.map((r) => r.id));
+    const file = characterFile(roster.map((r) => r.id), { allowEmpty: true });
     if (!file) return;
+    /* Every campaign, whole, as an OPTIONAL array beside the characters: an
+       older app ignores it, so the file's schemaVersion is unchanged
+       (docs/character-file.md §6). The in-memory copies are the newest —
+       including any storage refused — which is exactly what a backup is for. */
+    if (campaigns.length) file.campaigns = campaigns.map((c) => JSON.parse(JSON.stringify(c)));
     // Named as a backup whatever the count — see backupFilename().
     deliverCharacterFile(file, { via: 'save', name: backupFilename(file) });
     showToast('Backup saved.');
@@ -7360,6 +7739,11 @@
       typeof c.name === 'string' && c.name.trim() ? c.name.trim() : 'Unnamed'
     ));
     const n = names.length;
+    // Campaigns a backup carries (Game Master Tools), counted and matched the
+    // same way: the ones already here are the ones Overwrite would touch.
+    const camps = (Array.isArray(file.campaigns) ? file.campaigns : []).filter((c) => c && typeof c === 'object');
+    const campNames = camps.map((c) => (typeof c.name === 'string' && c.name.trim()) || 'Untitled campaign');
+    const campMatching = camps.filter((c) => typeof c.id === 'string' && campaigns.some((x) => x.id === c.id)).length;
     // Characters in the file that this device already has under the same id —
     // the only ones Overwrite would touch. Counted rather than described in
     // the abstract, because "matching" means nothing until you know whether it
@@ -7369,9 +7753,13 @@
     )).length;
     const head = file.meepleCharacter || {};
 
+    const holds = [n ? nameList(names) : '', camps.length
+      ? `${camps.length === 1 ? 'the campaign' : `${camps.length} campaigns:`} ${nameList(campNames)}` : '']
+      .filter(Boolean).join(n && camps.length ? ', and ' : '');
     askFile({
-      title: n === 1 ? 'Import this character?' : `Import ${n} characters?`,
-      text: `${filename} holds ${nameList(names)}.`,
+      title: !n ? (camps.length === 1 ? 'Import this campaign?' : `Import ${camps.length} campaigns?`)
+        : n === 1 ? 'Import this character?' : `Import ${n} characters?`,
+      text: `${filename} holds ${holds}.`,
       notes: [
         head.exported ? { text: `Exported ${head.exported}.` } : null,
         head.library && head.library.version !== (LIBRARY.meeple?.version)
@@ -7380,17 +7768,39 @@
         matching
           ? { warn: true, text: `${matching} of ${n === 1 ? 'them' : 'these'} ${matching === 1 ? 'is' : 'are'} already on this device. Overwriting replaces ${matching === 1 ? 'that sheet' : 'those sheets'} with the version in the file; adding keeps both copies.` }
           : { text: `Nothing in this file is on this device yet, so nothing can be overwritten. Restoring in place keeps the ids ${n === 1 ? 'it came' : 'they came'} in with, which is what lets a later backup match ${n === 1 ? 'it' : 'them'} up again.` },
+        campMatching
+          ? { warn: true, text: `${campMatching} of the campaigns ${campMatching === 1 ? 'is' : 'are'} already on this device. Overwriting replaces ${campMatching === 1 ? 'it' : 'them'} with the version in the file; adding keeps both copies.` }
+          : null,
         // Said in both cases, because it is the reassurance that makes
         // Overwrite pressable: a restore replaces what the file names and
         // touches nothing else.
-        { text: 'Characters this file says nothing about are left alone either way.' },
+        { text: camps.length
+          ? 'Characters and campaigns this file says nothing about are left alone either way.'
+          : 'Characters this file says nothing about are left alone either way.' },
       ].filter(Boolean),
       actions: [
-        { mode: 'add', label: n === 1 ? 'Add as New' : 'Add All as New' },
-        { mode: 'overwrite', danger: !!matching, label: matching ? 'Overwrite Matching' : 'Restore in Place' },
+        { mode: 'add', label: n + camps.length === 1 ? 'Add as New' : 'Add All as New' },
+        { mode: 'overwrite', danger: !!(matching || campMatching), label: matching || campMatching ? 'Overwrite Matching' : 'Restore in Place' },
       ],
-      run: (mode) => importCharacters(file, mode),
+      run: (mode) => importBackup(file, mode),
     });
+  }
+
+  /* A Settings restore: campaigns first (each written whole, or taken back),
+     then the characters — whose result window carries a sentence about the
+     campaigns too, so one window reports the whole file. */
+  function importBackup(file, mode) {
+    const camps = importBackupCampaigns(file.campaigns, mode);
+    const extra = campaignsSentence(camps);
+    if (file.characters.length) { importCharacters(file, mode, { extra, extraFailed: camps.unsaved.length > 0 }); return; }
+    const any = camps.added.length + camps.replaced.length;
+    showImportResult({
+      ok: !camps.unsaved.length,
+      title: camps.unsaved.length ? (any ? 'Partly imported' : 'Not imported')
+        : any === 1 ? 'Campaign imported' : 'Campaigns imported',
+      text: extra,
+    });
+    renderSettings();
   }
 
   function askCompendiumImport(bag) {
@@ -8763,7 +9173,7 @@
       // processed below never has its own element pulled out from under it.
       if (state.openStat && !e.target.closest('.stat-card')) showStatPop(null);
 
-      const t = e.target.closest('[data-nav],[data-tab],[data-edit-tab],[data-edit-attr],[data-skill-rank],[data-toggle],[data-step],[data-calc],[data-menu],[data-wound],[data-wound-reset],[data-calc-step],[data-calc-apply],[data-action],[data-key],[data-dice-back],[data-dice-roll],[data-roll],[data-roll-again],[data-inv-add],[data-inv-open],[data-item-save],[data-bp-step],[data-bp-edit],[data-bp-delete],[data-mod-add],[data-mod-remove],[data-stat-toggle],[data-effect-open],[data-effect-add],[data-effect-step],[data-effect-tick],[data-effects-clear],[data-tick-confirm],[data-skill-edit],[data-skill-draft],[data-skill-filter],[data-skill-save],[data-detail],[data-gear-add],[data-armor-add],[data-detail-remove],[data-pick],[data-tag],[data-note-add],[data-note-save],[data-note-cancel],[data-note-edit],[data-note-delete],[data-note-del-confirm],[data-portrait-pick],[data-portrait-remove],[data-portrait-menu],[data-rest],[data-patch],[data-patch-confirm],[data-poison-toggle],[data-adv],[data-rules-toggle],[data-id-save],[data-portrait-crop],[data-crop-save],[data-crop-reset],[data-open-character],[data-wiz],[data-wiz-step],[data-wiz-expand],[data-wiz-pick],[data-wiz-attr],[data-wiz-skill],[data-wiz-sec],[data-wiz-slot],[data-wiz-clear],[data-wiz-pick-group],[data-equip-drop],[data-roster-edit],[data-char-del],[data-char-del-confirm],[data-char-export],[data-import-open],[data-share-format],[data-share-send],[data-backup-export],[data-compendium-export],[data-compendium-reset],[data-file-open],[data-file-apply],[data-ap-mode],[data-ap-theme],[data-toast-dismiss],[data-toast-action],[data-campaigns-edit],[data-campaign-new],[data-open-campaign],[data-campaign-del],[data-campaign-del-open],[data-campaign-del-confirm],[data-campaign-tab],[data-campaign-menu],[data-campaign-rename],[data-campaign-save],[data-pierce-toggle],[data-hero-add],[data-hero-import],[data-hero-menu],[data-hero-calc],[data-hero-wound],[data-hero-effect-open],[data-hero-effect-step],[data-hero-edit],[data-hero-update],[data-hero-notes-open],[data-hero-notes-save],[data-hero-remove],[data-hero-del-confirm],[data-hero-save]');
+      const t = e.target.closest('[data-nav],[data-tab],[data-edit-tab],[data-edit-attr],[data-skill-rank],[data-toggle],[data-step],[data-calc],[data-menu],[data-wound],[data-wound-reset],[data-calc-step],[data-calc-apply],[data-action],[data-key],[data-dice-back],[data-dice-roll],[data-roll],[data-roll-again],[data-inv-add],[data-inv-open],[data-item-save],[data-bp-step],[data-bp-edit],[data-bp-delete],[data-mod-add],[data-mod-remove],[data-stat-toggle],[data-effect-open],[data-effect-add],[data-effect-step],[data-effect-tick],[data-effects-clear],[data-tick-confirm],[data-skill-edit],[data-skill-draft],[data-skill-filter],[data-skill-save],[data-detail],[data-gear-add],[data-armor-add],[data-detail-remove],[data-pick],[data-tag],[data-note-add],[data-note-save],[data-note-cancel],[data-note-edit],[data-note-delete],[data-note-del-confirm],[data-portrait-pick],[data-portrait-remove],[data-portrait-menu],[data-rest],[data-patch],[data-patch-confirm],[data-poison-toggle],[data-adv],[data-rules-toggle],[data-id-save],[data-portrait-crop],[data-crop-save],[data-crop-reset],[data-open-character],[data-wiz],[data-wiz-step],[data-wiz-expand],[data-wiz-pick],[data-wiz-attr],[data-wiz-skill],[data-wiz-sec],[data-wiz-slot],[data-wiz-clear],[data-wiz-pick-group],[data-equip-drop],[data-roster-edit],[data-char-del],[data-char-del-confirm],[data-char-export],[data-import-open],[data-share-format],[data-share-send],[data-backup-export],[data-compendium-export],[data-compendium-reset],[data-file-open],[data-file-apply],[data-ap-mode],[data-ap-theme],[data-toast-dismiss],[data-toast-action],[data-campaigns-edit],[data-campaign-new],[data-open-campaign],[data-campaign-del],[data-campaign-del-open],[data-campaign-del-confirm],[data-campaign-tab],[data-campaign-menu],[data-campaign-rename],[data-campaign-save],[data-pierce-toggle],[data-hero-add],[data-hero-import],[data-hero-menu],[data-hero-calc],[data-hero-wound],[data-hero-effect-open],[data-hero-effect-step],[data-hero-edit],[data-hero-update],[data-hero-notes-open],[data-hero-notes-save],[data-hero-remove],[data-hero-del-confirm],[data-hero-save],[data-enemy-new],[data-enemies-import],[data-enemies-export],[data-enemy-menu],[data-enemy-edit],[data-enemy-dup],[data-enemy-export],[data-enemy-remove],[data-enemy-del-confirm],[data-enemy-save],[data-enemy-attack-add],[data-enemy-attack-remove]');
       if (!t) return;
       /* The app root is STATE, never a control. It carries data-view, data-tab,
          data-edit-tab, data-campaign-tab, data-menu and data-modal so the stylesheet can switch on
@@ -8873,14 +9283,14 @@
         // tally uses, for the same reason.
         advHoldCancel();
         if (advHold.fired) { advHold.fired = false; return; }
-        showRoll(t.dataset.rollLabel, t.dataset.roll, t.dataset.rollExpr);
+        showRoll(t.dataset.rollLabel, t.dataset.roll, t.dataset.rollExpr, 0, t.dataset.rollSource);
         return;
       }
       if (t.hasAttribute('data-roll-again')) {
         const r = state.lastRoll;
         // Same mode as well as the same expression: rerolling a roll made with
         // Advantage is still a roll made with Advantage.
-        if (r) showRoll(r.label, r.kind, r.expr, r.adv);
+        if (r) showRoll(r.label, r.kind, r.expr, r.adv, r.source);
         return;
       }
 
@@ -8926,6 +9336,33 @@
         else if (t.hasAttribute('data-hero-update')) openHeroFilePicker(h.id);
         else if (t.hasAttribute('data-hero-notes-open')) openHeroNotes(h);
         else askRemoveHero(h);
+        return;
+      }
+      // --- Game Master Tools: the Enemies tab ---
+      if (t.hasAttribute('data-enemy-new'))          { openEnemyForm(null); return; }
+      if (t.hasAttribute('data-enemies-import'))     { openEnemiesFilePicker(); return; }
+      if (t.hasAttribute('data-enemies-export')) {
+        const c = activeCampaign();
+        if (c) exportEnemies(c.enemies, c.name, { whole: true });
+        return;
+      }
+      if (t.hasAttribute('data-enemy-save'))         { saveEnemyForm(); return; }
+      if (t.hasAttribute('data-enemy-attack-add'))   { addEnemyAttackRow(); return; }
+      if (t.dataset.enemyAttackRemove !== undefined) { removeEnemyAttackRow(parseInt(t.dataset.enemyAttackRemove, 10)); return; }
+      if (t.hasAttribute('data-enemy-del-confirm'))  { deleteEnemy(); return; }
+      if (t.hasAttribute('data-enemy-menu')) {
+        const e = enemyOf(t);
+        if (e) openEnemyMenu(e);
+        return;
+      }
+      // From an enemy's options sheet: the enemy it was opened for.
+      if (t.matches('[data-enemy-edit],[data-enemy-dup],[data-enemy-export],[data-enemy-remove]')) {
+        const e = enemyIn(activeCampaign(), state.enemyMenu);
+        if (!e) { closeModal(); return; }
+        if (t.hasAttribute('data-enemy-edit')) openEnemyForm(e);
+        else if (t.hasAttribute('data-enemy-dup')) copyEnemy(e);
+        else if (t.hasAttribute('data-enemy-export')) exportEnemies([e], e.name);
+        else askDeleteEnemy(e);
         return;
       }
       // On a hero card: the hero is the card's own [data-hero].
@@ -9365,6 +9802,8 @@
     // The attribute dropdowns report through change, not click, so they need
     // their own delegated listener.
     app.addEventListener('change', (e) => {
+      const enemiesPicker = e.target.closest('[data-enemies-file]');
+      if (enemiesPicker) { readEnemiesFile(enemiesPicker); return; }
       const heroPicker = e.target.closest('[data-hero-file]');
       if (heroPicker) { readHeroFile(heroPicker); return; }
       const picker = e.target.closest('[data-import-file]');

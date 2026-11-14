@@ -340,7 +340,7 @@ project-meeple/              # repo root = site root (GitHub Pages serves it as-
 
 | What happens if… | Expected behavior | Today |
 |---|---|---|
-| **Storage is unavailable or full** | The device keeps the character in memory so play continues; the player is told when something won't persist. | Built. A refused save keeps play going in memory and raises a standing alert (with a route to Export All Characters) until a later write lands; "Character saved." is only shown for a save that landed. An import storage refuses is undone and reported as not imported. A portrait that won't fit is kept on screen with a message. Corrupt stored data falls back to defaults rather than crashing. |
+| **Storage is unavailable or full** | The device keeps the character in memory so play continues; the player is told when something won't persist. | Built. A refused save keeps play going in memory and raises a standing alert (with a route to Export Backup) until a later write lands; "Character saved." is only shown for a save that landed. An import storage refuses is undone and reported as not imported. A portrait that won't fit is kept on screen with a message. Corrupt stored data falls back to defaults rather than crashing. |
 | **Database (server) is unavailable** | The device holds the character; it syncs when the player next connects. | **Open** — no server yet. Local-first design already covers the "device holds it" half. |
 | **API times out** | A refresh is offered. | **Open** — no API yet. |
 | **A third-party service fails** | A notice is shown; everything that doesn't depend on it keeps working. | Google Fonts failing falls back to system serif fonts. Nothing else is third-party yet. |

@@ -239,11 +239,11 @@ A place for a GM to run a game: campaigns holding a party of heroes, enemy stat 
 - **Enemies:** stat cards — HP, Mana (optional), Wounds (optional), Evasion, Armor, Fortitude, Speed, turns per round, attacks and abilities with roll boxes. Import and export, toward a future monster compendium.
 - **Combat:** choose the enemies (a group can share one turn), optionally a surprise round. Pick who acts next from those with turns left; end their turn; a new round resets everyone. Damage takes Armor off automatically, with an Armor Piercing toggle.
 
-**Build phases** — 0 groundwork (rules split into hero card + vitals, `campaign.js`) *(done)*, 1 campaign list and shell *(done)*, 2 Party *(done)*, 3 Enemies, 4 Combat.
+**Build phases** — 0 groundwork (rules split into hero card + vitals, `campaign.js`) *(done)*, 1 campaign list and shell *(done)*, 2 Party *(done)*, 3 Enemies, monster files and campaigns in backups *(done)*, 4 Combat.
 
 **Party, as built:** heroes from a character file (the file's content snapshot is borrowed for the calculation, never added to the GM's compendium) or typed in. Damage the GM enters takes the hero's Armor off automatically, with an Armor Piercing toggle (designer ruling, 2026-11-13); the player's own calculator still takes the number that lands. Not on a hero card yet: Patches, and effect tick buttons — the GM enters a Bleed tick as damage.
 
-**Not yet:** campaigns are not in Settings → Backup, and there is no campaign file to export — both belong with Phase 3's enemy import/export.
+**Enemies, as built:** stat cards (HP, optional Mana and Wounds, Evasion, Armor, Fortitude, Speed, turns a round, attacks with to-hit and damage dice) that roll through the sheet's roll card; an enemy crits on a natural 20 only. Edit, duplicate, delete. Monster files (`bestiary-file.md`) export and import as copies — the start of a monster compendium. Settings → Backup carries every campaign (`character-file.md` §4b).
 
 **Acceptance Criteria**
 - A hero's numbers on the GM's screen equal the player's sheet for the same state (`unit/mechanics.test.js`, "the hero card").

@@ -53,8 +53,29 @@
                  accept=".json,application/json" tabindex="-1" aria-hidden="true">
         </div>
         <div class="camp-page camp-page--enemies" role="tabpanel" aria-label="Enemies">
-          <div class="rule"><span class="rule__label">&#10022; Enemies &#10022;</span></div>
-          <p class="camp-empty">No enemies yet. Their stat cards will live here.</p>
+          <!-- The heading carries Export, the one action on the WHOLE list —
+               the Boons & Conditions heading's Clear all, same place, same
+               look. Hidden with nothing to export. -->
+          <div class="rule">
+            <span class="rule__label">&#10022; Enemies &#10022;</span>
+            <button class="rule__action" data-enemies-export hidden>Export all</button>
+          </div>
+          <p class="camp-empty" data-block="enemiesEmpty">No enemies yet. Make a stat card, or import a monster file from another campaign or GM.</p>
+          <!-- One stat card per enemy, painted by renderEnemies(): the sheet's
+               expandable rows — a summary line closed, the whole block open,
+               attacks with the sheet's own roll boxes. A stat card is a
+               TEMPLATE: each goblin in a fight gets its own health there. -->
+          <div class="enemies" data-list="enemies"></div>
+          <div class="party-add">
+            <button class="btn-dashed" data-enemy-new>
+              <svg class="plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="M12 5v14"/></svg><span>New Enemy</span>
+            </button>
+            <button class="btn-dashed" data-enemies-import>
+              <svg class="btn-dashed__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V3"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/></svg><span>Import</span>
+            </button>
+          </div>
+          <input class="visually-hidden" type="file" data-enemies-file
+                 accept=".json,application/json" tabindex="-1" aria-hidden="true">
         </div>
         <div class="camp-page camp-page--combat" role="tabpanel" aria-label="Combat">
           <div class="rule"><span class="rule__label">&#10022; Combat &#10022;</span></div>
