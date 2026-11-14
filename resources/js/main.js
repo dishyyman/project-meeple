@@ -4192,8 +4192,14 @@
   }
 
   function wireSwipe() {
+    /* Only where the swipe is on at all. The touchmove listener below cannot
+       be passive (it has to stop the page scrolling under a swipe), and a
+       non-passive listener makes the browser wait on it before every scroll
+       — a cost no browser tab should pay for a gesture it never uses. A
+       home-screen install cannot become a tab, so deciding once is enough. */
+    if (!swipeAllowed()) return;
     app.addEventListener('touchstart', (e) => {
-      if (!swipeAllowed() || swipe.busy || e.touches.length !== 1 || swipeBlocked()) return;
+      if (swipe.busy || e.touches.length !== 1 || swipeBlocked()) return;
       const t = e.touches[0];
       const r = app.getBoundingClientRect();
       if (t.clientX - r.left > SWIPE_EDGE) return;
