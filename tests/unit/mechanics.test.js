@@ -544,3 +544,168 @@ describe('§2.10 and effect arithmetic', () => {
     assert.deepEqual(ch.effects, []);
   });
 });
+
+/* ===================================================================== */
+/* The hero card — every derived stat split into a BUILD half (heroCard) */
+/* and a STATE half (vitals). A Game Master's copy of a hero is a card   */
+/* plus vitals and nothing else, so the two routes must agree exactly:   */
+/* whatever the player's sheet shows, the GM's copy shows too.           */
+/* ===================================================================== */
+
+describe('the hero card', () => {
+  // The shared fixture has no effect that moves Dexterity, Fortune or
+  // Constitution — the three that reach a defence or the health pool — so
+  // this engine adds one of each, to prove the card leaves them to vitals.
+  const MORE = {
+    ...EFFECTS,
+    'boon.grace': { id: 'boon.grace', kind: 'boon', mod: { stat: 'Dexterity', value: 1 } },
+    'boon.luck':  { id: 'boon.luck',  kind: 'boon', mod: { stat: 'Fortune', value: 1 } },
+    'boon.vigor': { id: 'boon.vigor', kind: 'boon', mod: { stat: 'Constitution', value: 2 } },
+  };
+  const E = create({
+    subclassOf: (id) => SUBCLASSES[id] || null,
+    itemOf: (id) => ITEMS[id] || null,
+    effectById: (id) => MORE[id] || null,
+  });
+  const V = E.vitals;
+
+  // Just the five fields a vitals record carries, copied off a character.
+  const vitalsOf = (ch) => JSON.parse(JSON.stringify({
+    health: ch.health, mana: ch.mana, wounds: ch.wounds, patches: ch.patches, effects: ch.effects,
+  }));
+
+  // Characters in every state that moves a number: gear, attributes,
+  // carried items (including a Constitution penalty past the floor),
+  // Wounds, every effect that touches a defence or the pool, downed, and a
+  // sheet with no class yet.
+  const fx = (pairs) => pairs.map(([id, stacks]) => ({ id, stacks }));
+  const CASES = {
+    'plain': char(),
+    'geared, with attributes': char({ armorWorn: 'armor.light', hands: [{ id: 'shield.armor' }],
+      stats: { Dexterity: 2, Fortune: 1, Constitution: 1 }, health: 11 }),
+    'carried items': char({ inventory: [{ id: 'i1', mods: [{ stat: 'Dexterity', value: 2 }, { stat: 'Constitution', value: 3 }] }],
+      health: 13 }),
+    'heavy armour, wounded': char({ armorWorn: 'armor.heavy', wounds: 2, health: 6 }),
+    'every effect on': char({ health: 9, effects: fx([['boon.grace', 2], ['boon.luck', 1], ['boon.vigor', 1],
+      ['boon.protection', 3], ['condition.chill', 1], ['condition.slow', 2], ['condition.vulnerable', 4]]) }),
+    'Constitution below the floor': char({ inventory: [{ id: 'i2', mods: [{ stat: 'Constitution', value: -20 }] }],
+      effects: fx([['boon.vigor', 1]]), health: 1 }),
+    'downed': char({ wounds: 4, health: 0, armorWorn: 'armor.light', stats: { Dexterity: 3, Fortune: 2 },
+      hands: [{ id: 'shield.evasion' }], effects: fx([['boon.grace', 1], ['condition.slow', 1]]) }),
+    'multiclass': char({ build: { origin: 'sc.alpha', levels: ['sc.beta', 'sc.beta'] }, health: 12, mana: 4 }),
+    'no class yet': char({ build: { origin: null, levels: [] }, health: 0, mana: 0, patches: 0 }),
+  };
+
+  for (const [name, ch] of Object.entries(CASES)) {
+    test(`every readout agrees with the full character — ${name}`, () => {
+      const card = E.heroCard(ch);
+      const v = vitalsOf(ch);
+      const full = [E.healthMax(ch), E.manaMax(ch), E.woundsMax(ch), E.patchesMax(ch), E.isDowned(ch),
+        E.evasion(ch), E.armor(ch), E.fortitude(ch), E.speed(ch)];
+      const split = [V.healthMax(card, v), V.manaMax(card), V.woundsMax(card), V.patchesMax(card), V.isDowned(card, v),
+        V.evasion(card, v), V.armor(card, v), V.fortitude(card, v), V.speed(card, v)];
+      assert.deepEqual(split, full);
+    });
+  }
+
+  // Each play rule, run both ways from the same starting point: the
+  // character and its vitals must end in the same place, and say the same.
+  const PLAYS = [
+    ['a small hit', (e, ...a) => e.damage(...a, 'health', 3)],
+    ['a hit through several Wounds', (e, ...a) => e.damage(...a, 'health', 25)],
+    ['a hit that downs', (e, ...a) => e.damage(...a, 'health', 99)],
+    ['Mana spent', (e, ...a) => e.damage(...a, 'mana', 4)],
+    ['healing past the top', (e, ...a) => e.heal(...a, 'health', 50)],
+    ['a Wound set by hand', (e, ...a) => e.setWounds(...a, 2)],
+    ['a short rest', (e, ...a) => e.rest(...a, 'short')],
+    ['a long rest', (e, ...a) => e.rest(...a, 'long')],
+    ['a Patch', (e, ...a) => e.spendPatch(...a)],
+    ['a Bleed tick', (e, ...a) => e.applyTick(...a, 'condition.bleed')],
+  ];
+  for (const [play, run] of PLAYS) {
+    test(`play rules agree — ${play}`, () => {
+      const start = char({ health: 6, wounds: 1, mana: 8, armorWorn: 'armor.light',
+        effects: fx([['boon.vigor', 1], ['boon.protection', 1], ['condition.bleed', 2]]) });
+      const ch = JSON.parse(JSON.stringify(start));
+      const card = E.heroCard(start);
+      const v = vitalsOf(start);
+      const outFull = run(E, ch);
+      const outSplit = run(V, card, v);
+      assert.deepEqual(outSplit, outFull);
+      assert.deepEqual(v, vitalsOf(ch));
+    });
+  }
+
+  test('the card is plain data: it survives a file or a network unchanged', () => {
+    const card = E.heroCard(CASES['geared, with attributes']);
+    assert.deepEqual(JSON.parse(JSON.stringify(card)), card);
+  });
+
+  test('the card leaves Wounds and effects out — they belong to the vitals', () => {
+    const plain = E.heroCard(char());
+    const loaded = E.heroCard(CASES['every effect on']);
+    assert.deepEqual(loaded.build, plain.build);
+    assert.equal(loaded.healthBase, plain.healthBase);
+  });
+});
+
+describe('an enemy is a card plus vitals', () => {
+  const V = M.vitals;
+  // Enemies have no gear and no build: their base IS their build.
+  const enemy = (wounds = 0) => {
+    const block = { evasion: 10, armor: 3, fortitude: 8, speed: 4 };
+    return { healthBase: 20, manaMax: 6, woundsMax: wounds, patchesMax: 0, base: block, build: { ...block } };
+  };
+  const vitals = (over = {}) => ({ health: 20, mana: 6, wounds: 0, patches: 0, effects: [], ...over });
+
+  test('with no Wounds: one bar, and emptying it downs them', () => {
+    const c = enemy(), v = vitals();
+    assert.deepEqual(V.damage(c, v, 'health', 8), { downed: false, boonsLost: 0 });
+    assert.equal(v.health, 12);
+    assert.equal(V.damage(c, v, 'health', 30).downed, true);
+    assert.deepEqual([v.health, v.wounds, V.isDowned(c, v)], [0, 0, true]);
+  });
+
+  test('downed, an enemy drops to its base profile like a hero does', () => {
+    const c = enemy(), v = vitals({ health: 0 });
+    assert.deepEqual([V.evasion(c, v), V.armor(c, v), V.fortitude(c, v), V.speed(c, v)], [10, 0, 8, 0]);
+  });
+
+  test('with Wounds: the same cascade as a hero', () => {
+    const c = enemy(2), v = vitals({ health: 5 });
+    V.damage(c, v, 'health', 9);          // 5 empties the bar → Wound 1, refill, 4 over
+    assert.deepEqual([v.health, v.wounds, V.isDowned(c, v)], [16, 1, false]);
+    assert.equal(V.armor(c, v), 3 - 2);   // each Wound is −2 Armor for an enemy too
+    V.damage(c, v, 'health', 99);
+    assert.deepEqual([v.health, v.wounds, V.isDowned(c, v)], [0, 2, true]);
+  });
+
+  test('healing a downed enemy with no Wounds stands it back up', () => {
+    const c = enemy(), v = vitals({ health: 0 });
+    V.heal(c, v, 'health', 5);
+    assert.equal(V.isDowned(c, v), false);
+  });
+});
+
+describe('Armor against a hit', () => {
+  const { damageAfterArmor } = require('../../resources/js/mechanics.js');
+
+  test('Armor takes its rating off the hit, never below zero', () => {
+    assert.equal(damageAfterArmor(5, 2), 3);
+    assert.equal(damageAfterArmor(2, 5), 0);
+    assert.equal(damageAfterArmor(4, 0), 4);
+  });
+
+  test('negative Armor adds to the hit (Wounds, Vulnerable)', () => {
+    assert.equal(damageAfterArmor(5, -2), 7);
+  });
+
+  test('Armor Piercing ignores Armor entirely', () => {
+    assert.equal(damageAfterArmor(5, 4, true), 5);
+    assert.equal(damageAfterArmor(5, -2, true), 5);
+  });
+
+  test('junk amounts deal nothing', () => {
+    for (const bad of [0, -3, 'abc', null]) assert.equal(damageAfterArmor(bad, 1), 0);
+  });
+});

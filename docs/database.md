@@ -32,6 +32,8 @@
 | `meeple.library` | device | A compendium installed in place of the built-in one (`library-schema.md`) |
 | `meeple.imported-entries` | device | Content entries that filled gaps, from an imported character or a compendium Add |
 | `meeple.account` | device | Placeholder `{ signedIn, name }` — no real account behind it |
+| `meeple.campaigns` | device | *(Game Master Tools — written from its Phase 1)* `{ ids: [...], activeId }`, the campaign list, as `meeple.roster` is for characters |
+| `meeple.campaign.<id>` | campaign | *(Game Master Tools)* One campaign: heroes, enemies, the fight in progress (A3b) |
 | `meeple:frame` | device | Preview frame preference (`phone` / `full`). Desktop only — on a phone the app is always full and this is ignored, not overwritten |
 
 **Not stored, by design:**
@@ -51,6 +53,19 @@ The shape `save()` writes — documented field by field in `character-file.md` �
 | Spent resources | `health`, `mana`, `wounds`, `patches` | What's *left*, never the maximum |
 | Abilities | `abilities[] { id, kind, title, dmg / heal, toHit, cost { ap, rp, mana }, desc }`, `passives[] { id, title, desc }` | Player-authored for now; may become compendium content (`character-file.md` §7) |
 | Play | `effects[]` (Boons/Conditions with stacks), `notes[] { id, title, body, created }` | |
+
+## A3b. The campaign record (Game Master Tools)
+
+Built and checked by `campaign.js` — `newCampaign()`, and `normalizeCampaign()` on every read. Every record carries `id` (random token), `rev` (change counter) and `updated` (ISO time), for a later sync (`architecture.md` Decision 12).
+
+| Part | Fields | Notes |
+|---|---|---|
+| Campaign | `id`, `name`, `subtitle`, `created`, `rev`, `updated` | No "one-shot / campaign" type and no session count — the GM writes either in the subtitle |
+| Hero | `id`, `characterId`, `source` (`file`/`manual`), `name`, `label`, `card`, `vitals`, `notes` | `characterId` is the player's own id, so a newer file updates the hero instead of adding a second |
+| Card | `healthBase` (null = no class), `manaMax`, `woundsMax`, `patchesMax`, `base { evasion, armor, fortitude, speed }`, `build { … }` | The build half of every derived stat, from the player's device (`mechanics.js` `heroCard()`). Stored, not derived, on purpose: the GM's device has no build to derive it from |
+| Vitals | `health`, `mana`, `wounds`, `patches`, `effects[] { id, stacks }` | Changed only through `mechanics.js` `vitals` rules |
+| Enemy | `id`, `name`, `tags[]`, `turns`, `stats { hp, mana, wounds, evasion, armor, fortitude, speed }`, `attacks[] { id, name, toHit, damage, piercing, mana, tags[], desc }`, `notes` | Shaped as a future monster-compendium entry; a campaign keeps its own copy. Empty `wounds` = one HP bar, downed at 0 |
+| Fight | `round`, `surprise`, `current`, `fighters[] { id, kind, heroId / enemyId, turns, taken, members[] { id, n, vitals } }` | A group sharing one turn is one fighter with several members, each with its own vitals |
 
 ## A4. Relationships
 
@@ -204,7 +219,21 @@ users ──1:many──► characters ──1:0..1──► portrait (object st
                       └──references by id──► compendium (not in the database)
 ```
 
-One user can have many characters. A character belongs to exactly one user. **Open:** GM hub relationships (a party or campaign that players' characters join; a GM who can *read* but not edit them).
+One user can have many characters. A character belongs to exactly one user.
+
+**Proposed for live campaigns** (`architecture.md` Decision 12 — nothing built):
+
+```text
+users ──1:many──► campaigns (as GM)
+campaigns ──1:many──► campaign_members ◄──many:1── users
+campaign_members ──0..1──► characters         (the hero a player joined with)
+campaigns ──1:many──► campaign_enemies        (the GM's copies)
+campaigns ──1:0..1──► fights
+campaigns ──1:many──► invite_codes            (short, revocable, rate-limited)
+```
+
+- A **member's card** is written by the player's device only; **vitals** by the player or the GM, as operations applied in order; **notes, enemies and fights** by the GM only.
+- Assumed visibility: members see each other's vitals, not enemy stats. **Open.**
 
 ## B5. Constraints — proposed
 
@@ -277,5 +306,5 @@ Additional: **the device stays the primary store** (`prd.md` §8), so a server-s
 5. Should a server host the latest compendium (B3)?
 6. How are edits to the same character on two devices reconciled — last write wins, `revision` check with a prompt, or merge (B3, B9)?
 7. Soft delete with a recovery window, or hard delete (B8)?
-8. GM hub data model: parties/campaigns and read access (B4)?
+8. GM hub: confirm the proposed live-campaign model and visibility (B4, `architecture.md` Decision 12)?
 9. Retention and account deletion (B10, `security.md`).

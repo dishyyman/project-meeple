@@ -99,7 +99,8 @@ project-meeple/
     ├── serve.mjs            # tiny static server (Node's http, no dependency)
     ├── unit/                # node --test
     │   ├── dice.test.js       # 17 — arithmetic, limits, refusals, never eval
-    │   ├── mechanics.test.js  # 67 — every rules-gaps §6 rule + §7 rulings
+    │   ├── mechanics.test.js  # 96 — every rules-gaps §6 rule + §7 rulings; the hero card agrees with the full character; enemies; Armor
+    │   ├── campaign.test.js   # 26 — GM Tools: records, the normalizer vs junk and hostile input, enemies through the vitals rules, turn tracking
     │   ├── content.test.js    #  7 — the real compendium vs the guide
     │   └── library-check.test.js # 14 — the compendium/entry shape check
     ├── e2e/                 # Playwright — every test runs in Chrome AND Safari
@@ -111,11 +112,13 @@ project-meeple/
     │   ├── data-safety.spec.js # 19 — Flows 6, 7, 7b, 7c (full round trip), 8, 11; storage refusing writes; held changes; import outcomes; old saves
     │   ├── compendium.spec.js # 8 — Flow 9; malformed compendiums; launch safety net and its grace period
     │   ├── keyboard.spec.js   # 6 — Enter/Space on custom buttons, Shift+Enter holds
-    │   ├── dialogs.spec.js    # 7 — dialog markup, focus in/kept/back, Escape, the shell made inert
-    │   ├── a11y.spec.js       # 22 — axe on every screen and main modal (Chrome); collapsible tap targets, note state, reduced motion (both)
+    │   ├── dialogs.spec.js    # 7 — dialog markup, focus in/kept/back, Escape (Cancel on sheets and alerts), the shell made inert
+    │   ├── a11y.spec.js       # 26 — axe on every screen and main modal, incl. the Rest sheet, Downed notice, portrait sheet and the Undo toast (Chrome); collapsible tap targets, note state, reduced motion (both)
     │   ├── rules.spec.js      # 1 — Flow 10 (marked known bug, §10)
     │   ├── frame.spec.js      # 5 — desktop frame: default, toggle remembered, full mode fits, narrow window locks; manifest + icons resolve; opaque iOS status bar
-    │   ├── phone.spec.js      # 5 — iphone project ONLY: fills the screen, no toggle, page never scrolls, tab bar on screen, fields ≥16px
+    │   ├── phone.spec.js      # 6 — iphone project ONLY: fills the screen, no toggle, page never scrolls, tab bar on screen, fields ≥16px, Add a Portrait takes a tap
+    │   ├── popups.spec.js     # 6 — sheet / alert / notice: Rest, Advantage, Patch, tick, Downed; every one has a way out; Escape is Cancel
+    │   ├── portrait.spec.js   # 5 — Flow 13: real clicks on the sheet's uploader and the Edit frame, the icon menu, Remove → Undo
     │   └── security.spec.js   # 10 — Flow 12, hostile ids, CSP, size limit
     └── fixtures/
         ├── files/             # real exports + hostile/malformed files
@@ -199,6 +202,10 @@ Each flow lists the steps and the result that must hold. These are the E2E suite
 **Steps:** import each file in `fixtures/` marked malicious or malformed.
 **Expected:** no script runs; malformed and too-new files are refused with a message naming the problem; nothing already on the device changes.
 
+### Flow 13 — Add, edit and remove a portrait
+**Steps:** on a character with no photo, tap **Add a Portrait** on the sheet → pick a photo. On Edit → Dossier, tap the frame → the portrait menu → **Adjust**; then **Remove Photo** → **Undo** on the toast → reload.
+**Expected:** the sheet's button takes a real tap (nothing stacked over it) and opens the picker. On Edit, an empty frame shows a camera and "Add photo" and goes straight to the picker; a filled one shows a pencil badge and opens the menu — Choose New Photo / Adjust / Remove Photo, each with an icon. Remove takes the photo off at once (screen and storage) and the toast offers Undo for 6 seconds; Undo puts it back exactly, and it survives the reload.
+
 ---
 
 ## 6. Coverage
@@ -211,6 +218,8 @@ Each flow lists the steps and the result that must hold. These are the E2E suite
 |---|---|
 | Dice engine | `unit/dice.test.js` |
 | Every rules-gaps §6 rule and §7 ruling | `unit/mechanics.test.js` |
+| Hero card + vitals give the player sheet's exact numbers; enemies; Armor reduction | `unit/mechanics.test.js` |
+| Campaign records, normalizer, combat turn tracking | `unit/campaign.test.js` |
 | Compendium content vs the guide | `unit/content.test.js` |
 | Compendium / library entry shape check | `unit/library-check.test.js` |
 | Flow 9 (compendium Add/Replace/Restore), malformed compendiums, launch safety net | `e2e/compendium.spec.js` |
@@ -224,6 +233,8 @@ Each flow lists the steps and the result that must hold. These are the E2E suite
 | Screen-reader state of journal notes; reduced motion | `e2e/a11y.spec.js` |
 | Flow 12 (hostile files), CSP, import size limit | `e2e/security.spec.js` |
 | Flow 10 (rules lookup) — written, marked known bug | `e2e/rules.spec.js`, §10 |
+| Popup shapes: sheet, alert, notice — layout, a visible way out, Escape is Cancel, general wording | `e2e/popups.spec.js` |
+| Flow 13 (portrait add / adjust / remove → Undo), by real clicks so a covered control fails | `e2e/portrait.spec.js`; the tap on a phone in `e2e/phone.spec.js` |
 | No JavaScript errors during any browser test | `e2e/helpers/test.js` (every test, automatically) |
 | Chrome and Safari (WebKit) | every browser test runs in both |
 | Keyboard: custom buttons, the hold gestures, Wound pips | `e2e/keyboard.spec.js` (real key presses, never `press()`) |

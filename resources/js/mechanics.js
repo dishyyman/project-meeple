@@ -123,6 +123,27 @@
      one of them. */
   const skillMod = (rank) => rank * R.SKILL_POINT_BONUS;
 
+  /* ---- armor against a hit ---------------------------------------------
+     GAME RULE (guide, Ch.1 "Damage Application" and "Armor"). Damage that
+     lands is the hit minus the target's Armor, never below zero — Armor +2
+     turns a 5 into a 3, and a 2 into nothing. Armor Piercing ignores Armor
+     entirely ("the damage ignores Armor and applies all of the damage").
+
+     NEGATIVE Armor is real and it HURTS: Wounds take 2 each and Vulnerable
+     "can reduce Armor into negative values, taking extra damage", so Armor −2
+     turns a 5 into a 7. Nothing here clamps the Armor itself — only the
+     result.
+
+     Takes plain numbers rather than a target, so the same rule serves a
+     hero card, an enemy and (one day) a player's own calculator. The caller
+     reads Armor through V.armor / armor(), which already knows about Wounds,
+     effects and being downed (downed Armor is 0: the hit lands whole). */
+  const damageAfterArmor = (amount, armorValue, piercing = false) => {
+    const hit = clampInt(amount);
+    if (piercing) return hit;
+    return Math.max(0, hit - Math.trunc(Number(armorValue) || 0));
+  };
+
   /* ------------------------------------------------------------------ */
   /* create() — an engine bound to one compendium                       */
   /* ------------------------------------------------------------------ */
@@ -266,19 +287,16 @@
     // health. The floor applies only once there IS a subclass. Without one
     // the pool is 0 on purpose — a sheet that is not a character yet — which
     // is the same distinction isDowned() draws with its cap guard.
-    const healthMax = (ch) => {
-      const sc = primarySubclass(ch.build);
-      if (!sc) return 0;
-      return Math.max(R.HEALTH_MAX_FLOOR, (sc.hp ?? 0) + statValue(ch, 'Constitution'));
-    };
+    //
+    // The arithmetic itself lives in the VITALS half (V.healthMax, below),
+    // because a Game Master's copy of a hero needs the same rule without the
+    // build behind it. This is the character's door into it.
+    const healthMax  = (ch) => V.healthMax(heroCard(ch), ch);
     const woundsMax  = (ch) => primarySubclass(ch.build)?.wounds ?? 0;
     const patchesMax = (ch) => primarySubclass(ch.build)?.patches ?? 0;
 
-    // DOWNED — derived, never stored. Reaching the Wound cap is the whole
-    // condition, by whatever route; an empty bar is a CONSEQUENCE of it (see
-    // setWounds). The cap guard keeps a sheet with no subclass yet (0 wounds,
-    // 0 cap) from reading as downed before the character exists.
-    const isDowned = (ch) => woundsMax(ch) > 0 && ch.wounds >= woundsMax(ch);
+    // DOWNED — derived, never stored. See V.isDowned for the rule.
+    const isDowned = (ch) => V.isDowned(heroCard(ch), ch);
 
     // "Choose the least restrictive option — the class with more Mana — but
     // Mana pools do not combine." The starting pool is a MAX across the
@@ -364,74 +382,145 @@
       .filter((g) => g.type === 'Shield')
       .reduce((n, g) => n + (g[key] || 0), 0);
 
-    /* ---- downed ------------------------------------------------------
+    /* ---- the four defences ------------------------------------------
+       Each is the build half (heroCard) plus the state half (V.evasion and
+       friends, below), which also owns the downed profile. */
+    const evasion   = (ch) => V.evasion(heroCard(ch), ch);
+    const armor     = (ch) => V.armor(heroCard(ch), ch);
+    const fortitude = (ch) => V.fortitude(heroCard(ch), ch);
+    const speed     = (ch) => V.speed(heroCard(ch), ch);
+
+    /* ================================================================== */
+    /* THE HERO CARD — every derived stat, split in two                   */
+    /* ================================================================== */
+    /* Each derived stat has a part that comes from the BUILD (class, gear,
+       attributes, carried items) and a part that comes from what is
+       HAPPENING (Wounds, Boons and Conditions, being downed). They are
+       computed separately so the second half can run without the first:
+
+         heroCard(ch)    the build half, as plain numbers. Worked out on the
+                         PLAYER'S device, against the player's own
+                         compendium, and carried to a Game Master in a
+                         character file (or, one day, over the network).
+                         The player's device is the authority for these
+                         numbers; a GM's device never recomputes them.
+         V.* (card, v)   the state half, and every play rule, over a small
+                         `v` of { health, mana, wounds, patches, effects }.
+                         A GM's copy of a hero — or an enemy — is a card plus
+                         vitals and nothing else.
+
+       The character's own readouts go through the SAME V functions, with the
+       character itself as `v` (it carries those five fields). So there is one
+       implementation of the Wound cascade, the downed profile and the effect
+       arithmetic, not a player copy and a GM copy. The unit tests prove the
+       two routes agree (mechanics.test.js, "the hero card").
+
+       Why this matters later: when campaigns sync live, the card is what the
+       player's device publishes and the vitals are what both sides change —
+       by named operations (damage, heal, setWounds…), which a server can
+       replay through this very file. Keep it free of DOM and storage. */
+
+    // An attribute from the build and carried items — everything statValue()
+    // counts except active effects, which belong to the vitals half.
+    const statFromBuild = (ch, name) => statBase(ch, name) + statMod(ch, name);
+
+    function heroCard(ch) {
+      const sc = primarySubclass(ch.build);
+      const armour = wornArmor(ch);
+      return {
+        // Before effects AND before the floor: a Constitution boon still has
+        // to be able to lift a pool the floor would otherwise prop up, so the
+        // floor is applied last, in V.healthMax. null — not 0 — for a sheet
+        // with no subclass yet, which has no pool at all.
+        healthBase: sc ? (sc.hp ?? 0) + statFromBuild(ch, 'Constitution') : null,
+        manaMax: manaMax(ch),
+        woundsMax: woundsMax(ch),
+        patchesMax: patchesMax(ch),
+        // The class's own block — what being downed drops Evasion and
+        // Fortitude back to.
+        base: {
+          evasion: baseStat(ch, 'evasion'), armor: baseStat(ch, 'armor'),
+          fortitude: baseStat(ch, 'fortitude'), speed: baseStat(ch, 'speed'),
+        },
+        // Standing, unwounded, with nothing on them. Armour's Evasion and
+        // Speed are MODIFIERS on the base, like its Armor.
+        build: {
+          evasion: baseStat(ch, 'evasion') + (armour?.evasionMod || 0)
+            + statFromBuild(ch, 'Dexterity') + shieldBonus(ch, 'evasionMod'),
+          armor: baseStat(ch, 'armor') + (armour?.armorMod || 0) + shieldBonus(ch, 'armorMod'),
+          fortitude: baseStat(ch, 'fortitude') + statFromBuild(ch, 'Fortune'),
+          speed: baseStat(ch, 'speed') + (armour?.speedMod || 0),
+        },
+      };
+    }
+
+    /* ================================================================== */
+    /* VITALS — the state half, and every play rule                       */
+    /* Each takes (card, v). Play rules CHANGE `v` in place.              */
+    /* ================================================================== */
+    const V = {};
+
+    // Constitution is +1 HP per point; carried items are already in the
+    // card's healthBase, active effects are added here. Floored at
+    // HEALTH_MAX_FLOOR (Constitution can be NEGATIVE: an inventory modifier
+    // goes down to −20). The floor applies only once there IS a pool.
+    V.healthMax  = (c, v) => (c.healthBase == null ? 0
+      : Math.max(R.HEALTH_MAX_FLOOR, c.healthBase + statFromEffects(v, 'Constitution')));
+    V.manaMax    = (c) => c.manaMax;
+    V.woundsMax  = (c) => c.woundsMax;
+    V.patchesMax = (c) => c.patchesMax;
+
+    /* DOWNED — derived, never stored.
+         · WITH a Wound track: reaching its cap is the whole condition, by
+           whatever route; an empty bar is a CONSEQUENCE of it (setWounds).
+         · WITHOUT one — an enemy whose stat block leaves Wounds empty — there
+           is one bar, and emptying it is the condition (designer ruling,
+           2026-11-13).
+       The pool guard keeps a sheet with no subclass yet (0 HP, 0 Wounds) from
+       reading as downed before it is a character. Every class in the
+       compendium has Wounds, so the second branch never applies to a player
+       character (content.test.js holds that). */
+    V.isDowned = (c, v) => (c.woundsMax > 0
+      ? v.wounds >= c.woundsMax
+      : V.healthMax(c, v) > 0 && v.health <= 0);
+
+    /* ---- the defences, standing and downed ----------------------------
        A downed character is helpless: not dodging, not resisting, not moving.
        Evasion and Fortitude fall back to their base values — every bonus that
        belongs to someone still on their feet stops applying — and Speed goes
        to zero outright. Armor is a flat zero by intent: it exists to reduce
        incoming damage, and damage no longer matters to someone at the bottom
-       of their Wound track. */
-    function evasion(ch) {
-      if (isDowned(ch)) return baseStat(ch, 'evasion');
-      // Armour's Evasion is a MODIFIER on the base, like its Armor and Speed.
-      return baseStat(ch, 'evasion')
-        + (wornArmor(ch)?.evasionMod || 0)
-        + statValue(ch, 'Dexterity')
-        + shieldBonus(ch, 'evasionMod')
-        - stacksOf(ch, 'condition.chill');
-    }
+       of their Wound track.
 
-    function armor(ch) {
-      if (isDowned(ch)) return R.DOWNED_ARMOR;
-      // Wounds reduce Armor directly (WOUND_ARMOR_STEP), so Vulnerable is
-      // purely a condition.
-      return baseStat(ch, 'armor')
-        + (wornArmor(ch)?.armorMod || 0)
-        + shieldBonus(ch, 'armorMod')
-        + stacksOf(ch, 'boon.protection')
-        - stacksOf(ch, 'condition.vulnerable')
-        + woundPenalty(ch, 'armor');
-    }
+       Standing, the card's build numbers move with what is on them: Dexterity
+       and Fortune from effects, Chill, Slow, Protection, Vulnerable, and each
+       Wound (−2 Armor, −1 Speed — WOUND_*_STEP). */
+    V.evasion = (c, v) => (V.isDowned(c, v) ? c.base.evasion
+      : c.build.evasion + statFromEffects(v, 'Dexterity') - stacksOf(v, 'condition.chill'));
 
-    const fortitude = (ch) => (isDowned(ch) ? baseStat(ch, 'fortitude')
-                                            : baseStat(ch, 'fortitude') + statValue(ch, 'Fortune'));
+    // Wounds reduce Armor directly (WOUND_ARMOR_STEP), so Vulnerable is purely
+    // a condition — and it can take Armor below zero, which ADDS damage
+    // (guide: "Can reduce Armor into negative values, taking extra damage").
+    V.armor = (c, v) => (V.isDowned(c, v) ? R.DOWNED_ARMOR
+      : c.build.armor
+        + stacksOf(v, 'boon.protection')
+        - stacksOf(v, 'condition.vulnerable')
+        + woundPenalty(v, 'armor'));
 
-    const speed = (ch) => (isDowned(ch) ? R.DOWNED_SPEED : baseStat(ch, 'speed')
-      + (wornArmor(ch)?.speedMod || 0)
-      - stacksOf(ch, 'condition.slow')
-      + woundPenalty(ch, 'speed'));
+    V.fortitude = (c, v) => (V.isDowned(c, v) ? c.base.fortitude
+      : c.build.fortitude + statFromEffects(v, 'Fortune'));
 
-    /* ================================================================== */
-    /* PLAY RULES — these change the character they are handed            */
-    /* ================================================================== */
+    V.speed = (c, v) => (V.isDowned(c, v) ? R.DOWNED_SPEED
+      : c.build.speed - stacksOf(v, 'condition.slow') + woundPenalty(v, 'speed'));
 
-    function heal(ch, resource, amt) {
+    /* ---- play rules ---------------------------------------------------- */
+
+    V.heal = (c, v, resource, amt) => {
       amt = clampInt(amt);
       if (!amt) return;
-      if (resource === 'mana') ch.mana = Math.min(manaMax(ch), ch.mana + amt);
-      else                     ch.health = Math.min(healthMax(ch), ch.health + amt);
-    }
-
-    /* Every Boon gone, Conditions untouched — the Wound rule (guide, Ch.1:
-       "When you take a Wound, you lose all Boons currently on you unless a
-       trait specifically notes it").
-
-       THE EXCEPTION IS NOT MODELLED. No trait can note anything yet, because
-       trait selection does not exist (rules-gaps §3.1). When it does, this is
-       the function that has to start asking. Returns how many were lost. */
-    function clearBoons(ch) {
-      const before = ch.effects.length;
-      ch.effects = ch.effects.filter((e) => (effectById(e.id) || {}).kind !== 'boon');
-      return before - ch.effects.length;
-    }
-
-    // Everything off, both kinds. The end of a skirmish, by whichever route —
-    // the Clear control or either rest.
-    function clearEffects(ch) {
-      const n = ch.effects.length;
-      ch.effects = [];
-      return n;
-    }
+      if (resource === 'mana') v.mana = Math.min(V.manaMax(c), v.mana + amt);
+      else                     v.health = Math.min(V.healthMax(c, v), v.health + amt);
+    };
 
     /* The one way Wounds are set. Reaching the cap empties the health bar no
        matter how the Wound arrived, so that consequence lives here rather than
@@ -443,27 +532,23 @@
        is deliberate: a Wound recorded is a Wound taken.
 
        Returns { downed, boonsLost }: `downed` is true only when THIS move
-       downed the character, so the caller can announce it exactly once;
-       `boonsLost` is counted so the caller can say so — losing three Boons
-       silently while the health bar refills is the sheet changing under the
-       player. */
-    function setWounds(ch, n) {
-      const wasDowned = isDowned(ch);
-      const before = ch.wounds;
-      ch.wounds = Math.min(woundsMax(ch), clampInt(n));
-      if (isDowned(ch)) ch.health = 0;
-      const boonsLost = ch.wounds > before ? clearBoons(ch) : 0;
-      return { downed: !wasDowned && isDowned(ch), boonsLost };
-    }
+       downed them, so the caller can announce it exactly once; `boonsLost` is
+       counted so the caller can say so. */
+    V.setWounds = (c, v, n) => {
+      const wasDowned = V.isDowned(c, v);
+      const before = v.wounds;
+      v.wounds = Math.min(V.woundsMax(c), clampInt(n));
+      if (V.isDowned(c, v)) v.health = 0;
+      const boonsLost = v.wounds > before ? clearBoons(v) : 0;
+      return { downed: !wasDowned && V.isDowned(c, v), boonsLost };
+    };
 
     /* LOADING — a standing character never sits at an empty bar.
 
        In play it cannot happen: damage that empties the bar takes a Wound and
        refills it, and only the LAST Wound leaves it at 0 (see damage()). But a
-       save can still hold it. Before HEALTH_MAX_FLOOR, a heavy Constitution
-       penalty gave a negative maximum, and a rest wrote that negative number
-       into current health; loading clamps it to 0, which left a character
-       standing on 0/1 that no rule could have produced.
+       save can still hold it — before HEALTH_MAX_FLOOR, a heavy Constitution
+       penalty gave a negative maximum that a rest wrote into current health.
 
        Designer ruling 2026-11-13: such a character loads at FULL health. No
        Wound is added — they never took that damage; the number came from a
@@ -471,45 +556,55 @@
        sheet with no subclass yet keeps 0/0 (there is no pool to fill).
 
        Returns whether it changed anything. */
-    function settleHealth(ch) {
-      const max = healthMax(ch);
-      if (max > 0 && !isDowned(ch) && ch.health <= 0) { ch.health = max; return true; }
+    V.settleHealth = (c, v) => {
+      const max = V.healthMax(c, v);
+      if (max > 0 && !V.isDowned(c, v) && v.health <= 0) { v.health = max; return true; }
       return false;
-    }
+    };
 
     /* Health cascade: each time damage empties the bar, take a Wound and
        refill. The refill is what makes a Wound survivable.
 
        The LAST Wound is the exception, and it is the whole point of the cap:
        at that Wound there is nothing left to refill from, so the bar stays
-       empty and the character is downed. Spillover past it is discarded —
-       you cannot be more downed than downed.
+       empty and they are downed. Spillover past it is discarded — you cannot
+       be more downed than downed. With no Wound track at all the loop never
+       runs: the bar simply empties (V.isDowned's second branch).
 
        Returns { downed, boonsLost }. `boonsLost` is undefined when no Wound
        bookkeeping happened at all (nothing dealt, or Mana), so a caller that
-       mirrors it into UI state can leave that state alone, exactly as before
-       the engine was extracted. */
-    function damage(ch, resource, amt) {
+       mirrors it into UI state can leave that state alone. */
+    V.damage = (c, v, resource, amt) => {
       amt = clampInt(amt);
       if (!amt) return { downed: false, boonsLost: undefined };
       if (resource === 'mana') {
-        ch.mana = Math.max(0, ch.mana - amt);
+        v.mana = Math.max(0, v.mana - amt);
         return { downed: false, boonsLost: undefined };
       }
-      let h = ch.health, w = ch.wounds, d = amt;
-      const max = healthMax(ch);
-      const cap = woundsMax(ch);
+      // Asked BEFORE the bar moves. setWounds() asks again, but by then the
+      // health below has already been written — and with no Wound track,
+      // emptying the bar IS being downed, so its "were they down already?"
+      // would answer yes and the moment would never be announced.
+      const wasDowned = V.isDowned(c, v);
+      let h = v.health, w = v.wounds, d = amt;
+      // Read ONCE, before any Wound clears a Constitution boon: the refill is
+      // to the pool as it stood when the hit landed.
+      const max = V.healthMax(c, v);
+      const cap = V.woundsMax(c);
       while (d >= h && w < cap) {
         d -= h;
         w += 1;
         if (w >= cap) { h = 0; d = 0; break; }   // downed — no refill
         h = max;
       }
-      ch.health = Math.max(0, h - d);
+      v.health = Math.max(0, h - d);
       // Through setWounds so the cap clamp and the empty-bar consequence have
-      // one owner.
-      return setWounds(ch, w);
-    }
+      // one owner. Its `downed` is replaced by the one measured above, which
+      // is the same answer for anyone with a Wound track (downed depends on
+      // Wounds alone there) and the right one for anyone without.
+      const out = V.setWounds(c, v, w);
+      return { downed: !wasDowned && V.isDowned(c, v), boonsLost: out.boonsLost };
+    };
 
     /* ---- rest ----------------------------------------------------------
        GAME RULE. A long rest is a full reset: Health, Mana and Wounds all come
@@ -520,72 +615,116 @@
        the MAXIMUM, not of what is missing. So a 15-Mana character always gets
        7 back; their current Mana only decides whether the ceiling swallows
        part of it. */
-    const shortRestMana = (ch) => Math.floor(manaMax(ch) / R.SHORT_REST_MANA_DIVISOR);
+    V.shortRestMana = (c) => Math.floor(V.manaMax(c) / R.SHORT_REST_MANA_DIVISOR);
 
     // Returns setWounds()'s { downed, boonsLost } — a rest always passes
     // through it.
-    function rest(ch, kind) {
+    V.rest = (c, v, kind) => {
       const long = kind === 'long';
-      ch.health = healthMax(ch);
-      ch.mana = long
-        ? manaMax(ch)
-        : Math.min(manaMax(ch), ch.mana + shortRestMana(ch));
+      v.health = V.healthMax(c, v);
+      v.mana = long
+        ? V.manaMax(c)
+        : Math.min(V.manaMax(c), v.mana + V.shortRestMana(c));
       /* Wounds clear on a long rest and are LEFT ALONE by a short one.
          Passing the wounds straight back through setWounds() on a short rest
-         is not the no-op it looks like: setWounds() owns the rule that a
-         character at the Wound cap has an empty bar, so a downed character who
-         takes a breather is still downed. A long rest clears the Wounds first
-         and therefore does stand them up. */
-      const out = setWounds(ch, long ? 0 : ch.wounds);
+         is not the no-op it looks like: setWounds() owns the rule that someone
+         at the Wound cap has an empty bar, so a downed character who takes a
+         breather is still downed. A long rest clears the Wounds first and
+         therefore does stand them up. */
+      const out = V.setWounds(c, v, long ? 0 : v.wounds);
       // Patches come back on a LONG rest only (guide, Ch.1).
-      if (long) ch.patches = patchesMax(ch);
+      if (long) v.patches = V.patchesMax(c);
       /* BOTH rests clear every Boon and Condition (guide, Ch.1 — effects last
          a skirmish). A rest is the end of a skirmish by definition. */
-      clearEffects(ch);
+      clearEffects(v);
       return out;
-    }
+    };
 
     /* ---- patches -------------------------------------------------------
        GAME RULE (Ch.1). Spending one Patch resets HP to full AND removes one
        Wound. In combat the same action costs 2 AP — NOT deducted here, and
-       that is a ruling rather than a debt: the app has no in-combat state, so
-       the dialog STATES the cost and the player applies it.
+       that is a ruling rather than a debt: the app has no AP tracking, so the
+       dialog STATES the cost and the player applies it.
 
        Order matters: the Wound comes off FIRST, then health is refilled,
-       because setWounds() owns the rule that a character at the Wound cap has
-       an empty bar. */
-    const patchGain = (ch) => ({
-      heals: ch.health < healthMax(ch),
-      wound: ch.wounds > 0,
+       because setWounds() owns the rule that someone at the Wound cap has an
+       empty bar. */
+    V.patchGain = (c, v) => ({
+      heals: v.health < V.healthMax(c, v),
+      wound: v.wounds > 0,
     });
 
     /* Nothing to spend when: no Patches left; nothing to gain; or Downed — a
        Downed character cannot act (docs/rules-gaps.md §2.2). */
-    function canSpendPatch(ch) {
-      if (ch.patches <= 0 || isDowned(ch)) return false;
-      const gain = patchGain(ch);
+    V.canSpendPatch = (c, v) => {
+      if (v.patches <= 0 || V.isDowned(c, v)) return false;
+      const gain = V.patchGain(c, v);
       return gain.heals || gain.wound;
-    }
+    };
 
     // Returns { boonsLost } when a Wound was cleared through setWounds(), and
     // {} when it was not (nothing spent, or no Wound to clear).
-    function spendPatch(ch) {
-      if (!canSpendPatch(ch)) return {};
-      ch.patches = Math.max(0, ch.patches - 1);
-      const out = ch.wounds > 0 ? setWounds(ch, ch.wounds - 1) : {};
-      ch.health = healthMax(ch);
+    V.spendPatch = (c, v) => {
+      if (!V.canSpendPatch(c, v)) return {};
+      v.patches = Math.max(0, v.patches - 1);
+      const out = v.wounds > 0 ? V.setWounds(c, v, v.wounds - 1) : {};
+      v.health = V.healthMax(c, v);
       return out;
-    }
+    };
 
     /* Bookkeeping, not the rule. Setting the count by hand changes NOTHING
        else — no health, no Wounds — which is why it can be a bare tap while
        the rule itself sits behind a hold. */
-    function setPatches(ch, n) {
-      ch.patches = Math.max(0, Math.min(patchesMax(ch), clampInt(n)));
-    }
+    V.setPatches = (c, v, n) => {
+      v.patches = Math.max(0, Math.min(V.patchesMax(c), clampInt(n)));
+    };
+
+    /* What one press of a tick button does, for every stack at once. Three
+       stacks of Bleed is 3 — the multiplication is the whole reason the button
+       is worth having. Damage goes through damage(), so the Wound cascade
+       applies and a tick can down someone exactly as a hit can.
+
+       Returns { amount, downed, boonsLost } — boonsLost undefined when no
+       Wound bookkeeping happened (a heal, or nothing to apply). */
+    V.applyTick = (c, v, id) => {
+      const def = effectById(id);
+      const stacks = stacksOf(v, id);
+      if (!def || !def.tick || !stacks) return { amount: 0, downed: false, boonsLost: undefined };
+      const per = def.tick.heal || def.tick.damage || 0;
+      const amount = per * stacks;
+      if (def.tick.heal) {
+        V.heal(c, v, 'health', amount);
+        return { amount, downed: false, boonsLost: undefined };
+      }
+      return { amount, ...V.damage(c, v, 'health', amount) };
+    };
 
     /* ---- boons & conditions -----------------------------------------
-       A stack count of zero is not a state worth tracking: decrementing the
+       These touch only `effects`, which a character and a bare vitals record
+       both carry — so one version serves both, with no card needed.
+
+       Every Boon gone, Conditions untouched — the Wound rule (guide, Ch.1:
+       "When you take a Wound, you lose all Boons currently on you unless a
+       trait specifically notes it").
+
+       THE EXCEPTION IS NOT MODELLED. No trait can note anything yet, because
+       trait selection does not exist (rules-gaps §3.1). When it does, this is
+       the function that has to start asking. Returns how many were lost. */
+    function clearBoons(v) {
+      const before = v.effects.length;
+      v.effects = v.effects.filter((e) => (effectById(e.id) || {}).kind !== 'boon');
+      return before - v.effects.length;
+    }
+
+    // Everything off, both kinds. The end of a skirmish, by whichever route —
+    // the Clear control or either rest.
+    function clearEffects(v) {
+      const n = v.effects.length;
+      v.effects = [];
+      return n;
+    }
+
+    /* A stack count of zero is not a state worth tracking: decrementing the
        last stack removes the entry outright. */
 
     // An effect the rules say does not stack declares its own ceiling.
@@ -594,41 +733,41 @@
       return (def && def.maxStacks) || R.MAX_STACKS;
     };
 
-    function addEffect(ch, id) {
+    function addEffect(v, id) {
       if (!effectById(id)) return;                     // unknown id — ignore
-      const cur = ch.effects.find((e) => e.id === id);
-      // Picking an effect already on the sheet deepens it instead of duplicating.
+      const cur = v.effects.find((e) => e.id === id);
+      // Picking an effect already on them deepens it instead of duplicating.
       if (cur) cur.stacks = clampStacks(cur.stacks + 1, stackCap(id));
-      else ch.effects.push({ id, stacks: 1 });
+      else v.effects.push({ id, stacks: 1 });
     }
 
-    function bumpEffect(ch, id, delta) {
-      const cur = ch.effects.find((e) => e.id === id);
+    function bumpEffect(v, id, delta) {
+      const cur = v.effects.find((e) => e.id === id);
       if (!cur) return;
       const next = clampStacks(cur.stacks + delta, stackCap(id));
-      if (next === 0) ch.effects = ch.effects.filter((e) => e.id !== id);
+      if (next === 0) v.effects = v.effects.filter((e) => e.id !== id);
       else cur.stacks = next;
     }
 
-    /* What one press of a tick button does, for every stack at once. Three
-       stacks of Bleed is 3 — the multiplication is the whole reason the button
-       is worth having. Damage goes through damage(), so the Wound cascade
-       applies and a tick can down a character exactly as a hit can.
+    Object.assign(V, { clearBoons, clearEffects, addEffect, bumpEffect });
+    Object.freeze(V);
 
-       Returns { amount, downed, boonsLost } — boonsLost undefined when no
-       Wound bookkeeping happened (a heal, or nothing to apply). */
-    function applyTick(ch, id) {
-      const def = effectById(id);
-      const stacks = stacksOf(ch, id);
-      if (!def || !def.tick || !stacks) return { amount: 0, downed: false, boonsLost: undefined };
-      const per = def.tick.heal || def.tick.damage || 0;
-      const amount = per * stacks;
-      if (def.tick.heal) {
-        heal(ch, 'health', amount);
-        return { amount, downed: false, boonsLost: undefined };
-      }
-      return { amount, ...damage(ch, 'health', amount) };
-    }
+    /* ================================================================== */
+    /* PLAY RULES — the character's doors into the vitals half            */
+    /* Same names and returns as ever; each builds the card and passes    */
+    /* the character itself as the vitals.                                */
+    /* ================================================================== */
+    const heal          = (ch, resource, amt) => V.heal(heroCard(ch), ch, resource, amt);
+    const setWounds     = (ch, n) => V.setWounds(heroCard(ch), ch, n);
+    const settleHealth  = (ch) => V.settleHealth(heroCard(ch), ch);
+    const damage        = (ch, resource, amt) => V.damage(heroCard(ch), ch, resource, amt);
+    const shortRestMana = (ch) => V.shortRestMana(heroCard(ch));
+    const rest          = (ch, kind) => V.rest(heroCard(ch), ch, kind);
+    const patchGain     = (ch) => V.patchGain(heroCard(ch), ch);
+    const canSpendPatch = (ch) => V.canSpendPatch(heroCard(ch), ch);
+    const spendPatch    = (ch) => V.spendPatch(heroCard(ch), ch);
+    const setPatches    = (ch, n) => V.setPatches(heroCard(ch), ch, n);
+    const applyTick     = (ch, id) => V.applyTick(heroCard(ch), ch, id);
 
     return {
       // attributes
@@ -646,10 +785,12 @@
       // play rules
       heal, damage, setWounds, settleHealth, rest, patchGain, canSpendPatch, spendPatch, setPatches,
       clearBoons, clearEffects, stackCap, addEffect, bumpEffect, applyTick,
+      // the split: the build half as numbers, and the state half over them
+      heroCard, vitals: V,
     };
   }
 
-  const api = { RULES, create, clampInt, clampStacks, spreadOk, skillMod };
+  const api = { RULES, create, clampInt, clampStacks, spreadOk, skillMod, damageAfterArmor };
 
   root.MEEPLE_MECHANICS = api;
   // Node loads this file as CommonJS; the browser has no `module` at all.

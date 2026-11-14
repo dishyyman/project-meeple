@@ -98,7 +98,7 @@ A server, accounts, and cloud sync are on the roadmap (`prd.md` §8, Nice to Hav
 None today. **Open.** Expected responsibilities when one exists:
 - Authenticate players.
 - Store and sync characters per account, without mixing players' data (§11).
-- Possibly: serve the latest compendium, and back the GM hub.
+- Possibly: serve the latest compendium, and back the GM hub (live campaigns — see Decision 12).
 
 ### Database
 
@@ -198,6 +198,7 @@ project-meeple/              # repo root = site root (GitHub Pages serves it as-
 │   │   ├── frame.js         # preview frame toggle
 │   │   ├── dice.js          # the one dice engine (also used by tools/)
 │   │   ├── mechanics.js     # the one game-mechanics engine (also used by tests/)
+│   │   ├── campaign.js      # Game Master Tools: campaign data, its normalizer, turn tracking
 │   │   ├── portrait.js      # the one image pipeline
 │   │   ├── library.js       # GENERATED — game content
 │   │   ├── library-check.js # the one compendium/entry shape check (also used by tests/)
@@ -212,7 +213,7 @@ project-meeple/              # repo root = site root (GitHub Pages serves it as-
 │   ├── rtf-to-rules.mjs     # Player's Guide converter
 │   └── make-icons.mjs       # icon.svg → the PNG icons (dev only, via Playwright)
 ├── tests/                   # DEV ONLY — see testing.md
-│   ├── unit/                # node --test: dice, mechanics, content
+│   ├── unit/                # node --test: dice, mechanics, campaign, content
 │   ├── e2e/                 # Playwright: flows, characterization, security
 │   ├── fixtures/            # real exported files + hostile ones; seeded saves
 │   └── serve.mjs            # tiny static server the browser tests start
@@ -293,6 +294,17 @@ project-meeple/              # repo root = site root (GitHub Pages serves it as-
 **Alternatives:** manual testing only; a test framework that runs inside the app.
 **Reason:** Node's built-in runner for unit tests (no install) and Playwright for browser tests, declared in a **dev-only** `package.json`. Playwright drives the Chrome already installed (`channel: 'chrome'`), so no browser download. Nothing in `package.json` loads in the app, so "no runtime dependencies" still holds.
 **Constraint:** `package.json` must **not** declare `"type": "module"` — `dice.js`, `mechanics.js` and `library-check.js` are loaded by Node as CommonJS.
+
+### Decision 12 — Game Master Tools are local-first and built to sync later (2026-11-13)
+**Context:** a GM needs a campaign — a party, enemies and the fight in progress. The first version is offline (heroes arrive as character files); a later one should let players join a campaign by code and see HP move both ways, live, for parties of any size.
+**Alternatives:** build the online version first; build offline now and redesign for sync later.
+**Decision:** offline now, in shapes a sync layer can carry unchanged:
+- **A hero is a card + vitals + notes, never a whole character.** The **card** is the build half of every derived stat (`heroCard()` in `mechanics.js`) — worked out on the *player's* device, against the player's compendium, so the GM's device never recomputes it and never depends on which content it has installed. The **vitals** (health, mana, Wounds, Patches, Boons/Conditions) are what both sides will change. The **notes** are the GM's alone. That split *is* the future permission boundary: the player's device publishes the card, both write vitals, only the GM writes notes, enemies and the fight.
+- **Vitals change only through named rules** (`vitals.damage / heal / setWounds / spendPatch / applyTick…`), the same ones the player's sheet uses. Online, those become *operations* a server applies in order — by running `mechanics.js` itself, which is why it must stay free of DOM and storage (Decision 11). Two people pressing Damage at once then both land, where "last save wins" would lose one.
+- **Every record has a random id, a `rev` counter and an `updated` time** (`campaign.js`), so copies on two devices can be merged by id and ordered by revision. Cheap now; a migration later.
+- **One normalizer** (`normalizeCampaign`) for anything from storage, a file or — later — the network.
+- **No initiative order is computed.** The GM picks who acts next from whoever has turns left; a round resets everyone (bosses can have several turns).
+**Still open, for the online version:** backend and auth (Decision 9); campaign codes (short, no look-alike characters, revocable, join attempts rate-limited); what players see (assumed: each other's vitals, not enemy stats); offline play with replay on reconnect; throttling bursts of taps into one operation; who owns a hero's vitals while it is joined (assumed: the server copy, with the device caching); the CSP's `connect-src`, which today forbids any network call (`security.md`); portraits not synced at first.
 
 ### Decision 11 — Game mechanics extracted into `mechanics.js` (2026-10-05)
 **Context:** the rules lived inside `main.js`'s closure, reading a shared `character` — impossible to unit-test without a browser page.

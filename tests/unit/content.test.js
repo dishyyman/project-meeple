@@ -79,6 +79,9 @@ test('every subclass states the base block Evasion 8 / Armor 0 / Fortitude 8 / S
 test('every subclass is complete enough to build a character on', () => {
   for (const sc of LIB.subclasses) {
     assert.ok(sc.hp > 0, `${sc.id} hp`);
+    // Load-bearing beyond completeness: V.isDowned's "no Wound track, so an
+    // empty bar downs you" branch is for enemies, and must never reach a
+    // player character. It cannot while every subclass has Wounds.
     assert.ok(sc.wounds > 0, `${sc.id} wounds`);
     assert.ok(Number.isInteger(sc.patches), `${sc.id} patches`);
     assert.ok(Array.isArray(sc.armorTypes) && Array.isArray(sc.weaponTypes), `${sc.id} proficiencies`);

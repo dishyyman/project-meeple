@@ -90,6 +90,11 @@ Not an avid TTRPG player. When she plays, she learns only what is absolutely nec
 - **As a** player, **I want to** roll my to-hit and damage from the sheet **so that** modifiers are already included.
 - **As a** player, **I want to** back up my characters to a file **so that** I can restore them, move to a new device, or hand one to my GM.
 - **As a** GM (Guide), **I want to** open a player's exported character file **so that** I can check their sheet without their device.
+- **As a** GM, **I want** a campaign that holds my party and my enemies **so that** I can run a fight from one screen — one-shot or a months-long campaign.
+- **As a** GM, **I want to** add a hero from the file a player sends me **so that** I see their real Evasion, Armor, Fortitude, Speed and HP without asking.
+- **As a** GM, **I want** enemy stat cards whose attacks roll and whose Armor is applied for me **so that** I'm not doing arithmetic mid-fight.
+- **As a** GM, **I want to** pick who acts next from those who haven't gone this round **so that** the order can change every round, and bosses can take several turns.
+- **As a** GM *(future, online)*, **I want to** share a campaign code that players join with their hero **so that** damage either of us enters shows on both screens.
 
 ---
 
@@ -222,18 +227,37 @@ Let players keep characters somewhere other than one browser's storage — a bac
 - The file carries a snapshot of the compendium entries the character uses, so it still resolves on a device with different content (local entries win).
 - The app refuses a file with a higher `schemaVersion` and accepts any lower one — a file exported today stays readable by every later version.
 
+### Feature 7 — Game Master Tools *(in progress)*
+
+**Purpose**
+A place for a GM to run a game: campaigns holding a party of heroes, enemy stat cards, and the fight in progress. Offline first; built to sync later (`architecture.md` Decision 12).
+
+**User Flow**
+- **Home → Game Master Tools** opens the campaign list (like Characters). A campaign has a name and an optional subtitle.
+- A campaign has three tabs: **Party**, **Enemies**, **Combat**.
+- **Party:** add a hero by hand or **from a file** (the `.meeple.json` a player already sends). Each hero shows HP, Wounds, Evasion, Armor, Fortitude, Speed and their Boons & Conditions — the basic numbers, not the whole sheet.
+- **Enemies:** stat cards — HP, Mana (optional), Wounds (optional), Evasion, Armor, Fortitude, Speed, turns per round, attacks and abilities with roll boxes. Import and export, toward a future monster compendium.
+- **Combat:** choose the enemies (a group can share one turn), optionally a surprise round. Pick who acts next from those with turns left; end their turn; a new round resets everyone. Damage takes Armor off automatically, with an Armor Piercing toggle.
+
+**Build phases** — 0 groundwork (rules split into hero card + vitals, `campaign.js`) *(done)*, 1 campaign list and shell, 2 Party, 3 Enemies, 4 Combat.
+
+**Acceptance Criteria**
+- A hero's numbers on the GM's screen equal the player's sheet for the same state (`unit/mechanics.test.js`, "the hero card").
+- No new file format for heroes; the character file is read as-is.
+- Nothing on the GM side connects to the network.
+
 ---
 
 ## 7. Non-Goals
 
 The following are intentionally **not** part of this version. Most were tested against the guiding principle in §3 and closed as decisions, not deferred work:
 
-- **Acting as a VTT** where players connect over the web to calculate damage or healing, transfer items, etc.
-- **Tracking turns or combat rounds** — including Action and Reaction Point pools. These were built and then removed (`rules-gaps.md` §2.1). Ability costs still print on each row.
+- **Acting as a VTT** where players connect over the web to calculate damage or healing, transfer items, etc. *(Live campaign sync is planned as future work — `architecture.md` Decision 12 — and the GM Tools are built so it can be added; nothing connects yet.)*
+- **Tracking turns or combat rounds on the player's sheet** — including Action and Reaction Point pools. These were built and then removed (`rules-gaps.md` §2.1). Ability costs still print on each row. *(The GM's Combat tab tracks who has acted each round — not AP, and not on a player's sheet.)*
 - **Inferring game context** — whether you're in combat, behind cover, or hit by the same attack. The app states the rule and lets the player act on it.
 - **Doing a player's arithmetic for a single action**, such as auto-doubling crit damage. Half / Double readouts serve the same need.
 - **Auto-firing end-of-turn effects**, or auto-cleansing Slow, Dazed, and Blind.
-- **Modeling GM-facing rulings** — DCs and Weight of Failure, group and contested checks, initiative, surprise, travel, foraging, social attitudes, light and sight, hiding, downtime, weather, traps. The Rules screen *shows* them; the app does not model them (`rules-gaps.md` §5).
+- **Modeling GM-facing rulings** — DCs and Weight of Failure, group and contested checks, initiative *order*, travel, foraging, social attitudes, light and sight, hiding, downtime, weather, traps. The Rules screen *shows* them; the app does not model them (`rules-gaps.md` §5). The GM Tools *record* the GM's choices (who acts next, a surprise round) without deciding them.
 - **Area-of-effect geometry and other positional rules** — these need a map, which is VTT territory. (Spells and equipment detail in `rules-gaps.md` §4 needs a scoping pass against this list before any of it is built.)
 
 ---
@@ -251,7 +275,7 @@ The following are intentionally **not** part of this version. Most were tested a
 - Characters stored on the device, surviving reloads. *(shipped)*
 
 **Nice to Have**
-- A Game Master's (Guide's) hub that lets a GM run a game, see players' stats as they update, and track NPC stat cards for combat and roleplay. *(A "Guide Tools" card already exists on Home as a placeholder.)*
+- A Game Master's (Guide's) hub that lets a GM run a game, see players' stats, and track enemy stat cards for combat — Feature 7, offline first. *(In progress.)* Live updates as players change their stats are the online follow-up.
 - Account-level syncing to save and load data from a cloud-based system. *(In the future pipeline. Sign-in UI exists with no login behind it; the device remains the primary store — signing in is only about carrying data between devices.)*
 
 **Future**
@@ -311,7 +335,7 @@ The following are intentionally **not** part of this version. Most were tested a
 - What does the level-up flow look like (Feature 3)? It is the next major build.
 - Which items in `rules-gaps.md` §4 (spells and equipment detail) survive scoping against the non-goals?
 - When account sync is picked up: which backend, and how does it fit the budget and the no-dependencies constraint? (Will need `security.md`.)
-- What does the GM hub need for a first version?
+- ~~What does the GM hub need for a first version?~~ Answered: Feature 7. For its online follow-up: what players see of each other and of enemies, and who owns a joined hero's vitals (`architecture.md` Decision 12).
 - Should abilities and spells, once they are compendium content, be snapshotted into character files like other entries? (`character-file.md` §7 — leaning yes.)
 - Should weapon tags get their own collection carrying rules text, or stay a bare vocabulary? (`library-schema.md` §10)
 

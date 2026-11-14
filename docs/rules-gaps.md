@@ -264,7 +264,10 @@ editor (`Edit Character → Abilities` is still stubbed).
   Power bonus. Not modelled (and depends on 2.4 existing first).
 - **Armor Piercing / Resistance / Immunity / Vulnerability** — damage types exist in
   the library but `damage()` takes a flat number and knows no type. Void is always
-  Armor Piercing per Ch.5.
+  Armor Piercing per Ch.5. *Armor reduction itself is now a rule* —
+  `damageAfterArmor(hit, armor, piercing)` in `mechanics.js` (hit − Armor, never below
+  0; negative Armor adds damage; Armor Piercing ignores Armor) — used by the GM's
+  Combat tab. The player's calculator still takes the final number.
 - **Unarmed attack** — 1d4 Physical. Not present; a character with empty hands has
   no attack option.
 - **Crafting** — 2 equipment slots, breaks on a natural 1, DC 10 during a Long Rest.
@@ -280,6 +283,10 @@ average), contested rolls, initiative and turn weaving, surprise rounds, travel 
 navigation, foraging, social attitudes, light levels and sight limits, hiding and
 spotting, downtime activities, weather, traps. These are rulings a GM makes; the app
 only needs to *show* them, which the Rules screen now does.
+
+**Game Master Tools record, they don't rule** (`prd.md` Feature 7): the Combat tab
+lets the GM pick who acts next from those with turns left and marks a surprise round
+as party-only — it never computes an initiative order.
 
 ---
 
