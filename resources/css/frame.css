@@ -13,9 +13,9 @@
   background: var(--bg-page);
   border-radius: 46px;
   box-shadow:
-    0 0 0 12px #0d0d0d,
-    0 0 0 14px #2b2926,
-    0 30px 60px rgba(0,0,0,0.7);
+    0 0 0 12px var(--frame-bezel),
+    0 0 0 14px var(--frame-rim),
+    var(--shadow-device);
   overflow: hidden;
 }
 .device__statusbar {
@@ -37,7 +37,7 @@
   top: 12px; left: 50%;
   transform: translateX(-50%);
   width: 120px; height: 30px;
-  background: #0d0d0d;
+  background: var(--frame-bezel);
   border-radius: 16px;
   z-index: 61;
 }
@@ -197,7 +197,7 @@
   font-family: var(--font-label);
   font-size: 12px; letter-spacing: 0.04em; text-transform: uppercase;
   color: var(--ink-muted);
-  background: rgba(43, 41, 38, 0.92);
+  background: var(--frame-chip);
   border: 1px solid color-mix(in srgb, var(--accent) 50%, transparent);
   border-radius: 999px;
   cursor: pointer;
@@ -231,6 +231,6 @@
 .boot-error p { margin: 0 0 11px; }
 .boot-error code {
   font-family: var(--font-mono); font-size: 0.9em;
-  background: rgba(255, 255, 255, 0.08); padding: 1px 5px; border-radius: 3px;
+  background: var(--code-bg); padding: 1px 5px; border-radius: 3px;
 }
 .boot-error__detail { margin-top: var(--space-4); font-size: var(--fs-small); opacity: 0.65; }

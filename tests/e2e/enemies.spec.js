@@ -17,7 +17,10 @@
        as copies — including a backup with campaigns and no characters.
    ===================================================================== */
 const { test, expect } = require('./helpers/test');
-const { openApp, press, appAttr, openFirstCharacter, download, readResult } = require('./helpers/app');
+const {
+  openApp, press, appAttr, openFirstCharacter, closeModal, download, readResult,
+  breakableStorage, failWrites, healWrites,
+} = require('./helpers/app');
 
 async function newCampaign(page, name = 'The Ashen Road') {
   await press(page, '[data-nav="campaigns"]');
@@ -358,4 +361,86 @@ test('a backup carries the GM\'s own monsters; restoring matches them by id', as
   const again = await restore('Add All as New');
   expect(again.text).toContain('1 monster was added');
   expect((await storedMonsters(page)).filter((m) => m.name === 'Wraith')).toHaveLength(1);
+});
+
+/* ---------------------------------------------------------------------
+   The compendium says where a monster actually went
+   ---------------------------------------------------------------------
+   Codex review 2026-11-14: New Enemy said "saved to the compendium" when the
+   compendium was full or its write was refused, and a monster file that did
+   not fit (or did not save) still reported everything added. Every ending
+   is now said in words, and nothing stays in memory that a reload would not
+   bring back. */
+
+// The GM's own compendium, `n` entries deep, in place before the app boots.
+async function fullCompendium(page, n) {
+  await page.addInitScript((count) => {
+    if (sessionStorage.getItem('compendium-seeded')) return;
+    sessionStorage.setItem('compendium-seeded', '1');
+    const monsters = Array.from({ length: count }, (_, i) => ({ id: `enemy_seed${i}`, name: `Seed ${i}`, stats: { hp: 5 } }));
+    localStorage.setItem('meeple.bestiary', JSON.stringify({ monsters }));
+  }, n);
+}
+
+const monsterFile = (names) => ({
+  name: 'pack.meeple.json', mimeType: 'application/json',
+  buffer: Buffer.from(JSON.stringify({
+    meepleBestiary: { schemaVersion: 1, title: 'Pack' },
+    enemies: names.map((name) => ({ name, stats: { hp: 8 } })),
+  })),
+});
+
+test('a compendium near full: a file is taken in part, New Enemy says it missed, a full one refuses', async ({ page }) => {
+  await fullCompendium(page, 199);
+  await openApp(page);
+  await newCampaign(page);
+
+  // One space, three in the file: one goes in, and the toast says two did not.
+  await importMonsterFile(page, monsterFile(['Wolf', 'Bear', 'Boar']));
+  await expect(page.locator('.toast')).toContainText('Wolf added to the compendium. It is full, so the other 2 were left out.');
+  expect((await storedMonsters(page)).length).toBe(200);
+  await page.keyboard.press('Escape');
+
+  // Full: New Enemy still saves to the campaign, and says the compendium missed it.
+  await makeOgre(page);
+  await expect(page.locator('.toast')).toContainText('Ogre Brute saved. The compendium is full (200), so it was not added there.');
+  expect((await stored(page))[0].enemies.map((e) => e.name)).toEqual(['Ogre Brute']);
+  expect((await storedMonsters(page)).some((m) => m.name === 'Ogre Brute')).toBe(false);
+
+  // Full, and a file: refused in words, nothing changed.
+  await importMonsterFile(page, monsterFile(['Stag']));
+  expect(await readResult(page)).toMatchObject({ state: 'error', title: 'The compendium is full' });
+  expect((await storedMonsters(page)).length).toBe(200);
+});
+
+test('a compendium write the browser refuses is taken back and said, for New Enemy and a file', async ({ page }) => {
+  await breakableStorage(page);
+  await openApp(page);
+  await newCampaign(page);
+  await failWrites(page, '^meeple\\.bestiary$');
+
+  await makeOgre(page);
+  await expect(page.locator('.toast')).toContainText('Ogre Brute saved, but not to the compendium — this browser’s storage is full or blocked.');
+  expect((await stored(page))[0].enemies.map((e) => e.name)).toEqual(['Ogre Brute']);   // the campaign copy landed
+  expect(await storedMonsters(page)).toEqual([]);
+  // Taken back, so memory agrees with disk: the sheet lists the stock three only,
+  // and there is nothing unsaved for the storage alert to stand up about.
+  await page.getByRole('button', { name: 'Add Enemy' }).click();
+  expect(await compendiumNames(page)).toEqual(['Goblin 1', 'Goblin 2', 'Goblin 3']);
+  await expect(page.locator('.storage-alert__card')).toBeHidden();
+
+  await importMonsterFile(page, monsterFile(['Wolf', 'Bear']));
+  expect(await readResult(page)).toMatchObject({ state: 'error', title: 'Nothing was imported' });
+  await closeModal(page);
+  await page.getByRole('button', { name: 'Add Enemy' }).click();
+  expect(await compendiumNames(page)).toEqual(['Goblin 1', 'Goblin 2', 'Goblin 3']);
+
+  // Storage back: the next New Enemy lands in both, as it always did.
+  await healWrites(page);
+  await page.keyboard.press('Escape');
+  await openNewEnemy(page);
+  await page.fill('[data-enemy-field="name"]', 'Troll');
+  await page.getByRole('button', { name: 'Create' }).click();
+  await expect(page.locator('.toast')).toContainText('Troll saved here and to the compendium.');
+  expect((await storedMonsters(page)).map((m) => m.name)).toEqual(['Troll']);
 });

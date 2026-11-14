@@ -130,7 +130,7 @@
 .persona-card[data-dragging] {
   transform: translateY(var(--drag-y, 0px));
   position: relative; z-index: 3;
-  box-shadow: 0 8px 20px rgba(0,0,0,0.5);
+  box-shadow: var(--shadow-lift);
   border-color: var(--accent);
   cursor: grabbing;
 }

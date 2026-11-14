@@ -228,6 +228,41 @@
   --shadow-modal: 0 18px 44px rgba(0,0,0,0.62);
   /* The edge of a screen being swiped away, cast over the one beneath. */
   --shadow-edge:  -10px 0 28px rgba(0,0,0,0.55);
+  /* Things that rise from the bottom edge cast UP, each sized to how far it
+     floats: the action sheet most, the dice tray a little less, the tab bar
+     — fixed to the edge, never floating — barely. */
+  --shadow-sheet:  0 -12px 40px rgba(0,0,0,0.6);
+  --shadow-tray:   0 -10px 34px rgba(0,0,0,0.55);
+  --shadow-tabbar: 0 -3px 14px rgba(0,0,0,0.4);
+  /* The menu drawer, cast left over the screen it slides across. */
+  --shadow-drawer: -8px 0 30px rgba(0,0,0,0.6);
+  /* A persona card picked up to reorder: lifted straight off the list. */
+  --shadow-lift:   0 8px 20px rgba(0,0,0,0.5);
+  /* The drop under a filled glass button (paired with its --hairline inset). */
+  --shadow-glass:  0 2px 8px rgba(0,0,0,0.5);
+
+  /* ---- over a photo ----
+     The portrait is the one surface whose colours are not ours (see
+     --on-dark), so the type on it brings its own dark: a fade up from the
+     bottom edge for the name to sit in, and a text shadow for the line under
+     it. Plain black, like --scrim — anything tinted shows on a bright photo. */
+  --fade-portrait: linear-gradient(to top, rgba(0,0,0,0.88) 0%, rgba(0,0,0,0.42) 34%, rgba(0,0,0,0) 62%);
+  /* The campaign banner: the same idea over the hatch, one long even fade. */
+  --fade-banner:   linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0) 75%);
+  --shadow-text-photo: 0 1px 6px rgba(0,0,0,0.75);
+
+  /* ---- the device frame (desktop preview only, frame.css) ----
+     The drawn phone around the app, and the shell chrome beside it. Not
+     part of the theme — a phone is black glass whatever the app looks like
+     — but tokens all the same, so no colour is written outside this file.
+     The toggle's pill is the rim's own colour, nearly opaque. */
+  --frame-bezel:   #0d0d0d;                 /* the glass edge and the notch */
+  --frame-rim:     #2b2926;                 /* the metal band outside it */
+  --frame-chip:    rgba(43,41,38,0.92);     /* the frame toggle, over the desk */
+  --shadow-device: 0 30px 60px rgba(0,0,0,0.7);
+  /* A `code` run on the boot-error card: a lift, a touch stronger than
+     --wash-lift so it holds as a chip at text size. */
+  --code-bg:       rgba(255,255,255,0.08);
 
   /* Hero & the elastic pull.
      --hero-h is the hero's resting height; --pull is how far past it the

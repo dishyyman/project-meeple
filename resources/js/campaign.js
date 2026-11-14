@@ -207,7 +207,21 @@
     };
   }
 
-  function normalizeVitals(raw, card) {
+  /* THE HEALTH MAXIMUM — the one number here that needs content.
+     Mana, Wounds and Patches top out at plain card numbers, but the health
+     pool is healthBase PLUS whatever Constitution the active effects grant
+     (mechanics.js V.healthMax), and what an effect grants is compendium
+     content this pure file does not hold.
+
+     So the maximum is a parameter. The app builds its API with create()
+     below, passing the content-bound V.healthMax, and every door in clamps
+     against the real number. Called without one (the unit tests, or Node),
+     the pool is the card's own with no effects counted — exact for as long
+     as no effect touches Constitution, which is true of every effect today.
+     Same floor rule as V.healthMax: no class yet (null) is no pool at all. */
+  const baseHealthMax = (card) => (card.healthBase == null ? 0 : Math.max(FLOOR, card.healthBase));
+
+  function normalizeVitals(raw, card, healthMax = baseHealthMax) {
     const v = obj(raw);
     const seen = new Set();
     const effects = arr(v.effects)
@@ -216,7 +230,10 @@
         && !seen.has(e.id) && seen.add(e.id))
       .map((e) => ({ id: e.id, stacks: int(e.stacks, 1, LIMITS.STACKS, 1) }));
     return {
-      health: count(v.health),
+      // Clamped like the other three pools, but only once the effects are
+      // clean: a Constitution Boon that lifts the pool must count, or a
+      // buffed hero would lose health just by being loaded.
+      health: Math.min(healthMax(card, { effects }), count(v.health)),
       mana: Math.min(card.manaMax, count(v.mana)),
       wounds: Math.min(card.woundsMax, count(v.wounds)),
       patches: Math.min(card.patchesMax, count(v.patches)),
@@ -234,7 +251,7 @@
      second one — and so a future "join with this hero" can find it.
      `vitals` defaults to topped up; a file import passes the player's
      current state instead. */
-  function newHero({ name, label = '', card, vitals = null, characterId = null, source = 'manual' }, now = nowIso()) {
+  function newHero({ name, label = '', card, vitals = null, characterId = null, source = 'manual' }, now = nowIso(), healthMax = baseHealthMax) {
     const c = normalizeCard(card);
     return {
       id: newId('hero'),
@@ -243,7 +260,7 @@
       name: str(name, LIMITS.NAME) || 'Unnamed hero',
       label: str(label, LIMITS.LABEL),
       card: c,
-      vitals: vitals ? normalizeVitals(vitals, c) : freshVitals(c),
+      vitals: vitals ? normalizeVitals(vitals, c, healthMax) : freshVitals(c),
       notes: '',
       rev: 1,
       updated: now,
@@ -252,17 +269,19 @@
 
   /* A newer file for a hero already in the party. The CARD is replaced —
      the player's device is the authority for it — but the vitals the GM has
-     been tracking are kept, only clamped to the new maxima: a level-up in
-     the middle of a session should not refill anyone's health. */
-  function refreshHero(hero, { name, label, card }, now = nowIso()) {
+     been tracking are kept, only clamped to the new maxima — Health
+     included: a level-up in the middle of a session should not refill
+     anyone's health, and a smaller pool (gear dropped, a respec) must not
+     leave them holding more than it. */
+  function refreshHero(hero, { name, label, card }, now = nowIso(), healthMax = baseHealthMax) {
     hero.card = normalizeCard(card);
     if (name) hero.name = str(name, LIMITS.NAME) || hero.name;
     if (label !== undefined) hero.label = str(label, LIMITS.LABEL);
-    hero.vitals = normalizeVitals(hero.vitals, hero.card);
+    hero.vitals = normalizeVitals(hero.vitals, hero.card, healthMax);
     return touch(hero, now);
   }
 
-  function normalizeHero(raw, used, now) {
+  function normalizeHero(raw, used, now, healthMax) {
     const h = obj(raw);
     const card = normalizeCard(h.card);
     return {
@@ -272,7 +291,7 @@
       name: str(h.name, LIMITS.NAME) || 'Unnamed hero',
       label: str(h.label, LIMITS.LABEL),
       card,
-      vitals: normalizeVitals(h.vitals, card),
+      vitals: normalizeVitals(h.vitals, card, healthMax),
       notes: str(h.notes, LIMITS.TEXT),
       ...meta(h, now),
     };
@@ -584,12 +603,12 @@
      deleted or edited — run the fight back through its normalizer: fighters
      whose hero or stat card is gone leave it, and every enemy's vitals are
      clamped to its card as it now stands. */
-  function settleCombat(campaign) {
-    campaign.combat = normalizeCombat(campaign.combat, campaign);
+  function settleCombat(campaign, healthMax = baseHealthMax) {
+    campaign.combat = normalizeCombat(campaign.combat, campaign, healthMax);
     return campaign.combat;
   }
 
-  function normalizeCombat(raw, campaign) {
+  function normalizeCombat(raw, campaign, healthMax) {
     if (!raw || typeof raw !== 'object') return null;
     const c = obj(raw);
     const used = campaignIds(campaign);
@@ -604,7 +623,7 @@
       const card = enemyCard(enemy);
       const members = arr(f.members).slice(0, LIMITS.GROUP).map((m, i) => ({
         id: idFrom(obj(m).id, 'm', used), n: int(obj(m).n, 1, LIMITS.GROUP, i + 1),
-        vitals: normalizeVitals(obj(m).vitals, card),
+        vitals: normalizeVitals(obj(m).vitals, card, healthMax),
       }));
       return members.length ? [{ ...base, kind: 'enemy', enemyId: enemy.id, members }] : [];
     });
@@ -640,7 +659,7 @@
      null when there is nothing campaign-shaped to rebuild. Ids are unique
      across the whole campaign, so a hero and an enemy can never collide in a
      selector. */
-  function normalizeCampaign(raw, now = nowIso()) {
+  function normalizeCampaign(raw, now = nowIso(), healthMax = baseHealthMax) {
     if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
     const used = new Set();
     const c = {
@@ -653,9 +672,9 @@
       created: isoOr(raw.created, now),
       ...meta(raw, now),
     };
-    c.heroes = arr(raw.heroes).slice(0, LIMITS.HEROES).map((h) => normalizeHero(h, used, now));
+    c.heroes = arr(raw.heroes).slice(0, LIMITS.HEROES).map((h) => normalizeHero(h, used, now, healthMax));
     c.enemies = arr(raw.enemies).slice(0, LIMITS.ENEMIES).map((e) => normalizeEnemy(e, used, now));
-    c.combat = normalizeCombat(raw.combat, c);
+    c.combat = normalizeCombat(raw.combat, c, healthMax);
     return c;
   }
 
@@ -663,8 +682,8 @@
      over it: the same campaign under a fresh id. Its heroes, enemies and fight
      keep their own ids — those only have to be unique inside the campaign,
      and keeping them is what keeps a fight pointing at its fighters. */
-  function copyCampaign(raw, now = nowIso()) {
-    const c = normalizeCampaign(raw, now);
+  function copyCampaign(raw, now = nowIso(), healthMax = baseHealthMax) {
+    const c = normalizeCampaign(raw, now, healthMax);
     if (!c) return null;
     c.id = newId('cmp');
     return c;
@@ -686,6 +705,26 @@
     startCombat, turnsLeft, canAct, upNext, pick, endTurn, roundOver, nextRound,
     memberIn, restoreMember, settleCombat,
   };
+
+  /* The API with the REAL health maximum built in — mechanics.js's create()
+     idea, for the one rule here that needs content. main.js builds its CMP
+     with this once, so every door that clamps vitals (load, restore, a
+     hero's file, a fight settling after an edit) uses the content-bound
+     V.healthMax, and no call site can forget to pass it. The bare api stays
+     as it is for Node, with the effect-free maximum. */
+  function create({ healthMax } = {}) {
+    if (typeof healthMax !== 'function') return api;
+    return Object.freeze({
+      ...api,
+      normalizeVitals: (raw, card) => normalizeVitals(raw, card, healthMax),
+      newHero: (spec, now = nowIso()) => newHero(spec, now, healthMax),
+      refreshHero: (hero, got, now = nowIso()) => refreshHero(hero, got, now, healthMax),
+      normalizeCampaign: (raw, now = nowIso()) => normalizeCampaign(raw, now, healthMax),
+      copyCampaign: (raw, now = nowIso()) => copyCampaign(raw, now, healthMax),
+      settleCombat: (campaign) => settleCombat(campaign, healthMax),
+    });
+  }
+  api.create = create;
 
   root.MEEPLE_CAMPAIGN = api;
   // Node loads this file as CommonJS; the browser has no `module` at all.

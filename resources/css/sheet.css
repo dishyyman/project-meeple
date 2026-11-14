@@ -153,7 +153,7 @@
    two-line name reaches up into the button on a short hero. */
 .hero__scrim {
   position: absolute; inset: 0;
-  background: linear-gradient(to top, rgba(0,0,0,0.88) 0%, rgba(0,0,0,0.42) 34%, rgba(0,0,0,0) 62%);
+  background: var(--fade-portrait);
   pointer-events: none;
 }
 /* Hung from the status bar's clearance, not a fixed 52px: on a real phone
@@ -170,7 +170,7 @@
 }
 .hero__meta {
   font-family: var(--font-body); font-style: italic; font-size: var(--fs-input); color: var(--on-dark-soft);
-  margin-top: var(--space-1-5); text-shadow: 0 1px 6px rgba(0,0,0,0.75);
+  margin-top: var(--space-1-5); text-shadow: var(--shadow-text-photo);
 }
 
 /* dice glyph inside the FAB */
@@ -552,7 +552,7 @@
   background: var(--bg-page);
   border-top: 1.5px solid var(--rule-strong);
   padding: var(--space-2) var(--space-1-5) var(--home-clear);
-  box-shadow: 0 -3px 14px rgba(0,0,0,0.4);
+  box-shadow: var(--shadow-tabbar);
 }
 .tabbar__btn {
   flex: 1; display: flex; flex-direction: column; align-items: center; gap: var(--space-1);

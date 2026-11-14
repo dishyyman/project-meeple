@@ -100,8 +100,9 @@ project-meeple/
     ├── unit/                # node --test
     │   ├── dice.test.js       # 17 — arithmetic, limits, refusals, never eval
     │   ├── mechanics.test.js  # 96 — every rules-gaps §6 rule + §7 rulings; the hero card agrees with the full character; enemies; Armor
-    │   ├── campaign.test.js   # 38 — GM Tools: records, the normalizer vs junk and hostile input, enemies through the vitals rules, turn tracking and the round count, fight ids, members, settling a fight, the Monster Compendium (stock, copies, the stored half), the monster file
+    │   ├── campaign.test.js   # 42 — GM Tools: records, the normalizer vs junk and hostile input (every pool clamped to its card, Health included), enemies through the vitals rules, turn tracking and the round count, fight ids, members, settling a fight, the Monster Compendium (stock, copies, the stored half), the monster file
     │   ├── content.test.js    #  7 — the real compendium vs the guide
+    │   ├── css-tokens.test.js #  2 — no colour written outside tokens.css
     │   └── library-check.test.js # 14 — the compendium/entry shape check
     ├── e2e/                 # Playwright — every test runs in Chrome AND Safari
     │   ├── helpers/test.js    # the `test` to import: fails on any page error
@@ -255,6 +256,7 @@ Each flow lists the steps and the result that must hold. These are the E2E suite
 | Campaign records, normalizer, combat turn tracking | `unit/campaign.test.js` |
 | Compendium content vs the guide | `unit/content.test.js` |
 | Compendium / library entry shape check | `unit/library-check.test.js` |
+| No colour outside `tokens.css` | `unit/css-tokens.test.js` |
 | Flow 9 (compendium Add/Replace/Restore), malformed compendiums, launch safety net | `e2e/compendium.spec.js` |
 | Flows 1, 2 (first run, creation) | `e2e/smoke.spec.js` |
 | Flows 3, 4, 5 (damage, rolls, effects) | `e2e/characterization.spec.js` (as recorded output, not readable assertions) |

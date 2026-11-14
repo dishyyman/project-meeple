@@ -366,7 +366,7 @@ them all the same storage key.
 
 ## 6a. Read by Game Master Tools
 
-A GM adds a hero to a campaign by importing this same file — nothing new is written for it, and the format does not change. The GM's device reads the character (any one, from a single export or a backup), works out its **hero card** (`mechanics.js` `heroCard()`) using the file's own `entries` as the content to resolve against, and keeps the player's current health, mana, Wounds, Patches and effects as the hero's starting vitals. Those entries are **not** merged into the GM's own compendium. A newer file for the same character (matched by its `id`) replaces the card and keeps the vitals the GM has been tracking. See `database.md` A3b.
+A GM adds a hero to a campaign by importing this same file — nothing new is written for it, and the format does not change. The GM's device reads the character (any one, from a single export or a backup), works out its **hero card** (`mechanics.js` `heroCard()`) using the file's own `entries` as the content to resolve against — **including ids the GM's device already has**, so where the two compendiums disagree about an id the card follows the player's sheet — and keeps the player's current health, mana, Wounds, Patches and effects as the hero's starting vitals. Those entries are **not** merged into the GM's own compendium: they are swapped in for the one calculation and the GM's own put back. A newer file for the same character (matched by its `id`) replaces the card and keeps the vitals the GM has been tracking. See `database.md` A3b.
 
 ## 7. Still to come
 

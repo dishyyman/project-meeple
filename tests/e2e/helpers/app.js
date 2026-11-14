@@ -155,7 +155,32 @@ async function readResult(page) {
 const rosterNames = (page) => page.$$eval('[data-list="roster"] .persona-card__name',
   (els) => els.map((e) => e.textContent.trim()));
 
+/* Storage that refuses writes on cue — a full quota (usually portraits) or
+   storage the browser has blocked.
+
+   failWrites() makes localStorage.setItem throw the way a full quota does,
+   for keys matching `pattern`, from the moment it is called. localStorage
+   only — sessionStorage carries the test seeding flag and must keep working.
+   Call breakableStorage() before openApp(); it does nothing until
+   failWrites() names what to refuse. */
+async function breakableStorage(page) {
+  await page.addInitScript(() => {
+    const real = Storage.prototype.setItem;
+    Storage.prototype.setItem = function (key, value) {
+      const p = window.__failWrites;
+      if (this === window.localStorage && p && new RegExp(p).test(key)) {
+        throw new DOMException('The quota has been exceeded.', 'QuotaExceededError');
+      }
+      return real.call(this, key, value);
+    };
+  });
+}
+const failWrites = (page, pattern = '^meeple\\.') =>
+  page.evaluate((p) => { window.__failWrites = p; }, pattern);
+const healWrites = (page) => page.evaluate(() => { window.__failWrites = null; });
+
 module.exports = {
   openApp, press, appAttr, openFirstCharacter, closeModal, applyCalc, addEffect, readSheet,
   fixture, chooseFile, download, readResult, rosterNames,
+  breakableStorage, failWrites, healWrites,
 };

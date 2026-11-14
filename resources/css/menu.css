@@ -11,7 +11,7 @@
 .drawer__scrim { position: absolute; inset: 0; background: var(--scrim); }
 .drawer__panel {
   position: absolute; top: 0; right: 0; bottom: 0; width: 82%;
-  background: var(--bg-page); box-shadow: -8px 0 30px rgba(0,0,0,0.6);
+  background: var(--bg-page); box-shadow: var(--shadow-drawer);
   padding: var(--statusbar-clear) 0 var(--space-10); overflow: auto;
   scroll-padding-block: var(--space-2);   /* focus-ring room, see .scroll */
 }

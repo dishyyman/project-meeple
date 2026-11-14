@@ -70,6 +70,29 @@ test('a hero from a file shows the numbers the player\'s sheet shows', async ({ 
   await expect(page.locator('[data-block="partyEmpty"]')).toBeHidden();
 });
 
+/* character-file.md §6a: the card is worked out against the FILE's entries,
+   including ids this device already has. Codex review 2026-11-14: only the
+   ids the GM lacked were borrowed, so where both compendiums carry the same
+   id with different numbers, the GM's won and the card did not match the
+   player's sheet. */
+test('a hero is built from the file\'s entries even where the GM has the same id', async ({ page }) => {
+  const file = JSON.parse(fs.readFileSync(ELARA, 'utf8'));
+  file.entries['subclass.hunter'].hp = 12;          // the GM's Hunter has 8; Elara's Constitution adds 1
+  const drifted = { name: 'elara.meeple.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(file)) };
+
+  await openApp(page);
+  await newCampaign(page);
+  await fromFile(page, drifted);
+  const elara = card(page, 'Elara Starwhisper');
+  await expect(health(elara)).toHaveText('7 / 13');
+
+  // Handed back: the same file without the change — the GM's own Hunter
+  // again, through the same borrow — gives the shipped 9, not a leftover 13.
+  await fromFile(page, ELARA);
+  await expect(health(elara)).toHaveText('7 / 9');
+  expect(await page.evaluate(() => localStorage.getItem('meeple.imported-entries'))).toBeNull();
+});
+
 test('damage takes the hero\'s Armor off; Armor Piercing does not', async ({ page }) => {
   await openApp(page);
   const before = await playerSave(page);

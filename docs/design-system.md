@@ -194,7 +194,7 @@ The full set. Themes override these values; components only ever use these names
 - **`--ink-soft` is body text; `--rule-strong` is structure.**
 - **Gold at size is `--gold-fill`**, not `--gold-bright` — the bright gold is sized for 8px diamonds.
 - **A wound pip and a button share `--accent`'s red.** They are told apart by shape and place: pips are 22px squares in the vitals card; buttons are wide and sit at the foot of a screen.
-- **Never hardcode a color outside `tokens.css`.**
+- **Never hardcode a color outside `tokens.css`** — not in a shadow, a fade or the device frame either. `tests/unit/css-tokens.test.js` fails on any `rgb()`/`hsl()`/hex/named colour in another stylesheet.
 
 ---
 
@@ -318,6 +318,16 @@ Hard offset shadows are the theme's woodcut signature. Floating layers use soft 
 | `--shadow-card` | `3px 3px 0 rgba(0,0,0,.45)` | Raised cards |
 | `--shadow-modal` | `0 18px 44px rgba(0,0,0,.62)` | Modals |
 | `--shadow-edge` | `-10px 0 28px rgba(0,0,0,.55)` | The edge of a screen being swiped back |
+| `--shadow-sheet` | `0 -12px 40px rgba(0,0,0,.6)` | An action sheet rising from the bottom |
+| `--shadow-tray` | `0 -10px 34px rgba(0,0,0,.55)` | The dice tray |
+| `--shadow-tabbar` | `0 -3px 14px rgba(0,0,0,.4)` | The tab bar, fixed to the bottom edge |
+| `--shadow-drawer` | `-8px 0 30px rgba(0,0,0,.6)` | The menu drawer |
+| `--shadow-lift` | `0 8px 20px rgba(0,0,0,.5)` | A persona card picked up to reorder |
+| `--shadow-glass` | `0 2px 8px rgba(0,0,0,.5)` | Under a filled glass button (with its `--hairline` inset) |
+| `--shadow-text-photo` | `0 1px 6px rgba(0,0,0,.75)` | Text over the portrait |
+| `--shadow-device` | `0 30px 60px rgba(0,0,0,.7)` | The drawn phone (desktop preview) |
+
+Fades over a photo are tokens too: `--fade-portrait` (the sheet's hero) and `--fade-banner` (a campaign's). The drawn phone's `--frame-bezel`, `--frame-rim` and `--frame-chip`, and the boot-error `--code-bg`, live with them in `tokens.css`. Several of the soft shadows are near each other in value; merging them is a design call, not a cleanup, and was left for one.
 
 **Rules:** a row inside a bordered container takes no shadow (it reads as a seam). Pressed buttons drop their shadow and shift `1px, 1px`.
 

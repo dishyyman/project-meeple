@@ -10,6 +10,7 @@ const { test, expect } = require('./helpers/test');
 const {
   openApp, press, appAttr, openFirstCharacter, closeModal, applyCalc,
   fixture, chooseFile, download, readResult, rosterNames,
+  breakableStorage, failWrites, healWrites,
 } = require('./helpers/app');
 
 // Back to Home after a reload, the way init() leaves it.
@@ -215,25 +216,9 @@ test('Flow 11 — a deleted character stays deleted after reload (the seed inclu
    standing alert while writes fail, no "saved" claim that is not true, and
    an import that does not report characters a reload will not bring back.
 
-   failWrites() makes localStorage.setItem throw the way a full quota does,
-   for keys matching `pattern`, from the moment it is called. localStorage
-   only — sessionStorage carries the test seeding flag and must keep working.
+   failWrites() (helpers/app.js) makes localStorage.setItem throw the way a
+   full quota does, for keys matching a pattern, from the moment it is called.
    --------------------------------------------------------------------- */
-async function breakableStorage(page) {
-  await page.addInitScript(() => {
-    const real = Storage.prototype.setItem;
-    Storage.prototype.setItem = function (key, value) {
-      const p = window.__failWrites;
-      if (this === window.localStorage && p && new RegExp(p).test(key)) {
-        throw new DOMException('The quota has been exceeded.', 'QuotaExceededError');
-      }
-      return real.call(this, key, value);
-    };
-  });
-}
-const failWrites = (page, pattern = '^meeple\\.') =>
-  page.evaluate((p) => { window.__failWrites = p; }, pattern);
-const healWrites = (page) => page.evaluate(() => { window.__failWrites = null; });
 const alertCard = (page) => page.locator('.storage-alert__card');
 
 test.describe('when storage refuses writes', () => {

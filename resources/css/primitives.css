@@ -42,7 +42,7 @@
 }
 .glass-btn--accent {
   background: var(--accent);
-  box-shadow: inset 0 0 0 1px var(--hairline), 0 2px 8px rgba(0,0,0,0.5);
+  box-shadow: inset 0 0 0 1px var(--hairline), var(--shadow-glass);
 }
 
 /* screen title (oxblood, medieval) */

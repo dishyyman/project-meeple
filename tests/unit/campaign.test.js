@@ -77,12 +77,37 @@ describe('records', () => {
   });
 
   test('a newer file replaces the card, keeps the GM\'s vitals, clamps them to the new maxima', () => {
-    const h = C.newHero({ name: 'Elara', card: CARD, vitals: { health: 5, mana: 15, wounds: 3, patches: 6 } }, NOW);
-    C.refreshHero(h, { name: 'Elara', label: 'Hunter 6', card: { ...CARD, manaMax: 10, woundsMax: 2 } }, NOW);
+    const h = C.newHero({ name: 'Elara', card: CARD, vitals: { health: 9, mana: 15, wounds: 3, patches: 6 } }, NOW);
+    // Every pool shrinks — Health too (codex review 2026-11-14: it alone was
+    // left at 9 / 5, extra Health the GM's card would have let them spend).
+    C.refreshHero(h, { name: 'Elara', label: 'Hunter 6', card: { ...CARD, healthBase: 5, manaMax: 10, woundsMax: 2 } }, NOW);
     assert.equal(h.card.manaMax, 10);
     assert.deepEqual([h.vitals.health, h.vitals.mana, h.vitals.wounds], [5, 10, 2]);
     assert.equal(h.label, 'Hunter 6');
     assert.equal(h.rev, 2);
+  });
+
+  test('a bigger pool does not refill the bar: the GM\'s health is kept as it was', () => {
+    const h = C.newHero({ name: 'Elara', card: CARD, vitals: { health: 4 } }, NOW);
+    C.refreshHero(h, { name: 'Elara', card: { ...CARD, healthBase: 20 } }, NOW);
+    assert.equal(h.vitals.health, 4);
+  });
+
+  test('with the real maximum (create), a Constitution effect lifts the cap', () => {
+    // A stand-in Boon: the app has none that touches Constitution today, but
+    // the engine allows one, and a buffed hero must not lose health on load.
+    const FX = { 'boon.vigor': { id: 'boon.vigor', kind: 'boon', mod: { stat: 'Constitution', value: 1 } } };
+    const RV = create({ subclassOf: () => null, itemOf: () => null, effectById: (id) => FX[id] || null }).vitals;
+    const BC = C.create({ healthMax: RV.healthMax });
+    const vitals = { health: 12, effects: [{ id: 'boon.vigor', stacks: 3 }] };
+    assert.equal(BC.newHero({ name: 'Elara', card: CARD, vitals }, NOW).vitals.health, 12);   // 9 + 3
+    assert.equal(C.newHero({ name: 'Elara', card: CARD, vitals }, NOW).vitals.health, 9);     // no content: 9
+    // Every door in the bound API carries it.
+    const raw = { heroes: [{ card: CARD, vitals: { health: 99, effects: [{ id: 'boon.vigor', stacks: 2 }] } }] };
+    assert.equal(BC.normalizeCampaign(raw, NOW).heroes[0].vitals.health, 11);
+    assert.equal(BC.copyCampaign(raw, NOW).heroes[0].vitals.health, 11);
+    // And without a function, create() is the plain api.
+    assert.equal(C.create(), C);
   });
 
   test('a manual hero: downed falls back to the numbers as typed', () => {
@@ -130,6 +155,14 @@ describe('normalizeCampaign — the one door in', () => {
     for (const id of ids) assert.match(id, C.SAFE_ID);
     assert.equal(new Set(ids).size, ids.length);
     assert.equal(c.heroes[0].id, 'same');       // the first keeps it, the second gets a fresh one
+  });
+
+  test('Health over the pool is clamped to it, like Mana and Wounds', () => {
+    const c = C.normalizeCampaign({ heroes: [
+      { card: { ...CARD, healthBase: 10 }, vitals: { health: 999 } },
+      { card: { ...CARD, healthBase: null }, vitals: { health: 7 } },     // no class: no pool
+    ] }, NOW);
+    assert.deepEqual(c.heroes.map((h) => h.vitals.health), [10, 0]);
   });
 
   test('an effect with a hostile id is dropped from the vitals', () => {
@@ -342,6 +375,15 @@ describe('combat — pick who acts next, round by round', () => {
     C.settleCombat(c);
     assert.equal(c.combat.fighters.filter((f) => f.kind === 'hero').length, 2);
     assert.equal(c.combat.fighters.filter((f) => f.kind === 'enemy').length, 1);
+  });
+
+  test('settleCombat: a stat card edited down clamps every member\'s Health to it', () => {
+    const { c, combat, ogre } = setup();
+    c.combat = combat;
+    ogre.stats.hp = 25;                              // was 40, and the Ogre is untouched
+    C.settleCombat(c);
+    const member = c.combat.fighters.find((f) => f.enemyId === ogre.id).members[0];
+    assert.equal(member.vitals.health, 25);
   });
 });
 

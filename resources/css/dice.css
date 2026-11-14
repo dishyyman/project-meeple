@@ -121,7 +121,7 @@
   background: var(--bg-card);
   border-top: 1.5px solid var(--line-gold);
   border-radius: var(--r-modal) var(--r-modal) 0 0;
-  box-shadow: 0 -12px 40px rgba(0,0,0,0.6);
+  box-shadow: var(--shadow-sheet);
   padding: var(--space-2-5) var(--space-4) calc(var(--space-4) + var(--home-clear));
   animation: sheet-rise 0.22s ease-out;
 }
@@ -286,7 +286,7 @@
   background: var(--bg-page);
   border-top: 1.5px solid var(--rule-strong);
   border-radius: 20px 20px 0 0;
-  box-shadow: 0 -10px 34px rgba(0,0,0,0.55);
+  box-shadow: var(--shadow-tray);
   padding: var(--space-2-5) var(--space-3) calc(var(--space-3) + env(safe-area-inset-bottom, 0px));
   animation: sheet-rise 0.22s ease-out;
 }

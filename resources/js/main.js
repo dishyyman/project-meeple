@@ -1739,7 +1739,10 @@
   /* Decision 12). Campaigns are small — a party's numbers and a list of */
   /* stat blocks — so every campaign is held in memory once loaded.      */
   /* ================================================================== */
-  const CMP = window.MEEPLE_CAMPAIGN;
+  // Built with the content-bound health maximum, so every door that clamps a
+  // hero's or an enemy's vitals counts Constitution from active effects the
+  // way the player's own sheet does (campaign.js, "THE HEALTH MAXIMUM").
+  const CMP = window.MEEPLE_CAMPAIGN.create({ healthMax: M.vitals.healthMax });
 
   /* Load every campaign the index names. Each is rebuilt by
      normalizeCampaign(), so a record someone edited by hand, or one written
@@ -2226,24 +2229,39 @@
      built on a scratch copy and thrown away; the file's content snapshot is
      BORROWED for the length of the calculation and handed back, so a player
      on a newer compendium still shows their real numbers without the GM's
-     own library changing underneath them (docs/character-file.md §6a). */
-  function unmergeEntries(ids) {
-    if (!ids.length) return;
-    const drop = new Set(ids);
-    const prune = (list) => {
-      if (!list) return;
-      for (let i = list.length - 1; i >= 0; i--) if (drop.has(list[i].id)) list.splice(i, 1);
-    };
-    prune(LIBRARY.classes); prune(LIBRARY.subclasses); prune(LIBRARY.traits); prune(LIBRARY.skills);
-    prune(ARMOR); prune(WEAPONS); prune(EQUIPMENT);
-    for (const id of ids) { SKILLS.delete(id); ITEMS.delete(id); }
-  }
+     own library changing underneath them (docs/character-file.md §6a).
 
+     Borrowed means EVERY usable entry in the snapshot, including ids this
+     device already holds. The card is the player's device's to define (see
+     refreshHero), so where the two compendiums disagree about the same id —
+     a homebrew entry edited on one side, an app update one device has not
+     loaded yet — the file's version is the one the player's sheet was built
+     from, and the one the card must be built from too. This is the opposite
+     of mergeEntries(), where the local entry wins because the player is
+     KEEPING the character on this device. (Codex review 2026-11-14.)
+
+     Each entry is swapped in place, in its catalog list and its index map,
+     and every swap is undone in reverse order in `finally`: the GM's own
+     entries go back where they were, the borrowed-only ones leave. */
   function withBorrowedEntries(bag, fn) {
-    const wanted = {};
-    for (const [id, e] of Object.entries(bag || {})) if (!byLibraryId(id)) wanted[id] = e;
-    const added = mergeEntries(wanted);
-    try { return fn(); } finally { unmergeEntries(added); }
+    const undo = [];
+    for (const [id, entry] of Object.entries(bag || {})) {
+      if (!usableEntry(id, entry)) continue;   // malformed: the GM's own (if any) stands
+      const shelf = shelfOf(id);
+      if (!shelf) continue;
+      const at = shelf.list.findIndex((x) => x.id === id);
+      const listed = at === -1 ? null : shelf.list[at];
+      const mapped = shelf.map ? shelf.map.get(id) : undefined;
+      if (listed) shelf.list[at] = entry; else shelf.list.push(entry);
+      if (shelf.map) shelf.map.set(id, entry);
+      undo.push(() => {
+        const i = shelf.list.indexOf(entry);
+        if (listed) { if (i !== -1) shelf.list[i] = listed; }
+        else if (i !== -1) shelf.list.splice(i, 1);
+        if (shelf.map) { if (mapped) shelf.map.set(id, mapped); else shelf.map.delete(id); }
+      });
+    }
+    try { return fn(); } finally { for (let i = undo.length - 1; i >= 0; i--) undo[i](); }
   }
 
   /* One character out of a file → what a hero needs: name, label, card, and
@@ -2660,11 +2678,20 @@
          ruling, 2026-11-14), as its own copy: made once, there for every
          campaign — and this campaign's copy can be edited without changing
          it. */
-      if (monsters.length < CMP.LIMITS.ENEMIES) {
+      /* The toast says where it actually went. The campaign copy always
+         lands (its own write failing is the storage notice's to report, as
+         for every play edit); the compendium copy can miss — no room, or a
+         write the browser refused, which is taken back so memory and disk
+         agree. */
+      if (monsters.length >= CMP.LIMITS.ENEMIES) {
+        showToast(`${clean.name} saved. The compendium is full (${CMP.LIMITS.ENEMIES}), so it was not added there.`);
+      } else {
+        const before = monsters.slice();
         monsters.push(CMP.freshEnemy(clean));
-        saveMonsters();
+        showToast(commitMonsters(before)
+          ? `${clean.name} saved here and to the compendium.`
+          : `${clean.name} saved, but not to the compendium — this browser’s storage is full or blocked.`);
       }
-      showToast(`${clean.name} saved here and to the compendium.`);
     }
     closeModal();
     // An edited stat card reaches into a fight in progress: its numbers are
@@ -2752,6 +2779,20 @@
     } catch (_) { monstersFailing = true; }
     settleStorage();
     return !monstersFailing;
+  }
+
+  /* Save a change the caller has just made to `monsters`, or take it back.
+     `before` is the list as it stood (monsters.slice(), taken first). A
+     refused write restores it, so what is in memory is what is on disk and
+     the storage notice has nothing standing to report about the compendium
+     — the caller says, in words, that this one thing did not land. Every
+     compendium ADD goes through here: New Enemy, a monster file, a backup. */
+  function commitMonsters(before) {
+    if (saveMonsters()) return true;
+    monsters = before;
+    monstersFailing = false;
+    settleStorage();
+    return false;
   }
 
   const allMonsters = () => [...CMP.stockMonsters(), ...monsters];
@@ -2846,12 +2887,29 @@
       showImportResult({ ok: false, ...msg });
       return;
     }
-    const room = CMP.LIMITS.ENEMIES - monsters.length;
-    const taken = read.enemies.slice(0, Math.max(0, room));
+    /* Every way this can end is said in words: nothing fits, some fit, the
+       write was refused, or all of it went in. Nothing is left standing in
+       memory that a reload would not bring back. */
+    const room = Math.max(0, CMP.LIMITS.ENEMIES - monsters.length);
+    if (!room) {
+      showImportResult({ ok: false, title: 'The compendium is full',
+        text: `It holds up to ${CMP.LIMITS.ENEMIES} of your own monsters. Delete some to make room, then import ${filename} again.` });
+      return;
+    }
+    const taken = read.enemies.slice(0, room);
+    const before = monsters.slice();
     monsters.push(...taken);
-    saveMonsters();
+    if (!commitMonsters(before)) {
+      showImportResult({ ok: false, title: 'Nothing was imported',
+        text: 'The monsters could not be imported — this browser’s storage is full or blocked.' });
+      return;
+    }
     renderMonsterPicker();
-    showToast(taken.length === 1 ? `${taken[0].name} added to the compendium.` : `${taken.length} monsters added to the compendium.`);
+    const left = read.enemies.length - taken.length;
+    const what = taken.length === 1 ? taken[0].name : `${taken.length} monsters`;
+    showToast(left
+      ? `${what} added to the compendium. It is full, so the other ${left} ${left === 1 ? 'was' : 'were'} left out.`
+      : `${what} added to the compendium.`);
   }
 
   /* ---- the Combat tab ---------------------------------------------------
@@ -7345,29 +7403,43 @@
   function mergeEntries(bag, { markImported } = {}) {
     const added = [];
     for (const [id, entry] of Object.entries(bag || {})) {
-      if (!entry || typeof entry !== 'object' || entry.id !== id) continue;
-      /* Shape-checked here because this is the ONE way an entry joins the
-         live library after launch — a character file's snapshot, a
-         compendium Add, and the entries restored at boot all come through.
-         A malformed one is skipped exactly like an unknown type below: the
-         character that needed it reports it as not restored (see
-         referencedLoss()), and it never reaches storage to be read back at
-         the next launch. */
-      if (LIBRARY_CHECK.checkEntry(entry)) continue;
-      if (byLibraryId(id)) continue;
+      if (!usableEntry(id, entry) || byLibraryId(id)) continue;
+      const shelf = shelfOf(id);
+      if (!shelf) continue;
       const e = markImported ? { ...entry, imported: true } : entry;
-      const kind = id.slice(0, id.indexOf('.'));
-      if (kind === 'class')      (LIBRARY.classes    ||= []).push(e);
-      else if (kind === 'subclass') (LIBRARY.subclasses ||= []).push(e);
-      else if (kind === 'trait') (LIBRARY.traits     ||= []).push(e);
-      else if (kind === 'skill') { (LIBRARY.skills ||= []).push(e); SKILLS.set(id, e); }
-      else if (kind === 'armor') { ARMOR.push(e); ITEMS.set(id, e); }
-      else if (kind === 'weapon' || kind === 'shield') { WEAPONS.push(e); ITEMS.set(id, e); }
-      else if (kind === 'gear' || kind === 'consumable') { EQUIPMENT.push(e); ITEMS.set(id, e); }
-      else continue;
+      shelf.list.push(e);
+      if (shelf.map) shelf.map.set(id, e);
       added.push(id);
     }
     return added;
+  }
+
+  /* Whether a bag's entry may join the live library at all: filed under its
+     own id, and of a shape library-check.js accepts. Shape-checked because
+     this is the way an entry joins the live library after launch — a
+     character file's snapshot, a compendium Add, the entries restored at
+     boot, and a GM's borrowed snapshot all come through it. A malformed one
+     is skipped exactly like an unknown type: the character that needed it
+     reports it as not restored (see referencedLoss()), and it never reaches
+     storage to be read back at the next launch. */
+  function usableEntry(id, entry) {
+    return !!entry && typeof entry === 'object' && entry.id === id && !LIBRARY_CHECK.checkEntry(entry);
+  }
+
+  /* Where an entry of this id lives: the catalog list every lookup scans,
+     and the index map beside it for the kinds that have one. null for a type
+     this app does not know. The `||=` only runs for the kind being shelved,
+     so asking never creates an empty catalog a library check would notice. */
+  function shelfOf(id) {
+    const kind = id.slice(0, id.indexOf('.'));
+    if (kind === 'class')    return { list: (LIBRARY.classes    ||= []) };
+    if (kind === 'subclass') return { list: (LIBRARY.subclasses ||= []) };
+    if (kind === 'trait')    return { list: (LIBRARY.traits     ||= []) };
+    if (kind === 'skill')    return { list: (LIBRARY.skills     ||= []), map: SKILLS };
+    if (kind === 'armor')    return { list: ARMOR, map: ITEMS };
+    if (kind === 'weapon' || kind === 'shield')   return { list: WEAPONS, map: ITEMS };
+    if (kind === 'gear' || kind === 'consumable') return { list: EQUIPMENT, map: ITEMS };
+    return null;
   }
 
   // One lookup across every collection, used to ask "does this device already
@@ -8547,12 +8619,7 @@
       else if (mode === 'overwrite') { monsters[at] = m; replaced++; }
     }
     const count = added + replaced;
-    if (count && !saveMonsters()) {
-      // Taken back: what is on disk is what was there before, so the
-      // storage notice has nothing standing to report about the compendium.
-      monsters = before;
-      monstersFailing = false;
-      settleStorage();
+    if (count && !commitMonsters(before)) {
       return { count: 0, failed: true, sentence: 'The monsters could not be imported — this browser’s storage is full or blocked.' };
     }
     const n = (k) => `${k} monster${k === 1 ? '' : 's'}`;
