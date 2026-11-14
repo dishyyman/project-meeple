@@ -299,6 +299,8 @@ New or changed conventions, newest first. Add a row whenever this doc changes.
 
 | Date | Convention | Notes |
 |---|---|---|
+| 2026-11-13 | Edge clearances hang from `--statusbar-clear` / `--home-clear`, never a fixed px | On a real phone those tokens are the device's safe area (`tokens.css`); fixed offsets land under the clock |
+| 2026-11-13 | Text fields are `--fs-input` (16px) or larger | iOS zooms the page on focus below 16px; `phone.spec.js` enforces it |
 | 2026-10-05 | Game arithmetic lives in `mechanics.js`; `main.js` wraps it | Extracted so rules can be unit-tested. Older history shows them in `main.js` |
 | 2026-10-05 | Tests: `npm test`; unit `*.test.js`, browser `*.spec.js` | Dev-only `package.json`; never add `"type": "module"` |
 | 2026-10-05 | No `style="…"` attributes anywhere, enforced by the CSP | Gear slots moved from `style="--slot-span"` to `data-span` |

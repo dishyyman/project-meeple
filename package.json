@@ -8,6 +8,7 @@
     "test:e2e": "playwright test",
     "test:chrome": "playwright test --project=chrome",
     "test:safari": "playwright test --project=safari",
+    "test:iphone": "playwright test --project=iphone",
     "test:report": "playwright show-report",
     "serve": "node tests/serve.mjs",
     "content": "node tools/csv-to-json.mjs"

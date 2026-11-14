@@ -148,8 +148,12 @@
   position: absolute; inset: 0;
   background: linear-gradient(to top, rgba(0,0,0,0.88) 0%, rgba(0,0,0,0.42) 34%, rgba(0,0,0,0) 62%);
 }
-.hero__btn-home { position: absolute; top: 52px; left: 16px; z-index: 5; }
-.hero__btn-menu { position: absolute; top: 52px; right: 16px; z-index: 5; }
+/* Hung from the status bar's clearance, not a fixed 52px: on a real phone
+   that clearance is the device's own safe area (tokens.css), and a fixed
+   offset would put these under the clock on a Dynamic Island iPhone. The
+   −2px keeps them exactly where they sat in the drawn phone (54 − 2). */
+.hero__btn-home { position: absolute; top: calc(var(--statusbar-clear) - 2px); left: 16px; z-index: 5; }
+.hero__btn-menu { position: absolute; top: calc(var(--statusbar-clear) - 2px); right: 16px; z-index: 5; }
 .hero__btn-dice { position: absolute; bottom: 22px; right: 16px; z-index: 5; }
 .hero__caption { position: absolute; left: 22px; right: 22px; bottom: 22px; }
 .hero__name {
@@ -470,7 +474,8 @@
   flex: 1; min-width: 0;
   border: 0; background: transparent; outline: none;
   padding: var(--space-2) 0;
-  font-family: var(--font-body); font-size: var(--fs-body); color: var(--ink-soft);
+  /* --fs-input, not --fs-body: under 16px, iOS zooms the page on focus. */
+  font-family: var(--font-body); font-size: var(--fs-input); color: var(--ink-soft);
   /* The type=search clear affordance is a platform control that lands
      off-palette here; the field is short enough to clear by hand. */
   -webkit-appearance: none; appearance: none;

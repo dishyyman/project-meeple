@@ -117,6 +117,7 @@ object-src 'none'; base-uri 'self'; form-action 'none'
 ```
 
 - No `'unsafe-inline'` and no `'unsafe-eval'` anywhere. JS may still set CSS custom properties through `el.style.setProperty()`, which a CSP does not block.
+- The home-screen manifest (`manifest.webmanifest`, added 2026-11-13) and its icons load under `default-src 'self'` and `img-src 'self'` — no new source was needed.
 - **Changing a source is a security decision** — record why here. Self-hosting the fonts (Gap 4) would let the two Google entries go.
 - A `<meta>` CSP can't set `frame-ancestors` (clickjacking protection); that needs a real HTTP header from the host. **Open** — with hosting.
 

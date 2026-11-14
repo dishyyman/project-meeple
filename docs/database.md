@@ -32,7 +32,7 @@
 | `meeple.library` | device | A compendium installed in place of the built-in one (`library-schema.md`) |
 | `meeple.imported-entries` | device | Content entries that filled gaps, from an imported character or a compendium Add |
 | `meeple.account` | device | Placeholder `{ signedIn, name }` — no real account behind it |
-| `meeple:frame` | device | Preview frame preference (`phone` / `full`) |
+| `meeple:frame` | device | Preview frame preference (`phone` / `full`). Desktop only — on a phone the app is always full and this is ignored, not overwritten |
 
 **Not stored, by design:**
 - Anything **derived** — level, maximum health and mana, the Wound track, Patch maximum, proficiencies, Evasion, Armor, to-hit, Power. All computed from the build and the compendium (`architecture.md` Decision 6).

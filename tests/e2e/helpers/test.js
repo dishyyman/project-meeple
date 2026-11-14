@@ -39,8 +39,8 @@ const test = base.test.extend({
     page.on('console', (m) => {
       if (m.type() !== 'error') return;
       const url = m.location().url || '';
-      // The browser asks for /favicon.ico on its own; the app has no icon yet
-      // (the logo is undecided — design-system.md §2). Not an app error.
+      // A browser may still ask for /favicon.ico on its own, even though
+      // index.html names a PNG icon. Not an app error.
       if (url.endsWith('/favicon.ico')) return;
       errors.push(`${m.text()} ${url}`.trim());
     });

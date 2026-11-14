@@ -1,0 +1,65 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <!-- MEEPLE app icon — SOURCE. The PNGs beside this file are generated
+       from it by tools/make-icons.mjs; edit this, then rerun that.
+
+       Field Journal, in miniature: the 60% page (#232323) lamplit from
+       above, a gold rule with corner diamonds like a journal card
+       (palette-3 outer, palette-2 hairline inner), and the meeple in the
+       gold range. One ember standout, as on every screen: the gem on its
+       chest (palette-4, lit toward --accent-bright).
+
+       Full bleed and opaque on purpose: iOS rounds the corners itself and
+       fills any transparency with black. Everything that matters sits well
+       inside the corner curve. The #frame group is dropped for the
+       maskable (Android) variant, whose safe zone is a centred circle the
+       rule's corners would be cut by. -->
+  <defs>
+    <radialGradient id="lamp" cx="50%" cy="38%" r="70%">
+      <stop offset="0%" stop-color="#34302a"/>
+      <stop offset="55%" stop-color="#232323"/>
+      <stop offset="100%" stop-color="#1a1a19"/>
+    </radialGradient>
+    <linearGradient id="gold" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#e5b316"/>
+      <stop offset="55%" stop-color="#cb9f13"/>
+      <stop offset="100%" stop-color="#a47e05"/>
+    </linearGradient>
+    <linearGradient id="ember" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#ee6728"/>
+      <stop offset="100%" stop-color="#a73500"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1024" height="1024" fill="url(#lamp)"/>
+
+  <g id="frame">
+    <rect x="128" y="128" width="768" height="768" rx="36" fill="none" stroke="#a47e05" stroke-width="10"/>
+    <rect x="156" y="156" width="712" height="712" rx="20" fill="none" stroke="#684d00" stroke-width="4"/>
+    <g fill="#e5b316">
+      <path d="M128 104 L152 128 L128 152 L104 128 Z"/>
+      <path d="M896 104 L920 128 L896 152 L872 128 Z"/>
+      <path d="M128 872 L152 896 L128 920 L104 896 Z"/>
+      <path d="M896 872 L920 896 L896 920 L872 896 Z"/>
+    </g>
+  </g>
+
+  <g id="meeple">
+    <!-- A soft shadow under the figure, so it stands ON the page. -->
+    <ellipse cx="512" cy="786" rx="200" ry="18" fill="#000" opacity="0.35"/>
+    <circle cx="512" cy="322" r="92" fill="url(#gold)"/>
+    <path fill="url(#gold)" d="
+      M512 410 L560 412
+      C640 420 724 438 732 486
+      C738 524 702 546 640 550
+      C610 553 592 566 600 594
+      L692 744 C704 766 692 782 666 782
+      L578 782 C556 782 546 772 540 756
+      L512 676
+      L484 756 C478 772 468 782 446 782
+      L358 782 C332 782 320 766 332 744
+      L424 594 C432 566 414 553 384 550
+      C322 546 286 524 292 486
+      C300 438 384 420 464 412 Z"/>
+    <path fill="url(#ember)" d="M512 468 L546 512 L512 556 L478 512 Z"/>
+  </g>
+</svg>

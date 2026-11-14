@@ -26,7 +26,8 @@ The app deliberately keeps behavior, structure, and appearance apart. Preserve t
 - **`resources/js/boot.js`** — fetches every fragment in `pages/`, injects them into `.app` in a fixed order, then resolves `window.MEEPLE_READY`. Adding a screen means adding a file and one entry in its `PAGES` array.
 - **`resources/css/style.css`** — an index of `@import`s and nothing else. The import order IS the cascade; it follows the original §1–§25 numbering deliberately.
 - **`resources/css/tokens.css`** — ALL design tokens. To re-skin, edit here — never hardcode colors/sizes elsewhere. The remaining CSS files are one per screen, mirroring `pages/`.
-- **`resources/js/frame.js`** — the phone-frame/full-window toggle. Shell chrome only; it sets `data-frame` on the root element and touches nothing inside `.app`.
+- **`resources/js/frame.js`** — the phone-frame/full-window toggle (a desktop preview). On a real phone it locks full window and hides the toggle. Shell chrome only; it sets `data-frame` (and `data-frame-locked`) on the root element and touches nothing inside `.app`.
+- **Edges on a real phone:** anything near the top or bottom hangs from `--statusbar-clear` / `--home-clear` (the device's safe area in full mode), never a fixed px; text fields are ≥ `--fs-input` (16px) or iOS zooms on focus.
 - **`resources/js/mechanics.js`** — THE game arithmetic: every derived stat and play rule (heal, damage, Wound cascade, rests, Patches, effects). Pure — no DOM, no storage, no UI state; takes the character as its first argument and gets content through `create()`. Loaded by the app and by the unit tests.
 - **`resources/js/main.js`** — behavior: a `character` data model, transient `state`, one-line wrappers that apply `mechanics.js` to the open character, class-only render, and one delegated click handler. Persists characters to localStorage.
 - **`tests/`** — dev-only: unit tests (`node --test`), Playwright browser tests, fixtures. Not shipped.

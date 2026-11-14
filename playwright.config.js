@@ -1,11 +1,12 @@
 /* =====================================================================
    MEEPLE — Playwright configuration (development only)
    ---------------------------------------------------------------------
-   Run:  npm run test:e2e              (Chrome and Safari)
-         npm run test:chrome / test:safari   (one browser)
+   Run:  npm run test:e2e              (Chrome, Safari, and the iPhone layout)
+         npm run test:chrome / test:safari / test:iphone   (one project)
          npm run test:report           (open the last run's HTML report)
 
-   Every browser test runs twice, once per project below:
+   Every browser test runs twice, once per desktop project below (the
+   third, iphone, runs only phone.spec.js — see `projects`):
 
      · chrome — the Chrome already installed on the machine (channel:
                 'chrome'), not a Playwright download.
@@ -18,7 +19,7 @@
    Each test gets a fresh browser context, which means fresh localStorage —
    tests never see a player's real data.
    ===================================================================== */
-const { defineConfig } = require('@playwright/test');
+const { defineConfig, devices } = require('@playwright/test');
 
 const PORT = 4173;
 
@@ -49,9 +50,19 @@ module.exports = defineConfig({
     screenshot: 'only-on-failure',
     trace: 'retain-on-failure',
   },
+  /* chrome and safari are a DESKTOP browser at 460px — the phone frame,
+     which is what most specs are written against. iphone is the real
+     thing as far as an emulator goes: WebKit at an iPhone's size, with
+     touch and no hover, so frame.js locks the app to full screen. It runs
+     only phone.spec.js (the layout on an actual phone); the desktop
+     projects skip that file, because it asserts what a phone sees.
+     Emulation cannot draw a notch, so env(safe-area-inset-*) reads 0
+     here — the safe-area spacing itself is checked on a real device
+     (testing.md §9). */
   projects: [
-    { name: 'chrome', use: { browserName: 'chromium', channel: 'chrome' } },
-    { name: 'safari', use: { browserName: 'webkit' } },
+    { name: 'chrome', use: { browserName: 'chromium', channel: 'chrome' }, testIgnore: /phone\.spec\.js/ },
+    { name: 'safari', use: { browserName: 'webkit' }, testIgnore: /phone\.spec\.js/ },
+    { name: 'iphone', use: { ...devices['iPhone 15'] }, testMatch: /phone\.spec\.js/ },
   ],
   webServer: {
     command: `node tests/serve.mjs ${PORT}`,

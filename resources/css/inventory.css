@@ -203,7 +203,9 @@
    only a softening glow, never the sole cue. */
 .field__input:focus-visible,
 .field__area:focus-visible { border-color: var(--focus); box-shadow: var(--focus-ring); }
-.field__area { min-height: 92px; resize: vertical; font-size: var(--fs-body); line-height: 1.5; }
+/* --fs-input, like every field: iOS Safari zooms the whole page in on any
+   field under 16px when it is tapped, and leaves it zoomed after. */
+.field__area { min-height: 92px; resize: vertical; line-height: 1.5; }
 .field__input::placeholder,
 .field__area::placeholder { color: var(--ink-faint); font-style: italic; }
 .field__error {

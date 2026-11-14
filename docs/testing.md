@@ -62,6 +62,7 @@ Drive the real app in a real browser through the critical journeys (§5): first 
 - **Contrast:** every new color pair clears WCAG AA (`design-system.md` §4).
 - **Reduced motion:** animations stop or soften.
 - **Screen readers:** icon buttons labeled; toasts announced.
+- **Real phone:** after layout changes near the top or bottom edge, open the deployed site on an iPhone, both in Safari and added to the home screen — nothing under the clock or Dynamic Island, the tab bar clear of the home indicator, no page bounce, no zoom when a field is tapped.
 - **Visual regression:** before/after screenshots of key screens when CSS changes broadly (used for the type/spacing migration on 2026-10-05).
 
 ---
@@ -74,7 +75,7 @@ Chosen to keep the app itself dependency-free. **Test tools are development-only
 |---|---|---|
 | **Unit** | **Node's built-in test runner** (`node --test`, `node:assert`) | Zero dependencies; Node 24 is already installed; `dice.js` already loads in Node |
 | **Integration** | Node test runner for file-format logic once extracted; **Playwright** for anything that needs the browser (storage, files, rendering) | |
-| **E2E** | **Playwright** (`@playwright/test`), every test in two projects: **chrome** (the installed Chrome, `channel: 'chrome'`) and **safari** (Playwright's WebKit) | Chrome and Safari are what players use. WebKit is the engine inside Safari and every iPhone browser — it is not the Safari app itself, so it catches engine bugs, not every Safari quirk; real-device QA still matters |
+| **E2E** | **Playwright** (`@playwright/test`), every test in two desktop projects: **chrome** (the installed Chrome, `channel: 'chrome'`) and **safari** (Playwright's WebKit). A third, **iphone** (WebKit as an iPhone 15: touch, no hover, 393×659), runs only `phone.spec.js` — the layout a phone actually gets | Chrome and Safari are what players use. WebKit is the engine inside Safari and every iPhone browser — it is not the Safari app itself, so it catches engine bugs, not every Safari quirk; real-device QA still matters. Emulation draws no notch, so safe-area spacing is a real-device check (below) |
 | **Accessibility** | **axe-core** (`@axe-core/playwright`, pinned exactly, dev-only) scans every screen and the main modals against WCAG 2.1 A/AA, strictly — any violation fails (`a11y.spec.js`). Keyboard and dialog behaviour by real key presses (`keyboard.spec.js`, `dialogs.spec.js`). A manual screen-reader pass on a real device still matters | Added 2026-11-13. axe runs in Chrome only (it reads the DOM, which both engines agree on) and with `bypassCSP` in that one file, because axe injects inline styles to measure contrast — see the file header |
 | **Visual** | Manual visual QA in the app. Playwright saves a screenshot of a **failed** test only — there are no screenshot baselines | Decided 2026-11-04: baselines would need re-approving on every deliberate look change; visual issues are noted by hand instead |
 | **Error capture** | `tests/e2e/helpers/test.js` — every browser test fails on any uncaught exception or console error | Automatic, so no test can forget the check |
@@ -113,6 +114,8 @@ project-meeple/
     │   ├── dialogs.spec.js    # 7 — dialog markup, focus in/kept/back, Escape, the shell made inert
     │   ├── a11y.spec.js       # 22 — axe on every screen and main modal (Chrome); collapsible tap targets, note state, reduced motion (both)
     │   ├── rules.spec.js      # 1 — Flow 10 (marked known bug, §10)
+    │   ├── frame.spec.js      # 4 — desktop frame: default, toggle remembered, full mode fits, narrow window locks; manifest + icons resolve
+    │   ├── phone.spec.js      # 5 — iphone project ONLY: fills the screen, no toggle, page never scrolls, tab bar on screen, fields ≥16px
     │   └── security.spec.js   # 10 — Flow 12, hostile ids, CSP, size limit
     └── fixtures/
         ├── files/             # real exports + hostile/malformed files
@@ -245,7 +248,8 @@ Each flow lists the steps and the result that must hold. These are the E2E suite
 | **Everything** | `npm test` | Works — unit, then browser |
 | **Unit tests** | `npm run test:unit` | Works — 80 tests, under a second |
 | **Browser tests** | `npm run test:e2e` (or `npx playwright test <file>`) | Works — 19 tests × 2 browsers, ~15 seconds; starts its own server |
-| **One browser only** | `npm run test:chrome` / `npm run test:safari` | |
+| **One browser only** | `npm run test:chrome` / `npm run test:safari` / `npm run test:iphone` | `iphone` runs only `phone.spec.js` |
+| **App icons** | `node tools/make-icons.mjs` | Regenerates the PNGs from `resources/images/icons/icon.svg` |
 | **One browser test** | `npx playwright test security -g malicious` | |
 | **A failed browser test** | `npm run test:report` | The last run's HTML report: each failure's error, a screenshot of the moment it failed, and the step-by-step replay. Kept in `playwright-report/` (git-ignored) |
 | **Just the replay** | `npx playwright show-trace test-results/<test>/trace.zip` | |

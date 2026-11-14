@@ -70,7 +70,8 @@ A server, accounts, and cloud sync are on the roadmap (`prd.md` §8, Nice to Hav
 | **Boot** | `resources/js/boot.js` | Fetches every fragment in `pages/`, injects them into `.app` in a fixed order, resolves `window.MEEPLE_READY`. Shows an explanation if the app was opened from `file://`. |
 | **Screens** | `pages/*.html`, `pages/modals/*.html`, `pages/toast.html` | Structure only: semantic markup, classes, and `data-*` hooks. One file per screen. |
 | **Styles** | `resources/css/` — `style.css` (import index), `tokens.css` (all design values), one file per screen | All appearance. Import order is the cascade. |
-| **Frame toggle** | `resources/js/frame.js` | Phone-frame / full-window preview toggle. Touches nothing inside `.app`. |
+| **Frame mode** | `resources/js/frame.js` | Phone-frame / full-window preview toggle on a desktop; on a real phone (touch-first, or a window under 460px) locks full window and hides the toggle. Touches nothing inside `.app`. |
+| **Home-screen app** | `manifest.webmanifest`, `resources/images/icons/` | Name, standalone display, theme colours and icons for "Add to Home Screen". Icons generated from `icon.svg` by `tools/make-icons.mjs`. |
 | **Dice engine** | `resources/js/dice.js` | The only dice parser (`evaluateDice()`). Shared by the app and the content converter. Never uses `eval()`. |
 | **Mechanics engine** | `resources/js/mechanics.js` | The only implementation of the game's arithmetic: every derived stat and every play rule (heal, damage, Wound cascade, rests, Patches, effects). No DOM, no storage. Shared by the app and the unit tests (Decision 11). |
 | **Portrait engine** | `resources/js/portrait.js` | The only image pipeline (`compress()`): decodes, resizes, and re-encodes photos so they fit in `localStorage`. |
@@ -116,7 +117,7 @@ Today, `localStorage` in each browser. Responsibilities:
 | `meeple.library` | A compendium installed in place of the built-in one | Compendium import (Replace) |
 | `meeple.imported-entries` | Individual content entries that filled gaps (from Add or an imported character) | Imports |
 | `meeple.account` | Placeholder signed-in flag and name | Account stub |
-| `meeple:frame` | Phone-frame or full-window preference | `frame.js` |
+| `meeple:frame` | Phone-frame or full-window preference (desktop; ignored, not overwritten, on a phone) | `frame.js` |
 
 Server-side database: **Open** — see `database.md` when it exists.
 
@@ -156,7 +157,7 @@ Server-side database: **Open** — see `database.md` when it exists.
 ## 6. Data Flow
 
 **Loading the app**
-1. Browser loads `index.html` over `http://` and runs `frame.js` (applies the stored frame mode before first paint).
+1. Browser loads `index.html` over `http://` and runs `frame.js` (applies the frame mode before first paint — full on a phone, else the stored choice).
 2. `boot.js` fetches all screen fragments in parallel and inserts them in order, then resolves `MEEPLE_READY`.
 3. `dice.js`, `mechanics.js`, `portrait.js`, `library.js`, `library-check.js`, and `rules.js` define their globals.
 4. `main.js` waits on `MEEPLE_READY`, then `init()` loads imported entries, the roster (opening a character), and the account flag; renders everything; wires the click handler; and lands on Home.
@@ -183,6 +184,7 @@ Server-side database: **Open** — see `database.md` when it exists.
 ```text
 project-meeple/              # repo root = site root (GitHub Pages serves it as-is)
 ├── index.html               # shell only: frame, .app root, script tags
+├── manifest.webmanifest     # home-screen app: name, display, colours, icons
 ├── CLAUDE.md                # working conventions for the codebase
 ├── pages/                   # one HTML fragment per screen (structure only)
 │   ├── home.html  characters.html  sheet.html  edit.html
@@ -202,11 +204,13 @@ project-meeple/              # repo root = site root (GitHub Pages serves it as-
 │   │   ├── rules.js         # GENERATED — Player's Guide
 │   │   └── main.js          # model, content indexes, render, wiring
 │   └── images/              # portrait assets
+│       └── icons/           # icon.svg (source) + GENERATED home-screen/favicon PNGs
 ├── tools/
 │   ├── csv/                 # exported Google Sheets tabs (source of content)
 │   ├── out/library.json     # converter output, readable JSON
 │   ├── csv-to-json.mjs      # content converter
-│   └── rtf-to-rules.mjs     # Player's Guide converter
+│   ├── rtf-to-rules.mjs     # Player's Guide converter
+│   └── make-icons.mjs       # icon.svg → the PNG icons (dev only, via Playwright)
 ├── tests/                   # DEV ONLY — see testing.md
 │   ├── unit/                # node --test: dice, mechanics, content
 │   ├── e2e/                 # Playwright: flows, characterization, security

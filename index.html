@@ -2,7 +2,28 @@
 <html lang="en" data-frame="phone">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- viewport-fit=cover lets the app paint edge to edge on a notched
+       iPhone instead of being letterboxed inside the safe area. That is only
+       safe because the app then reads the real insets back through
+       env(safe-area-inset-*) — see --statusbar-clear and --home-clear in
+       tokens.css. Zoom is deliberately left enabled (accessibility). -->
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+
+  <!-- Home-screen app. The manifest (name, icons, standalone display) is
+       what Android and current iOS read; the apple-* tags are what older
+       iOS reads, and the only way to set the status bar style on iOS.
+       black-translucent draws the app UNDER the clock and battery, which is
+       why the top inset must come from env() rather than a fixed 54px.
+       The manifest loads under default-src 'self' in the policy below —
+       no new source is needed. -->
+  <link rel="manifest" href="manifest.webmanifest">
+  <meta name="theme-color" content="#232323">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Meeple">
+  <link rel="apple-touch-icon" href="resources/images/icons/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="resources/images/icons/favicon-32.png">
 
   <!-- Content Security Policy — the backstop behind esc() (docs/security.md).
        If an escaping bug ever let markup from an imported file onto the page,
