@@ -100,7 +100,7 @@ project-meeple/
     ├── unit/                # node --test
     │   ├── dice.test.js       # 17 — arithmetic, limits, refusals, never eval
     │   ├── mechanics.test.js  # 96 — every rules-gaps §6 rule + §7 rulings; the hero card agrees with the full character; enemies; Armor
-    │   ├── campaign.test.js   # 26 — GM Tools: records, the normalizer vs junk and hostile input, enemies through the vitals rules, turn tracking
+    │   ├── campaign.test.js   # 35 — GM Tools: records, the normalizer vs junk and hostile input, enemies through the vitals rules, turn tracking and the round count, fight ids, members, settling a fight, the monster file
     │   ├── content.test.js    #  7 — the real compendium vs the guide
     │   └── library-check.test.js # 14 — the compendium/entry shape check
     ├── e2e/                 # Playwright — every test runs in Chrome AND Safari
@@ -114,10 +114,11 @@ project-meeple/
     │   ├── compendium.spec.js # 8 — Flow 9; malformed compendiums; launch safety net and its grace period
     │   ├── keyboard.spec.js   # 6 — Enter/Space on custom buttons, Shift+Enter holds
     │   ├── dialogs.spec.js    # 7 — dialog markup, focus in/kept/back, Escape (Cancel on sheets and alerts), the shell made inert
-    │   ├── a11y.spec.js       # 33 — axe on every screen and main modal, incl. the Rest sheet, Downed notice, portrait sheet, the Undo toast, the campaign screens, the Party tab with a hero and its popups (Chrome); collapsible tap targets, note state, reduced motion (both)
+    │   ├── a11y.spec.js       # 34 — axe on every screen and main modal, incl. the Rest sheet, Downed notice, portrait sheet, the Undo toast, the campaign screens, the Party tab with a hero and its popups, a fight in progress with Start Combat, the ✎ sheet and End Fight (Chrome); collapsible tap targets, note state, reduced motion (both)
     │   ├── rules.spec.js      # 1 — Flow 10 (marked known bug, §10)
     │   ├── frame.spec.js      # 5 — desktop frame: default, toggle remembered, full mode fits, narrow window locks; manifest + icons resolve; opaque iOS status bar
     │   ├── phone.spec.js      # 6 — iphone project ONLY: fills the screen, no toggle, page never scrolls (campaign screens too), both tab bars on screen, fields ≥16px, Add a Portrait takes a tap
+    │   ├── combat.spec.js     # 7 — Flow 18: Start Combat (whole party, counts, sharing a turn, no surprise round), the line (pick, End Turn, a boss's three turns, the round count, kept over a reload), Armor per goblin, down greyed and skipped but pickable, the ✎ (manual heal even when down, effects, a Wound cleared, Back to Full), End Fight, a deleted stat card leaving the fight
     │   ├── enemies.spec.js    # 7 — Flows 16, 17: stat cards made and checked, an enemy crits on a natural 20 only, edit/duplicate/delete, monster files (export, import as copies, refusals, hostile), backups carrying campaigns (restore in place, as copies, campaigns-only)
     │   ├── party.spec.js      # 9 — Flow 15: a file's hero matches the sheet, Armor and Armor Piercing, Wounds and Boons move the defences, downed, a newer file keeps the vitals, several characters ask who, hostile file, typed-in hero edit/notes/remove/reload; the open character and the GM's compendium never change
     │   ├── popups.spec.js     # 6 — sheet / alert / notice: Rest, Advantage, Patch, tick, Downed; every one has a way out; Escape is Cancel
@@ -221,6 +222,10 @@ Each flow lists the steps and the result that must hold. These are the E2E suite
 **Steps:** with a campaign, Settings → **Export Backup** → delete the campaign → **Import Backup** → Overwrite Matching; again → Add All as New. Import a backup with campaigns and no characters, from Settings and from the Characters list.
 **Expected:** the backup line counts characters and campaigns; the file keeps `schemaVersion: 1` and carries `campaigns`; restoring in place brings the campaign back under its own id, adding makes a copy under a new one. A campaigns-only backup restores from Settings ("Campaign imported") and is declined by the Characters list's Import.
 
+### Flow 18 — Combat (Game Master Tools)
+**Steps:** Combat tab → **Start Combat** → 3 Goblins sharing a turn, 1 Ogre (3 turns) → Start. Go on a hero, then another (a mis-tap); End Turn. The Ogre three times. Everyone else; **Start Round 2**. Hit Goblin 2 for 10; hit Goblin 1 for 3 with Armor Piercing; down every goblin. ✎ on Goblin 2 → Health → Heal 4; ✎ → Add a Boon or Condition; ✎ → Back to Full. Hit the Ogre for 50; ✎ → Clear a Wound. Reload. **End Fight** → Escape, then End Fight.
+**Expected:** the whole party joins and there is no surprise option; Up Next is heroes first; the acting card is whole with the enemy's attacks rolling as "Ogre Brute · Greatclub"; the Ogre reads "2 of 3 turns left" and stays up next; the heading counts rounds. Armor comes off each hit (Armor Piercing excepted); a downed goblin says "Down", greys, moves to the end of Up Next and stays pickable, and the round ends without it. Healing an enemy is the number typed (no Poison toggle) and brings a downed one back; ✎ changes this fight only — the stat card is untouched. The fight survives a reload; End Fight asks, heroes keep their vitals, and the enemies' fight is gone.
+
 ### Flow 14 — Campaigns (Game Master Tools)
 **Steps:** Home → **Game Master Tools** → **New Campaign** → name and subtitle → Create. Switch Party / Enemies / Combat. Options → Edit Name. Back to the list → make two more → Edit → reorder with the arrow keys → delete one → reload.
 **Expected:** the empty list explains itself and New Campaign leads; a campaign needs a name; a new one opens on Party with its name and subtitle; the tab bar says which tab is selected; rename shows in the header and the list; the order and the deletion are saved and survive a reload; the Characters list's edit mode never shows on the Campaigns list. A hand-edited save is cleaned up on load (bad ids skipped, text stays text). If storage refuses a write, the campaign stays for the session and the storage alert says so.
@@ -257,6 +262,7 @@ Each flow lists the steps and the result that must hold. These are the E2E suite
 | Flow 14 (campaigns: create, rename, tabs, reorder, delete, tampered save, storage refusing writes) | `e2e/campaigns.spec.js` |
 | Flow 15 (the Party: heroes from files and typed in, Armor, Wounds, effects, updates) | `e2e/party.spec.js` |
 | Flows 16, 17 (enemies and monster files; backups carrying campaigns) | `e2e/enemies.spec.js`; the file shapes in `unit/campaign.test.js` |
+| Flow 18 (the fight: the line, rounds, Armor, down, the ✎, End Fight) | `e2e/combat.spec.js`; the turn and round rules in `unit/campaign.test.js` |
 | No JavaScript errors during any browser test | `e2e/helpers/test.js` (every test, automatically) |
 | Chrome and Safari (WebKit) | every browser test runs in both |
 | Keyboard: custom buttons, the hold gestures, Wound pips | `e2e/keyboard.spec.js` (real key presses, never `press()`) |

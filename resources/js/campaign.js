@@ -416,8 +416,10 @@
        taken     how many it has used this round
        current   the fighter acting now, or null between turns
 
-     A SURPRISE round is one the party takes alone (guide: "a full round of
-     combat before the surprised targets can act").
+     There is no surprise round (designer ruling, 2026-11-14): the fight
+     opens at round 1 with everyone in it, and the ROUND COUNT is the one
+     thing the app keeps — it goes up each time the line has gone through
+     everyone and resets.
 
      Downed heroes and defeated enemies are not this file's business — that
      needs the vitals engine. Callers pass `isOut(fighter)` where it matters;
@@ -426,8 +428,8 @@
 
   /* `groups`: [{ enemyId, count, shareTurn }]. Every hero joins. Each enemy
      member starts topped up from its stat block. */
-  function startCombat(campaign, { groups = [], surprise = false } = {}) {
-    const used = new Set();
+  function startCombat(campaign, { groups = [] } = {}) {
+    const used = campaignIds(campaign);
     const fighters = campaign.heroes.map((h) => ({
       id: idFrom(null, 'f', used), kind: 'hero', heroId: h.id, turns: 1, taken: 0,
     }));
@@ -446,14 +448,24 @@
         }
       }
     }
-    return { round: 1, surprise: !!surprise, current: null, fighters: fighters.slice(0, LIMITS.FIGHTERS) };
+    return { round: 1, current: null, fighters: fighters.slice(0, LIMITS.FIGHTERS) };
+  }
+
+  /* Fighter and member ids must not collide with a hero's or an enemy's:
+     the app finds "who is this?" by id across all of them (a hero and a
+     goblin can both be the calculator's target), so every id in the fight
+     is minted against the campaign's own. */
+  function campaignIds(campaign) {
+    return new Set([...arr(campaign.heroes), ...arr(campaign.enemies)].map((x) => x.id));
   }
 
   const turnsLeft = (f) => Math.max(0, f.turns - f.taken);
 
-  // May this fighter take a turn now? Turns left, and not an enemy in the
-  // party's surprise round.
-  const canAct = (combat, f) => turnsLeft(f) > 0 && !(combat.surprise && f.kind !== 'hero');
+  // May this fighter take a turn now? Only whether it has one left — who is
+  // DOWN is the vitals engine's question, asked by the caller (see isOut).
+  // `combat` stays in the signature so a later rule about the fight as a
+  // whole has somewhere to go without every caller changing.
+  const canAct = (combat, f) => turnsLeft(f) > 0;
 
   /* Who the GM can pick from, heroes first — the party always opens a fight
      (guide), so that is where the eye should land — and each group in the
@@ -484,15 +496,46 @@
 
   function nextRound(combat) {
     combat.round += 1;
-    combat.surprise = false;
     combat.current = null;
     for (const f of combat.fighters) f.taken = 0;
+  }
+
+  /* One enemy in the fight, by its member id: { fighter, member }, or null.
+     A member is a single body — one goblin of three sharing a turn, or a
+     boss alone — with its own vitals. */
+  function memberIn(combat, memberId) {
+    if (!combat) return null;
+    for (const f of combat.fighters) {
+      if (f.kind !== 'enemy') continue;
+      const member = f.members.find((m) => m.id === memberId);
+      if (member) return { fighter: f, member };
+    }
+    return null;
+  }
+
+  /* "Back to Full" — the GM's manual reset for one enemy: topped up from its
+     stat card as it started the fight, Wounds and effects gone. Not a
+     healing rule (designer ruling, 2026-11-14: an enemy's healing is the
+     GM's by hand), which is why it is a plain reset here rather than
+     anything in mechanics.js. */
+  function restoreMember(enemy, member) {
+    member.vitals = freshVitals(enemyCard(enemy));
+    return member;
+  }
+
+  /* After the campaign changes under a fight — a hero removed, a stat card
+     deleted or edited — run the fight back through its normalizer: fighters
+     whose hero or stat card is gone leave it, and every enemy's vitals are
+     clamped to its card as it now stands. */
+  function settleCombat(campaign) {
+    campaign.combat = normalizeCombat(campaign.combat, campaign);
+    return campaign.combat;
   }
 
   function normalizeCombat(raw, campaign) {
     if (!raw || typeof raw !== 'object') return null;
     const c = obj(raw);
-    const used = new Set();
+    const used = campaignIds(campaign);
     const heroIds = new Set(campaign.heroes.map((h) => h.id));
     const enemies = new Map(campaign.enemies.map((e) => [e.id, e]));
     const fighters = arr(c.fighters).slice(0, LIMITS.FIGHTERS).map((x) => obj(x)).flatMap((f) => {
@@ -509,8 +552,8 @@
       return members.length ? [{ ...base, kind: 'enemy', enemyId: enemy.id, members }] : [];
     });
     return {
+      // An older save's `surprise` flag is dropped here, like any unknown field.
       round: int(c.round, 1, 9999, 1),
-      surprise: c.surprise === true,
       current: fighters.some((f) => f.id === c.current) ? c.current : null,
       fighters,
     };
@@ -582,6 +625,7 @@
     BESTIARY_VERSION, bestiaryFile, readBestiary,
     // combat
     startCombat, turnsLeft, canAct, upNext, pick, endTurn, roundOver, nextRound,
+    memberIn, restoreMember, settleCombat,
   };
 
   root.MEEPLE_CAMPAIGN = api;

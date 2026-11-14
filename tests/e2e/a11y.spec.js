@@ -187,6 +187,41 @@ test('axe: Enemies tab with an open stat card, the editor and the options', asyn
   await expectClean(page);
 });
 
+// Game Master Tools, Combat: Start Combat, a fight in progress with someone
+// acting and a group with one down, the ✎ sheet, and the End Fight alert.
+test('axe: Combat tab mid-fight, and the combat popups', async ({ page }) => {
+  await openApp(page);
+  await newCampaign(page, 'The Ashen Road');
+  await press(page, '[data-hero-add]');
+  await page.fill('[data-hero-field="name"]', 'Brom');
+  await press(page, '[data-hero-save]');
+  await press(page, '.tabbar__btn[data-campaign-tab="enemies"]');
+  await press(page, '[data-enemy-new]');
+  await page.fill('[data-enemy-field="name"]', 'Goblin');
+  await page.locator('[data-attack-row] [data-attack-field="name"]').fill('Rusty Blade');
+  await page.locator('[data-attack-row] [data-attack-field="damage"]').fill('1d6+1');
+  await press(page, '[data-enemy-save]');
+  await press(page, '.tabbar__btn[data-campaign-tab="combat"]');
+  await press(page, '[data-combat-start-open]');
+  await expect.poll(() => appAttr(page, 'data-modal')).toBe('combat-start');
+  await press(page, '[data-start-step$=":1"]');
+  await press(page, '[data-start-step$=":1"]');
+  await expectClean(page);
+  await press(page, '[data-combat-start]');
+  await press(page, '[data-combat-pick]');
+  await press(page, '[data-member-edit]');
+  await expect.poll(() => appAttr(page, 'data-modal')).toBe('member-menu');
+  await expectClean(page);
+  await press(page, '[data-member-act="health"]');
+  await page.fill('[data-calc-input]', '20');
+  await press(page, '.modal--calc [data-calc-apply="damage"]');
+  await expect(page.locator('.fighter__member[data-downed]')).toHaveCount(1);
+  await expectClean(page);
+  await press(page, '[data-combat-end-open]');
+  await expect.poll(() => appAttr(page, 'data-modal')).toBe('combat-end');
+  await expectClean(page);
+});
+
 test('axe: modal — Delete character', async ({ page }) => {
   await openApp(page);
   await press(page, '[data-nav="characters"]');

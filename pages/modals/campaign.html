@@ -342,3 +342,121 @@
         </div>
       </div>
     </div>
+
+    <!-- ================= START COMBAT =================
+         A form, like the hero and enemy editors: who is in the fight, then
+         Cancel | Start. The whole party joins (a fight is everyone at the
+         table); the GM sets how many of each stat card join, and whether a
+         group of the same enemy SHARES one turn (each still has its own
+         health). Rows are painted by renderCombatStart(). There is no
+         surprise round (designer ruling, 2026-11-14). -->
+    <div class="modal modal--combat-start">
+      <div class="modal__scrim" data-modal="close"></div>
+      <div class="modal__card" role="dialog" aria-modal="true" aria-labelledby="combat-start-title" tabindex="-1">
+        <div class="modal__head">
+          <div class="modal__title" id="combat-start-title">Start Combat</div>
+          <button class="modal__close" data-modal="close" aria-label="Close"></button>
+        </div>
+        <p class="hero-form__lead" data-bind="combatParty"></p>
+        <div class="field" role="group" aria-labelledby="combat-start-enemies">
+          <span class="field__label" id="combat-start-enemies">Enemies</span>
+          <p class="camp-empty" data-block="combatStartEmpty">No stat cards yet &mdash; make them on the Enemies tab.</p>
+          <div class="combat-start" data-list="combatStart"></div>
+        </div>
+        <p class="field__error status status--error" data-combat-start-error hidden>Nobody to fight yet. Add a hero or an enemy first.</p>
+        <div class="form-actions">
+          <button class="btn-ghost" data-modal="close">Cancel</button>
+          <button class="btn-save" data-combat-start>Start</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= END FIGHT CONFIRM =================
+         An ALERT. Ending throws away the enemies' fight health — the one
+         thing here the app cannot rebuild — so it asks. Heroes keep what
+         happened to them: their vitals are the Party tab's, and a fight is
+         only one part of a session. -->
+    <div class="modal modal--combat-end">
+      <div class="modal__scrim" data-modal="close"></div>
+      <div class="modal__card alert" role="dialog" aria-modal="true" aria-labelledby="combat-end-title" aria-describedby="combat-end-text" tabindex="-1">
+        <span class="alert__icon alert__icon--warn" aria-hidden="true">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="m13 19 6-6"/><path d="M14.5 17.5 3.586 6.586A2 2 0 013 5.172V3h2.172a2 2 0 011.414.586L17.5 14.5"/><path d="m14.828 6.172 2.586-2.586A2 2 0 0118.828 3H21v2.172a2 2 0 01-.586 1.414l-2.586 2.586"/><path d="m16 16 4 4"/><path d="m19 21 2-2"/><path d="m5 14 4 4"/><path d="m5 21-2-2"/><path d="M7.5 16.5 4 20"/></svg>
+        </span>
+        <div class="alert__title" id="combat-end-title">End the fight?</div>
+        <p class="alert__text" id="combat-end-text">Heroes keep their Health, Wounds and effects. The enemies&rsquo; health from this fight is cleared.</p>
+        <p class="alert__meta">Stat cards on the Enemies tab stay as they are.</p>
+        <div class="alert__actions">
+          <button class="btn-ghost" data-modal="close">Cancel</button>
+          <button class="btn-save" data-combat-end>End Fight</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= ONE ENEMY IN THE FIGHT =================
+         The ✎ on an enemy in the fight. A SHEET of what can happen to it
+         that is not a hit: healing (by hand — designer ruling 2026-11-14, an
+         enemy's healing is not tied to any healing rule), Mana, a Wound
+         cleared, a Boon or Condition, or a straight reset. It changes THIS
+         goblin in THIS fight only; the stat card is untouched. Rows that do
+         not apply (no Mana, no Wound to clear) are hidden by
+         openMemberMenu(). -->
+    <div class="modal modal--member-menu modal--action-sheet">
+      <div class="modal__scrim" data-modal="close"></div>
+      <div class="action-sheet" role="dialog" aria-modal="true" aria-labelledby="member-menu-title" tabindex="-1">
+        <div class="action-sheet__grab" aria-hidden="true"></div>
+        <div class="action-sheet__head">
+          <div class="action-sheet__title" id="member-menu-title" data-bind="memberMenuName"></div>
+          <p class="action-sheet__sub" data-bind="memberMenuSub"></p>
+        </div>
+        <div class="action-sheet__list">
+          <!-- The sheet's heart: Health, healed or hurt by hand. -->
+          <button class="action-sheet__row" data-member-act="health">
+            <span class="action-sheet__icon" aria-hidden="true">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
+            </span>
+            <span class="action-sheet__text">
+              <span class="action-sheet__label">Health</span>
+              <span class="action-sheet__note">Heal or damage by hand</span>
+            </span>
+            <svg class="action-sheet__chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+          </button>
+          <button class="action-sheet__row" data-member-act="mana">
+            <span class="action-sheet__icon" aria-hidden="true">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22a7 7 0 0 0 7-7c0-2-1-3.9-3-5.5s-3.5-4-4-6.5c-.5 2.5-2 4.9-4 6.5C6 11.1 5 13 5 15a7 7 0 0 0 7 7z"/></svg>
+            </span>
+            <span class="action-sheet__text">
+              <span class="action-sheet__label">Mana</span>
+              <span class="action-sheet__note">Spend or restore</span>
+            </span>
+            <svg class="action-sheet__chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+          </button>
+          <button class="action-sheet__row" data-member-act="wound">
+            <span class="action-sheet__icon" aria-hidden="true">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+            </span>
+            <span class="action-sheet__text">
+              <span class="action-sheet__label">Clear a Wound</span>
+            </span>
+          </button>
+          <button class="action-sheet__row" data-member-act="effects">
+            <span class="action-sheet__icon" aria-hidden="true">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+            </span>
+            <span class="action-sheet__text">
+              <span class="action-sheet__label">Add a Boon or Condition</span>
+            </span>
+            <svg class="action-sheet__chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+          </button>
+          <button class="action-sheet__row" data-member-act="full">
+            <span class="action-sheet__icon" aria-hidden="true">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+            </span>
+            <span class="action-sheet__text">
+              <span class="action-sheet__label">Back to Full</span>
+              <span class="action-sheet__note">As it started the fight</span>
+            </span>
+          </button>
+        </div>
+        <button class="action-sheet__cancel" data-modal="close">Cancel</button>
+      </div>
+    </div>

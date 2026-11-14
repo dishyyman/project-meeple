@@ -77,9 +77,41 @@
           <input class="visually-hidden" type="file" data-enemies-file
                  accept=".json,application/json" tabindex="-1" aria-hidden="true">
         </div>
+        <!-- The fight (docs/prd.md Feature 7, phase 4). No initiative ORDER:
+             the GM picks who acts next from everyone with a turn left, ends
+             that turn, and when the line has gone through everyone a new
+             round gives every turn back. renderCombat() paints all of it.
+
+             The heading is the round count ("✦ Round 2 ✦") during a fight,
+             and carries End Fight where the Enemies heading carries Export
+             all — the one action on the whole fight. -->
         <div class="camp-page camp-page--combat" role="tabpanel" aria-label="Combat">
-          <div class="rule"><span class="rule__label">&#10022; Combat &#10022;</span></div>
-          <p class="camp-empty">No fight in progress.</p>
+          <div class="rule">
+            <span class="rule__label" data-bind="combatRound">&#10022; Combat &#10022;</span>
+            <button class="rule__action" data-combat-end-open hidden>End Fight</button>
+          </div>
+
+          <!-- No fight: a line of prose and the one way in. -->
+          <div data-block="combatIdle">
+            <p class="camp-empty">No fight in progress. Start one when the party meets trouble &mdash; the whole party joins, and you choose the enemies.</p>
+            <button class="btn-save combat-start-btn" data-combat-start-open>Start Combat</button>
+          </div>
+
+          <div data-block="combatLive" hidden>
+            <!-- Who is acting, with their whole card, and the turn's one
+                 button: End Turn, or Start Round N once everyone has gone.
+                 Or, between turns, a line saying to pick someone. -->
+            <div class="combat-now" data-list="combatNow"></div>
+
+            <div data-block="combatNext">
+              <div class="rule"><span class="rule__label">&#10022; Up Next &#10022;</span></div>
+              <div class="fighters" data-list="combatNext"></div>
+            </div>
+            <div data-block="combatDone">
+              <div class="rule"><span class="rule__label">&#10022; Gone This Round &#10022;</span></div>
+              <div class="fighters" data-list="combatDone"></div>
+            </div>
+          </div>
         </div>
       </div>
 

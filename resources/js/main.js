@@ -642,9 +642,9 @@
     campaignsEdit: false,        // Campaigns list in edit mode (reorder/delete)
     campaignDeleting: null,      // campaign id awaiting delete confirmation
     campaignForm: null,          // { id } while the new/rename form is open; id null = new
-    calcTarget: null,            // hero id when the calculator is aimed at a hero, else the open character
-    pierce: false,               // the calculator's Armor Piercing toggle (heroes only)
-    effectTarget: null,          // hero id when the Boons & Conditions picker is aimed at a hero
+    calcTarget: null,            // hero or fight-member id when the calculator is aimed at one, else the open character
+    pierce: false,               // the calculator's Armor Piercing toggle (GM side only)
+    effectTarget: null,          // hero or fight-member id when the Boons & Conditions picker is aimed at one
     heroMenu: null,              // hero id whose options sheet is open
     heroForm: null,              // { id } while the typed-in hero form is open; id null = new
     heroNotes: null,             // hero id whose notes are open
@@ -653,6 +653,8 @@
     enemyForm: null,             // { id, attacks } while the enemy editor is open; id null = new
     enemyMenu: null,             // enemy id whose options sheet is open
     enemyDeleting: null,         // enemy id awaiting the delete confirmation
+    combatDraft: null,           // { [enemyId]: { count, share } } while Start Combat is open
+    memberMenu: null,            // fight-member id whose ✎ sheet is open
     // Character creation. `null` when the wizard is not running — the draft is
     // deliberately NOT a half-built entry in the roster, so abandoning creation
     // leaves nothing behind to clean up. See startCreate().
@@ -1863,6 +1865,7 @@
     renderCampaignTabs();
     renderParty();
     renderEnemies();
+    renderCombat();
   }
 
   const CAMPAIGN_TABS = ['party', 'enemies', 'combat'];
@@ -1982,9 +1985,16 @@
     return card ? heroIn(activeCampaign(), card.dataset.hero) : null;
   };
 
-  function heroCardHtml(h) {
-    const c = h.card, v = h.vitals;
-    const downed = V.isDowned(c, v);
+  /* The parts of a card that show and change someone's VITALS — Health,
+     Mana, the Wound track, the four defences, Boons & Conditions — for a
+     hero on the Party tab and for anyone in a fight alike. `hooks` names the
+     data-* attributes the controls carry, so a press on a goblin's bar is
+     routed to that goblin and a press on a hero's to that hero; the markup is
+     otherwise identical, which is what lets a GM read both the same way. */
+  const HERO_HOOKS = { calc: 'data-hero-calc', wound: 'data-hero-wound', step: 'data-hero-effect-step', add: 'data-hero-effect-open' };
+  const MEMBER_HOOKS = { calc: 'data-member-calc', wound: 'data-member-wound', step: 'data-member-effect-step', add: 'data-member-effect-open' };
+
+  function vitalParts(name, c, v, hooks) {
     const cells = (cur, max) => {
       let html = '';
       for (let i = 0; i < max; i++) html += `<span class="cell${i < cur ? ' is-on' : ''}"></span>`;
@@ -1997,7 +2007,7 @@
           <span class="vital__value">${v.health} / ${hpMax}</span>
         </div>
         <div class="vital__row">
-          <button class="vital__track" type="button" data-hero-calc="health" aria-label="Damage or heal ${esc(h.name)}">${cells(v.health, hpMax)}</button>
+          <button class="vital__track" type="button" ${hooks.calc}="health" aria-label="Damage or heal ${esc(name)}">${cells(v.health, hpMax)}</button>
         </div>
       </div>`;
     // Mana only for someone who has a pool — a fighter's card stays short.
@@ -2007,14 +2017,14 @@
           <span class="vital__value">${v.mana} / ${c.manaMax}</span>
         </div>
         <div class="vital__row">
-          <button class="vital__track" type="button" data-hero-calc="mana" aria-label="Spend or restore ${esc(h.name)}'s Mana">${cells(v.mana, c.manaMax)}</button>
+          <button class="vital__track" type="button" ${hooks.calc}="mana" aria-label="Spend or restore ${esc(name)}'s Mana">${cells(v.mana, c.manaMax)}</button>
         </div>
       </div>` : '';
     let pips = '';
     for (let i = 0; i < c.woundsMax; i++) {
       const on = i < v.wounds;
-      pips += `<button class="pip${on ? ' is-on' : ''}" data-hero-wound="${i}"`
-        + ` aria-label="Set ${esc(h.name)}'s Wounds to ${i + 1}${on && i + 1 === v.wounds ? ', or tap again for ' + i : ''}">`
+      pips += `<button class="pip${on ? ' is-on' : ''}" ${hooks.wound}="${i}"`
+        + ` aria-label="Set ${esc(name)}'s Wounds to ${i + 1}${on && i + 1 === v.wounds ? ', or tap again for ' + i : ''}">`
         + `${on ? WOUND_ICON : ''}</button>`;
     }
     const wounds = c.woundsMax ? `<div class="wounds">
@@ -2027,7 +2037,20 @@
       { label: 'Fortitude', value: String(V.fortitude(c, v)) },
       { label: 'Speed',     value: String(V.speed(c, v)) },
     ];
-    const effects = v.effects.map((e) => effectRow(e, { step: 'data-hero-effect-step', tick: false })).join('');
+    const rows = v.effects.map((e) => effectRow(e, { step: hooks.step, tick: false })).join('');
+    return {
+      health, mana, wounds,
+      // The rows alone, for a compact fighter: what is ON someone is worth
+      // seeing even when it is not their turn; the + to add one is not.
+      effectRows: rows ? `<div class="effects">${rows}</div>` : '',
+      grid: `<div class="combat-grid">${defences.map(combatCell).join('')}</div>`,
+      effects: `<div class="effects">${rows}<button class="effect-add" ${hooks.add} aria-label="Add a boon or condition to ${esc(name)}"><svg class="plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="M12 5v14"/></svg></button></div>`,
+    };
+  }
+
+  function heroCardHtml(h) {
+    const downed = V.isDowned(h.card, h.vitals);
+    const p = vitalParts(h.name, h.card, h.vitals, HERO_HOOKS);
     return `<article class="hero-card" data-hero="${esc(h.id)}"${downed ? ' data-downed' : ''} aria-label="${esc(h.name)}">
       <div class="hero-card__head">
         <div class="hero-card__who">
@@ -2039,9 +2062,9 @@
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
         </button>
       </div>
-      ${health}${mana}${wounds}
-      <div class="combat-grid">${defences.map(combatCell).join('')}</div>
-      <div class="effects">${effects}<button class="effect-add" data-hero-effect-open aria-label="Add a boon or condition to ${esc(h.name)}"><svg class="plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="M12 5v14"/></svg></button></div>
+      ${p.health}${p.mana}${p.wounds}
+      ${p.grid}
+      ${p.effects}
     </article>`;
   }
 
@@ -2059,8 +2082,42 @@
   function heroChanged(c, h, out = {}) {
     saveCampaign(c);
     renderParty();
+    // The fight shows the same hero, so it is repainted with them.
+    renderCombat();
     if (out.downed) showToast(`${h.name} is downed.`, 'warn');
     else if (out.boonsLost) showToast(`${h.name}'s Boons were cleared by the Wound.`, 'warn');
+  }
+
+  /* WHO a GM-side control is aimed at. The calculator and the Boons &
+     Conditions picker are each re-aimed by one id — a hero's, or one enemy's
+     in the fight (a "member": each goblin of three has its own) — and this
+     turns that id into the same shape for both: a name, the card, the vitals
+     to change. Fight ids are minted against the campaign's own
+     (campaign.js campaignIds), so an id names one of them, never both. */
+  function subjectFor(c, id) {
+    if (!c || !id) return null;
+    const h = heroIn(c, id);
+    if (h) return { kind: 'hero', id, name: h.name, card: h.card, vitals: h.vitals, hero: h };
+    const found = CMP.memberIn(c.combat, id);
+    const e = found && enemyIn(c, found.fighter.enemyId);
+    if (!e) return null;
+    return {
+      kind: 'enemy', id, name: memberName(c, e, found.member),
+      card: CMP.enemyCard(e), vitals: found.member.vitals, enemy: e, ...found,
+    };
+  }
+
+  const calcSubject = () => (state.calcTarget ? subjectFor(activeCampaign(), state.calcTarget) : null);
+
+  /* After any change to someone on the GM side. A hero is the Party tab's
+     (heroChanged also repaints the fight); an enemy in the fight lives only
+     there. The rules' own consequences are said in a toast, as for a hero. */
+  function subjectChanged(c, s, out = {}) {
+    if (s.kind === 'hero') { heroChanged(c, s.hero, out); return; }
+    saveCampaign(c);
+    renderCombat();
+    if (out.downed) showToast(`${s.name} is down.`, 'warn');
+    else if (out.boonsLost) showToast(`${s.name}'s Boons were cleared by the Wound.`, 'warn');
   }
 
   /* ---- the calculator, pointed at a hero ------------------------------
@@ -2069,47 +2126,56 @@
      open character. Damage to a hero's Health has the hero's Armor taken off
      (damageAfterArmor — the guide's rule, and the designer's ruling that the
      GM side applies it), with Armor Piercing as the way out. */
-  function openHeroCalc(h, resource) {
+  // `s` is a subjectFor() — a hero, or one enemy in the fight.
+  function openSubjectCalc(s, resource) {
     openCalc(resource);
-    state.calcTarget = h.id;
-    const v = h.vitals, c = h.card;
-    setText('calcTitle', `${h.name} · ${resource === 'mana' ? 'Mana' : 'Health'}`);
+    state.calcTarget = s.id;
+    const v = s.vitals, c = s.card;
+    setText('calcTitle', `${s.name} · ${resource === 'mana' ? 'Mana' : 'Health'}`);
     setText('calcCur', resource === 'mana' ? v.mana : v.health);
     setText('calcMax', resource === 'mana' ? c.manaMax : V.healthMax(c, v));
     paintCalcPoison();
     paintCalcPierce();
   }
+  const openHeroCalc = (h, resource) => openSubjectCalc(subjectFor(activeCampaign(), h.id), resource);
 
   function paintCalcPierce() {
     const el = $('.modal--calc [data-pierce-toggle]');
     if (!el) return;
-    const h = state.calcTarget ? heroIn(activeCampaign(), state.calcTarget) : null;
-    const on = !!h && state.calcResource !== 'mana';
+    const s = calcSubject();
+    const on = !!s && state.calcResource !== 'mana';
     el.hidden = !on;
     if (!on) return;
     el.setAttribute('aria-pressed', String(state.pierce));
-    setText('calcPierceLabel', `Armor Piercing — ignore Armor ${modLabel(V.armor(h.card, h.vitals))}`);
+    setText('calcPierceLabel', `Armor Piercing — ignore Armor ${modLabel(V.armor(s.card, s.vitals))}`);
   }
 
+  /* Heal or Damage, aimed at a hero or an enemy. Damage to Health has the
+     target's Armor taken off (Armor Piercing the way out) for both. Healing
+     differs: a hero's honours their Poison, as the player's sheet does; an
+     enemy's is the GM's number exactly as typed (designer ruling,
+     2026-11-14 — an enemy's healing is manual, tied to no healing rule), and
+     it works on one that is down: healing a single-bar enemy off 0 is what
+     brings it back. */
   function applyHeroCalc(isHeal, raw) {
     const c = activeCampaign();
-    const h = heroIn(c, state.calcTarget);
+    const s = calcSubject();
     const resource = state.calcResource;
     const pierce = state.pierce, poison = state.applyPoison;
     closeCalc();
-    if (!h) return;
-    const card = h.card, v = h.vitals;
+    if (!s) return;
+    const card = s.card, v = s.vitals;
     let out = {};
     if (isHeal) {
       let amt = clampInt(raw);
       // Healing RECEIVED: the hero's own Poison, as on the player's sheet.
-      if (poison && resource !== 'mana') amt = Math.max(0, amt + M.poisonHealPenalty(v));
+      if (s.kind === 'hero' && poison && resource !== 'mana') amt = Math.max(0, amt + M.poisonHealPenalty(v));
       V.heal(card, v, resource, amt);
     } else {
       const amt = resource === 'mana' ? raw : damageAfterArmor(raw, V.armor(card, v), pierce);
       out = V.damage(card, v, resource, amt);
     }
-    heroChanged(c, h, out);
+    subjectChanged(c, s, out);
   }
 
   /* ---- Wounds and effects on a hero ---------------------------------- */
@@ -2121,7 +2187,7 @@
     heroChanged(activeCampaign(), h, out);
   }
 
-  // The player's Boons & Conditions picker, pointed at a hero.
+  // The player's Boons & Conditions picker, pointed at a hero or an enemy.
   function openHeroEffects(h) {
     state.effectTarget = h.id;
     openEffectPicker();
@@ -2129,11 +2195,11 @@
 
   function addHeroEffect(id) {
     const c = activeCampaign();
-    const h = heroIn(c, state.effectTarget);
+    const s = subjectFor(c, state.effectTarget);
     closeModal();
-    if (!h) return;
-    V.addEffect(h.vitals, id);
-    heroChanged(c, h);
+    if (!s) return;
+    V.addEffect(s.vitals, id);
+    subjectChanged(c, s);
   }
 
   function stepHeroEffect(h, spec) {
@@ -2376,8 +2442,11 @@
     const at = c.heroes.findIndex((h) => h.id === id);
     if (at === -1) return;
     c.heroes.splice(at, 1);
+    // A hero who leaves the party leaves any fight too.
+    CMP.settleCombat(c);
     saveCampaign(c);
     renderParty();
+    renderCombat();
   }
 
   /* ---- the Enemies tab --------------------------------------------------
@@ -2580,8 +2649,12 @@
       c.enemies.push(clean);
     }
     closeModal();
+    // An edited stat card reaches into a fight in progress: its numbers are
+    // read from the card, and each member's vitals are clamped to it.
+    CMP.settleCombat(c);
     saveCampaign(c);
     renderEnemies();
+    renderCombat();
   }
 
   /* ---- options: duplicate, export, delete ------------------------------ */
@@ -2618,8 +2691,11 @@
     const at = c.enemies.findIndex((e) => e.id === id);
     if (at === -1) return;
     c.enemies.splice(at, 1);
+    // Its enemies leave a fight in progress with it.
+    CMP.settleCombat(c);
     saveCampaign(c);
     renderEnemies();
+    renderCombat();
   }
 
   /* A monster file: one enemy from its menu, or every enemy from the
@@ -2675,6 +2751,343 @@
     saveCampaign(c);
     renderEnemies();
     showToast(taken.length === 1 ? `${taken[0].name} added.` : `${taken.length} enemies added.`);
+  }
+
+  /* ---- the Combat tab ---------------------------------------------------
+     No initiative ORDER (designer ruling, 2026-11-13): the GM picks who acts
+     next from everyone with a turn left, ends that turn, and when the line
+     has gone through everyone a new round gives every turn back — the round
+     count is the one thing the app keeps. The turn bookkeeping is
+     campaign.js (startCombat, pick, endTurn, roundOver, nextRound); what is
+     here is the screen, and the one question campaign.js cannot answer
+     alone: who is DOWN, which needs the vitals engine.
+
+     Down fighters stay in the list, greyed (designer ruling, 2026-11-14):
+     the GM sees who fell, they no longer hold a round open, and they can
+     still be picked — a hero revived, an enemy the GM heals back up. */
+  const FIGHT_PENCIL_SVG = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/><path d="m15 5 4 4"/></svg>';
+
+  /* "Goblin 2" when more than one of a stat card is in the fight — whether
+     they share a turn or not — so the GM can say which one was hit. One of
+     a kind is just its name. */
+  function memberName(c, e, m) {
+    const many = c.combat ? c.combat.fighters
+      .filter((f) => f.kind === 'enemy' && f.enemyId === e.id)
+      .reduce((n, f) => n + f.members.length, 0) : 0;
+    return many > 1 ? `${e.name} ${m.n}` : e.name;
+  }
+
+  // Out of the fight: a downed hero, or an enemy fighter every member of
+  // which is down. Passed to roundOver() so they do not hold the round open.
+  function fighterOut(c, f) {
+    if (f.kind === 'hero') {
+      const h = heroIn(c, f.heroId);
+      return !h || V.isDowned(h.card, h.vitals);
+    }
+    const e = enemyIn(c, f.enemyId);
+    if (!e) return true;
+    const card = CMP.enemyCard(e);
+    return f.members.every((m) => V.isDowned(card, m.vitals));
+  }
+
+  const memberOf = (el) => {
+    const box = el && el.closest('[data-member]');
+    return box ? subjectFor(activeCampaign(), box.dataset.member) : null;
+  };
+
+  /* One fighter. Compact in the lists — the name, the turns left, the Go
+     button, and each body's Health bar, because a hit lands on someone
+     whose turn it is NOT far more often than on whoever is acting. `full`
+     for whoever is acting: every vital, the defences, Boons & Conditions,
+     and for an enemy its attacks with the sheet's own roll boxes. */
+  function fighterHtml(c, f, { full = false } = {}) {
+    const combat = c.combat;
+    const out = fighterOut(c, f);
+    const left = CMP.turnsLeft(f);
+    const pickable = !full && left > 0;
+    let name, body, edit = '', downTag = '';
+
+    if (f.kind === 'hero') {
+      const h = heroIn(c, f.heroId);
+      if (!h) return '';
+      name = h.name;
+      const p = vitalParts(h.name, h.card, h.vitals, HERO_HOOKS);
+      body = `<div data-hero="${esc(h.id)}">${full ? p.health + p.mana + p.wounds + p.grid + p.effects : p.health + p.wounds + p.effectRows}</div>`;
+      if (out) downTag = '<span class="hero-card__state">Downed</span>';
+    } else {
+      const e = enemyIn(c, f.enemyId);
+      if (!e) return '';
+      const card = CMP.enemyCard(e);
+      const group = f.members.length > 1;
+      // A group is "Goblin ×3"; one alone is its member's own name, so two
+      // goblins that do not share a turn read "Goblin 1" and "Goblin 2".
+      name = group ? `${e.name} ×${f.members.length}` : memberName(c, e, f.members[0]);
+      const editBtn = (m, label) => `<button class="icon-act icon-act--edit fighter__edit" data-member-edit="${esc(m.id)}" aria-label="Edit ${esc(label)}">${FIGHT_PENCIL_SVG}</button>`;
+      body = f.members.map((m) => {
+        const label = memberName(c, e, m);
+        const down = V.isDowned(card, m.vitals);
+        const p = vitalParts(label, card, m.vitals, MEMBER_HOOKS);
+        // A group's members each get a line of their own: a name to say
+        // which goblin, its Down, its ✎. One alone has all that in the head.
+        const head = group ? `<div class="fighter__member-head">
+            <span class="fighter__member-name">${esc(label)}</span>
+            ${down ? '<span class="hero-card__state">Down</span>' : ''}
+            ${editBtn(m, label)}
+          </div>` : '';
+        return `<div class="fighter__member" data-member="${esc(m.id)}"${down ? ' data-downed' : ''}>${head}${full ? p.health + p.mana + p.wounds + p.grid + p.effects : p.health + p.wounds + p.effectRows}</div>`;
+      }).join('');
+      if (!group) {
+        edit = editBtn(f.members[0], memberName(c, e, f.members[0]));
+        if (out) downTag = '<span class="hero-card__state">Down</span>';
+      }
+      if (full) {
+        body += e.attacks.length ? `<div class="enemy__attacks">${e.attacks.map((a) => enemyAttackRow(e, a)).join('')}</div>` : '';
+        body += e.notes ? `<p class="enemy__notes">${esc(e.notes)}</p>` : '';
+      }
+    }
+
+    const meta = [
+      f.turns > 1 ? `${left} of ${f.turns} turns left` : '',
+      f.kind === 'enemy' && f.members.length > 1 ? 'Sharing one turn' : '',
+    ].filter(Boolean).join(' · ');
+    const go = pickable
+      ? `<button class="fighter__go" data-combat-pick="${esc(f.id)}" aria-label="Go: ${esc(name)}">Go</button>` : '';
+    return `<article class="fighter${full ? ' fighter--current' : ''}" data-fighter="${esc(f.id)}"${out ? ' data-out' : ''} aria-label="${esc(name)}">
+      <div class="fighter__head">
+        <div class="fighter__who">
+          <h3 class="fighter__name">${esc(name)}</h3>
+          ${meta ? `<p class="fighter__meta">${esc(meta)}</p>` : ''}
+        </div>
+        ${downTag}${edit}${go}
+      </div>
+      ${body}
+    </article>`;
+  }
+
+  function renderCombat() {
+    const c = activeCampaign();
+    const combat = c ? c.combat : null;
+    showBlock('combatIdle', !combat);
+    showBlock('combatLive', !!combat);
+    const end = $('[data-combat-end-open]');
+    if (end) end.hidden = !combat;
+    setText('combatRound', combat ? `✦ Round ${combat.round} ✦` : '✦ Combat ✦');
+    if (!combat) {
+      fillList('combatNow', ''); fillList('combatNext', ''); fillList('combatDone', '');
+      return;
+    }
+
+    const isOut = (f) => fighterOut(c, f);
+    const current = combat.fighters.find((f) => f.id === combat.current) || null;
+    const over = !current && CMP.roundOver(combat, isOut);
+
+    let now;
+    if (current) {
+      now = `<p class="eyebrow combat-now__label">Acting now</p>
+        ${fighterHtml(c, current, { full: true })}
+        <button class="btn-save combat-turn-btn" data-combat-end-turn>End Turn</button>`;
+    } else if (over) {
+      now = `<p class="camp-empty">Everyone has gone this round.</p>
+        <button class="btn-save combat-turn-btn" data-combat-next-round>Start Round ${combat.round + 1}</button>`;
+    } else {
+      now = '<p class="camp-empty">Pick who goes next from Up Next.</p>';
+    }
+    // Said, not inferred into an ending: the GM decides when a fight is over.
+    const enemies = combat.fighters.filter((f) => f.kind === 'enemy');
+    if (enemies.length && enemies.every(isOut)) {
+      now += '<p class="status status--ok combat-now__note">Every enemy is down. End the fight when you&rsquo;re ready.</p>';
+    }
+    fillList('combatNow', now);
+
+    // Up next: heroes first (campaign.js upNext), and anyone down after
+    // everyone standing — still there, still pickable, out of the way.
+    const ready = CMP.upNext(combat).filter((f) => f !== current);
+    const next = [...ready.filter((f) => !isOut(f)), ...ready.filter(isOut)];
+    const done = combat.fighters.filter((f) => f !== current && !CMP.turnsLeft(f));
+    showBlock('combatNext', next.length > 0);
+    showBlock('combatDone', done.length > 0);
+    fillList('combatNext', next.map((f) => fighterHtml(c, f)).join(''));
+    fillList('combatDone', done.map((f) => fighterHtml(c, f)).join(''));
+  }
+
+  /* Focus follows the fight, so a keyboard GM is never left on a control
+     that has just been painted away. A turn later rather than now: after a
+     dialog closes, the page stays inert until watchModals() hears of it, and
+     an inert button cannot take focus. */
+  function focusCombat(sel) {
+    setTimeout(() => {
+      const el = $(`.camp-page--combat ${sel}`);
+      if (el) el.focus({ preventScroll: true });
+    }, 0);
+  }
+
+  function combatChanged(c) {
+    saveCampaign(c);
+    renderCombat();
+  }
+
+  /* Picking is not committing (campaign.js pick): a mis-tap is fixed by
+     picking someone else. The acting card is drawn at the top of the tab, so
+     the scroll goes back up to it. */
+  function pickFighter(id) {
+    const c = activeCampaign();
+    if (!c || !c.combat || !CMP.pick(c.combat, id)) return;
+    combatChanged(c);
+    const scroller = $('.camp-scroll');
+    if (scroller) scroller.scrollTop = 0;
+    focusCombat('[data-combat-end-turn]');
+  }
+
+  function endFighterTurn() {
+    const c = activeCampaign();
+    if (!c || !c.combat) return;
+    CMP.endTurn(c.combat);
+    combatChanged(c);
+    focusCombat($('.camp-page--combat [data-combat-next-round]') ? '[data-combat-next-round]' : '[data-combat-pick]');
+  }
+
+  function startNextRound() {
+    const c = activeCampaign();
+    if (!c || !c.combat) return;
+    CMP.nextRound(c.combat);
+    combatChanged(c);
+    focusCombat('[data-combat-pick]');
+  }
+
+  /* ---- Start Combat --------------------------------------------------- */
+  function openCombatStart() {
+    const c = activeCampaign();
+    if (!c) return;
+    state.combatDraft = Object.fromEntries(c.enemies.map((e) => [e.id, { count: 0, share: false }]));
+    const names = c.heroes.map((h) => h.name);
+    setText('combatParty', names.length
+      ? `The whole party joins: ${nameList(names, 6)}.`
+      : 'No heroes in the party yet, so this fight is enemies only.');
+    showBlock('combatStartEmpty', !c.enemies.length);
+    $('[data-combat-start-error]').hidden = true;
+    renderCombatStart();
+    app.setAttribute('data-modal', 'combat-start');
+  }
+
+  // A count for each stat card (the effect stepper, − n +) and, once there
+  // are two or more, whether they share one turn.
+  function renderCombatStart() {
+    const c = activeCampaign();
+    const d = state.combatDraft;
+    if (!c || !d) return;
+    fillList('combatStart', c.enemies.map((e) => {
+      const row = d[e.id] || { count: 0, share: false };
+      const meta = [`HP ${e.stats.hp}`, e.turns > 1 ? `${e.turns} turns` : ''].filter(Boolean).join(' · ');
+      return `<div class="combat-start__row">
+        <div class="combat-start__who">
+          <span class="combat-start__name">${esc(e.name)}</span>
+          <span class="combat-start__meta">${esc(meta)}</span>
+        </div>
+        <div class="effect-step">
+          <button class="effect-step__btn" data-start-step="${esc(e.id)}:-1" aria-label="One fewer ${esc(e.name)}"${row.count ? '' : ' disabled'}>−</button>
+          <span class="effect-step__count" aria-live="polite" aria-label="${row.count} ${esc(e.name)}">${row.count}</span>
+          <button class="effect-step__btn" data-start-step="${esc(e.id)}:1" aria-label="One more ${esc(e.name)}"${row.count >= CMP.LIMITS.GROUP ? ' disabled' : ''}>+</button>
+        </div>
+        <label class="combat-start__share"${row.count > 1 ? '' : ' hidden'}>
+          <input type="checkbox" data-start-share="${esc(e.id)}"${row.share ? ' checked' : ''}> Share one turn
+        </label>
+      </div>`;
+    }).join(''));
+  }
+
+  function stepCombatStart(spec) {
+    const d = state.combatDraft;
+    if (!d) return;
+    const [id, delta] = spec.split(':');
+    if (!d[id]) return;
+    d[id].count = Math.max(0, Math.min(CMP.LIMITS.GROUP, d[id].count + parseInt(delta, 10)));
+    $('[data-combat-start-error]').hidden = true;
+    renderCombatStart();
+    // The button pressed was repainted: put focus back on its new self, or
+    // on its partner when it has just been disabled (− at 0, + at the cap).
+    const same = $(`[data-start-step="${CSS.escape(spec)}"]`);
+    const other = $(`[data-start-step="${CSS.escape(`${id}:${delta === '1' ? '-1' : '1'}`)}"]`);
+    (same && !same.disabled ? same : other)?.focus();
+  }
+
+  function startCombatFromDraft() {
+    const c = activeCampaign();
+    const d = state.combatDraft;
+    if (!c || !d) return;
+    const groups = Object.entries(d).filter(([, g]) => g.count > 0)
+      .map(([enemyId, g]) => ({ enemyId, count: g.count, shareTurn: g.share }));
+    if (!c.heroes.length && !groups.length) {
+      $('[data-combat-start-error]').hidden = false;
+      return;
+    }
+    c.combat = CMP.startCombat(c, { groups });
+    closeModal();
+    combatChanged(c);
+    setCampaignTab('combat');
+    focusCombat('[data-combat-pick]');
+  }
+
+  /* ---- End Fight -------------------------------------------------------
+     Heroes keep what happened to them — their vitals are the Party tab's;
+     the enemies' fight health was only ever the fight's. */
+  function endCombat() {
+    const c = activeCampaign();
+    closeModal();
+    if (!c || !c.combat) return;
+    c.combat = null;
+    combatChanged(c);
+    focusCombat('[data-combat-start-open]');
+    showToast('Fight ended.');
+  }
+
+  /* ---- one enemy in the fight ------------------------------------------
+     The ✎: what can happen to it that is not a hit (designer ruling,
+     2026-11-14). Healing is by hand, works on one that is down, and is tied
+     to no healing rule; Back to Full is a plain reset from its stat card. */
+  function openMemberMenu(id) {
+    const c = activeCampaign();
+    const s = subjectFor(c, id);
+    if (!s || s.kind !== 'enemy') return;
+    state.memberMenu = id;
+    const down = V.isDowned(s.card, s.vitals);
+    setText('memberMenuName', s.name);
+    setText('memberMenuSub', [
+      `Health ${s.vitals.health} / ${V.healthMax(s.card, s.vitals)}`,
+      s.card.woundsMax ? `Wounds ${s.vitals.wounds} / ${s.card.woundsMax}` : '',
+      down ? 'Down' : '',
+    ].filter(Boolean).join(' · '));
+    const row = (act) => $(`.modal--member-menu [data-member-act="${act}"]`);
+    row('mana').hidden = !s.card.manaMax;
+    row('wound').hidden = !s.vitals.wounds;
+    app.setAttribute('data-modal', 'member-menu');
+  }
+
+  function memberAct(act) {
+    const c = activeCampaign();
+    const s = subjectFor(c, state.memberMenu);
+    if (!s) { closeModal(); return; }
+    // These hand over to another dialog, aimed at this enemy.
+    if (act === 'health' || act === 'mana') { openSubjectCalc(s, act); return; }
+    if (act === 'effects') { state.effectTarget = s.id; openEffectPicker(); return; }
+    closeModal();
+    let out = {};
+    if (act === 'wound') out = V.setWounds(s.card, s.vitals, s.vitals.wounds - 1);
+    else if (act === 'full') CMP.restoreMember(s.enemy, s.member);
+    else return;
+    subjectChanged(c, s, out);
+    if (act === 'full') showToast(`${s.name} is back to full.`);
+  }
+
+  // The pips on an enemy: the hero card's gesture, on this member.
+  function tapMemberWound(s, i) {
+    const out = V.setWounds(s.card, s.vitals, (i + 1 === s.vitals.wounds) ? i : i + 1);
+    subjectChanged(activeCampaign(), s, out);
+  }
+
+  function stepMemberEffect(s, spec) {
+    const [id, deltaStr] = spec.split(':');
+    V.bumpEffect(s.vitals, id, parseInt(deltaStr, 10));
+    subjectChanged(activeCampaign(), s);
   }
 
   /* ---- campaigns in a backup -------------------------------------------
@@ -5514,9 +5927,11 @@
   function paintCalcPoison() {
     const el = $('.modal--calc [data-poison-toggle]');
     if (!el) return;
-    // Whose Poison: a hero's when the calculator is aimed at one.
-    const h = state.calcTarget ? heroIn(activeCampaign(), state.calcTarget) : null;
-    const poisoned = h ? M.stacksOf(h.vitals, 'condition.poison') > 0 : poisonOffered();
+    // Whose Poison: a hero's when the calculator is aimed at one. Never an
+    // enemy's — its healing is the GM's number as typed (applyHeroCalc).
+    const s = calcSubject();
+    const h = s && s.kind === 'hero' ? s.hero : null;
+    const poisoned = s ? (!!h && M.stacksOf(h.vitals, 'condition.poison') > 0) : poisonOffered();
     const on = state.calcResource !== 'mana' && poisoned;
     el.hidden = !on;
     if (!on) return;
@@ -5607,6 +6022,8 @@
     state.enemyForm = null;
     state.enemyMenu = null;
     state.enemyDeleting = null;
+    state.combatDraft = null;
+    state.memberMenu = null;
     // Same reasoning for the creation slot picker: while this is set, every
     // data-pick row is routed into the draft rather than the live character.
     state.wizPick = null;
@@ -9173,7 +9590,7 @@
       // processed below never has its own element pulled out from under it.
       if (state.openStat && !e.target.closest('.stat-card')) showStatPop(null);
 
-      const t = e.target.closest('[data-nav],[data-tab],[data-edit-tab],[data-edit-attr],[data-skill-rank],[data-toggle],[data-step],[data-calc],[data-menu],[data-wound],[data-wound-reset],[data-calc-step],[data-calc-apply],[data-action],[data-key],[data-dice-back],[data-dice-roll],[data-roll],[data-roll-again],[data-inv-add],[data-inv-open],[data-item-save],[data-bp-step],[data-bp-edit],[data-bp-delete],[data-mod-add],[data-mod-remove],[data-stat-toggle],[data-effect-open],[data-effect-add],[data-effect-step],[data-effect-tick],[data-effects-clear],[data-tick-confirm],[data-skill-edit],[data-skill-draft],[data-skill-filter],[data-skill-save],[data-detail],[data-gear-add],[data-armor-add],[data-detail-remove],[data-pick],[data-tag],[data-note-add],[data-note-save],[data-note-cancel],[data-note-edit],[data-note-delete],[data-note-del-confirm],[data-portrait-pick],[data-portrait-remove],[data-portrait-menu],[data-rest],[data-patch],[data-patch-confirm],[data-poison-toggle],[data-adv],[data-rules-toggle],[data-id-save],[data-portrait-crop],[data-crop-save],[data-crop-reset],[data-open-character],[data-wiz],[data-wiz-step],[data-wiz-expand],[data-wiz-pick],[data-wiz-attr],[data-wiz-skill],[data-wiz-sec],[data-wiz-slot],[data-wiz-clear],[data-wiz-pick-group],[data-equip-drop],[data-roster-edit],[data-char-del],[data-char-del-confirm],[data-char-export],[data-import-open],[data-share-format],[data-share-send],[data-backup-export],[data-compendium-export],[data-compendium-reset],[data-file-open],[data-file-apply],[data-ap-mode],[data-ap-theme],[data-toast-dismiss],[data-toast-action],[data-campaigns-edit],[data-campaign-new],[data-open-campaign],[data-campaign-del],[data-campaign-del-open],[data-campaign-del-confirm],[data-campaign-tab],[data-campaign-menu],[data-campaign-rename],[data-campaign-save],[data-pierce-toggle],[data-hero-add],[data-hero-import],[data-hero-menu],[data-hero-calc],[data-hero-wound],[data-hero-effect-open],[data-hero-effect-step],[data-hero-edit],[data-hero-update],[data-hero-notes-open],[data-hero-notes-save],[data-hero-remove],[data-hero-del-confirm],[data-hero-save],[data-enemy-new],[data-enemies-import],[data-enemies-export],[data-enemy-menu],[data-enemy-edit],[data-enemy-dup],[data-enemy-export],[data-enemy-remove],[data-enemy-del-confirm],[data-enemy-save],[data-enemy-attack-add],[data-enemy-attack-remove]');
+      const t = e.target.closest('[data-nav],[data-tab],[data-edit-tab],[data-edit-attr],[data-skill-rank],[data-toggle],[data-step],[data-calc],[data-menu],[data-wound],[data-wound-reset],[data-calc-step],[data-calc-apply],[data-action],[data-key],[data-dice-back],[data-dice-roll],[data-roll],[data-roll-again],[data-inv-add],[data-inv-open],[data-item-save],[data-bp-step],[data-bp-edit],[data-bp-delete],[data-mod-add],[data-mod-remove],[data-stat-toggle],[data-effect-open],[data-effect-add],[data-effect-step],[data-effect-tick],[data-effects-clear],[data-tick-confirm],[data-skill-edit],[data-skill-draft],[data-skill-filter],[data-skill-save],[data-detail],[data-gear-add],[data-armor-add],[data-detail-remove],[data-pick],[data-tag],[data-note-add],[data-note-save],[data-note-cancel],[data-note-edit],[data-note-delete],[data-note-del-confirm],[data-portrait-pick],[data-portrait-remove],[data-portrait-menu],[data-rest],[data-patch],[data-patch-confirm],[data-poison-toggle],[data-adv],[data-rules-toggle],[data-id-save],[data-portrait-crop],[data-crop-save],[data-crop-reset],[data-open-character],[data-wiz],[data-wiz-step],[data-wiz-expand],[data-wiz-pick],[data-wiz-attr],[data-wiz-skill],[data-wiz-sec],[data-wiz-slot],[data-wiz-clear],[data-wiz-pick-group],[data-equip-drop],[data-roster-edit],[data-char-del],[data-char-del-confirm],[data-char-export],[data-import-open],[data-share-format],[data-share-send],[data-backup-export],[data-compendium-export],[data-compendium-reset],[data-file-open],[data-file-apply],[data-ap-mode],[data-ap-theme],[data-toast-dismiss],[data-toast-action],[data-campaigns-edit],[data-campaign-new],[data-open-campaign],[data-campaign-del],[data-campaign-del-open],[data-campaign-del-confirm],[data-campaign-tab],[data-campaign-menu],[data-campaign-rename],[data-campaign-save],[data-pierce-toggle],[data-hero-add],[data-hero-import],[data-hero-menu],[data-hero-calc],[data-hero-wound],[data-hero-effect-open],[data-hero-effect-step],[data-hero-edit],[data-hero-update],[data-hero-notes-open],[data-hero-notes-save],[data-hero-remove],[data-hero-del-confirm],[data-hero-save],[data-enemy-new],[data-enemies-import],[data-enemies-export],[data-enemy-menu],[data-enemy-edit],[data-enemy-dup],[data-enemy-export],[data-enemy-remove],[data-enemy-del-confirm],[data-enemy-save],[data-enemy-attack-add],[data-enemy-attack-remove],[data-combat-start-open],[data-combat-start],[data-start-step],[data-start-share],[data-combat-end-open],[data-combat-end],[data-combat-pick],[data-combat-end-turn],[data-combat-next-round],[data-member-edit],[data-member-act],[data-member-calc],[data-member-wound],[data-member-effect-open],[data-member-effect-step]');
       if (!t) return;
       /* The app root is STATE, never a control. It carries data-view, data-tab,
          data-edit-tab, data-campaign-tab, data-menu and data-modal so the stylesheet can switch on
@@ -9363,6 +9780,33 @@
         else if (t.hasAttribute('data-enemy-dup')) copyEnemy(e);
         else if (t.hasAttribute('data-enemy-export')) exportEnemies([e], e.name);
         else askDeleteEnemy(e);
+        return;
+      }
+      // --- Game Master Tools: the Combat tab ---
+      if (t.hasAttribute('data-combat-start-open'))  { openCombatStart(); return; }
+      if (t.hasAttribute('data-combat-start'))       { startCombatFromDraft(); return; }
+      if (t.dataset.startStep)                       { stepCombatStart(t.dataset.startStep); return; }
+      // A checkbox: the browser has already ticked it — read, never prevent.
+      if (t.dataset.startShare) {
+        const d = state.combatDraft && state.combatDraft[t.dataset.startShare];
+        if (d) d.share = t.checked;
+        return;
+      }
+      if (t.hasAttribute('data-combat-end-open'))    { app.setAttribute('data-modal', 'combat-end'); return; }
+      if (t.hasAttribute('data-combat-end'))         { endCombat(); return; }
+      if (t.dataset.combatPick)                      { pickFighter(t.dataset.combatPick); return; }
+      if (t.hasAttribute('data-combat-end-turn'))    { endFighterTurn(); return; }
+      if (t.hasAttribute('data-combat-next-round'))  { startNextRound(); return; }
+      if (t.dataset.memberEdit)                      { openMemberMenu(t.dataset.memberEdit); return; }
+      if (t.dataset.memberAct)                       { memberAct(t.dataset.memberAct); return; }
+      // On an enemy in the fight: the member is the box's own [data-member].
+      if (t.matches('[data-member-calc],[data-member-wound],[data-member-effect-open],[data-member-effect-step]')) {
+        const s = memberOf(t);
+        if (!s) return;
+        if (t.dataset.memberCalc) openSubjectCalc(s, t.dataset.memberCalc === 'mana' ? 'mana' : 'health');
+        else if (t.dataset.memberWound !== undefined) tapMemberWound(s, parseInt(t.dataset.memberWound, 10));
+        else if (t.hasAttribute('data-member-effect-open')) { state.effectTarget = s.id; openEffectPicker(); }
+        else stepMemberEffect(s, t.dataset.memberEffectStep);
         return;
       }
       // On a hero card: the hero is the card's own [data-hero].

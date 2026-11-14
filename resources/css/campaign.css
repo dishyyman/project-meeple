@@ -188,3 +188,97 @@
 .enemy-attack__pierce input { width: 20px; height: 20px; margin: 0; accent-color: var(--accent); }
 .enemy-attack__error { grid-column: 1 / -1; margin: 0; }
 .enemy-attack__error[hidden] { display: none; }
+
+/* ---- the Combat tab ----
+   A fighter is a hero card's cousin: the same card edge, the same name type,
+   and inside it the very vital, Wound and defence parts the Party tab draws
+   (vitalParts() in main.js), so a goblin's bar reads the way a hero's does.
+   Compact in the lists, whole for whoever is acting. */
+.combat-start-btn { width: 100%; margin-top: var(--space-4); }
+.combat-now { display: flex; flex-direction: column; gap: var(--space-3); }
+.combat-now__label { margin: 0; color: var(--accent-bright); }
+.combat-now__note { margin: 0; font-family: var(--font-body); font-size: var(--fs-note); line-height: 1.5; }
+/* End Turn / Start Round N: the screen's one ember button. */
+.combat-turn-btn { width: 100%; }
+
+.fighters { display: flex; flex-direction: column; gap: var(--space-2-5); }
+.fighter {
+  display: flex; flex-direction: column; gap: var(--space-3);
+  border: 1px solid var(--line-hair); border-radius: var(--r-md);
+  background: var(--bg-card); padding: var(--space-3-5);
+  box-shadow: var(--shadow-hair);
+}
+/* Whoever is acting takes the gold edge — the card the eye should be on. */
+.fighter--current { border-color: var(--line-gold); }
+/* DOWN stays in the list, greyed (designer ruling, 2026-11-14): no fill, a
+   dashed edge, the name in the muted ink and the bars drained of colour.
+   Never by colour alone — the card says "Down" (or "Downed") in words, and
+   the text keeps inks that clear AA, so greyed is not unreadable. */
+.fighter[data-out] { background: transparent; border-style: dashed; box-shadow: none; }
+.fighter[data-out] .fighter__name { color: var(--ink-muted); }
+.fighter[data-out] .vital__track,
+.fighter[data-out] .wounds__pips,
+.fighter__member[data-downed] .vital__track,
+.fighter__member[data-downed] .wounds__pips { filter: grayscale(1); }
+
+.fighter__head { display: flex; align-items: center; gap: var(--space-2-5); }
+.fighter__who { flex: 1; min-width: 0; }
+.fighter__name {
+  margin: 0;
+  font-family: var(--font-display); font-size: var(--fs-title); font-weight: 400;
+  line-height: 1.15; color: var(--ink); overflow-wrap: anywhere;
+}
+.fighter__meta {
+  margin: var(--space-0-5) 0 0;
+  font-family: var(--font-body); font-style: italic; font-size: var(--fs-note); color: var(--ink-faint);
+}
+/* Go: quiet, outlined — End Turn is the ember on this screen, and a list of
+   ten Go buttons in it would drown that out. */
+.fighter__go {
+  flex-shrink: 0; min-width: 52px; min-height: 36px;
+  padding: var(--space-1-5) var(--space-3-5);
+  border: 1.5px solid var(--line-warm); border-radius: var(--r-sm); background: transparent;
+  font-family: var(--font-label); font-size: var(--fs-small);
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--gold);
+}
+.fighter__go:active { transform: translate(1px, 1px); }
+
+/* One body in a group: its own line (name, Down, ✎) over its own bar. */
+.fighter__member { display: flex; flex-direction: column; gap: var(--space-2); }
+.fighter__member + .fighter__member { padding-top: var(--space-2-5); border-top: 1px solid var(--line-soft); }
+.fighter__member-head { display: flex; align-items: center; gap: var(--space-2); }
+.fighter__member-name {
+  flex: 1; min-width: 0;
+  font-family: var(--font-label); font-size: var(--fs-small);
+  letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-soft);
+}
+
+/* As on the hero card: the card's own gap does the spacing. */
+.fighter .vital { margin-bottom: 0; }
+.fighter .wounds { padding-top: 0; border-top: 0; }
+.fighter .combat-grid { margin-top: 0; }
+.fighter .combat-cell { padding: var(--space-2) var(--space-0-5) var(--space-1-5); }
+.fighter .combat-cell__value { font-size: var(--fs-display); }
+.fighter .enemy__attacks { margin-top: 0; }
+.fighter .enemy__notes { margin-top: 0; }
+
+/* ---- Start Combat: a count for each stat card ---- */
+.modal--combat-start .modal__card { max-height: 100%; overflow-y: auto; }
+.combat-start { display: flex; flex-direction: column; gap: var(--space-2); }
+.combat-start__row {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center;
+  gap: var(--space-1-5) var(--space-3);
+  padding: var(--space-2-5) var(--space-3);
+  border: 1px solid var(--line-soft); border-radius: var(--r-sm); background: var(--bg-inset);
+}
+.combat-start__who { display: flex; flex-direction: column; min-width: 0; }
+.combat-start__name { font-family: var(--font-display); font-size: var(--fs-row); color: var(--ink); overflow-wrap: anywhere; }
+.combat-start__meta { font-family: var(--font-body); font-style: italic; font-size: var(--fs-note); color: var(--ink-faint); }
+.combat-start .effect-step__btn:disabled { opacity: var(--disabled-opacity); }
+.combat-start__share {
+  grid-column: 1 / -1;
+  display: flex; align-items: center; gap: var(--space-2);
+  font-family: var(--font-body); font-size: var(--fs-body); color: var(--ink-soft);
+}
+.combat-start__share[hidden] { display: none; }
+.combat-start__share input { width: 20px; height: 20px; margin: 0; accent-color: var(--accent); }

@@ -280,15 +280,68 @@ describe('combat — pick who acts next, round by round', () => {
     assert.equal(C.pick(combat, downed.id), true);   // a Revive, say
   });
 
-  test('a surprise round is the party\'s alone, and ends after one round', () => {
-    const { combat } = setup({ surprise: true });
-    assert.equal(C.upNext(combat).every((f) => f.kind === 'hero'), true);
-    assert.equal(C.pick(combat, byKind(combat, 'enemy')[0].id), false);
-    for (const f of byKind(combat, 'hero')) { C.pick(combat, f.id); C.endTurn(combat); }
-    assert.equal(C.roundOver(combat), true);
-    C.nextRound(combat);
-    assert.equal(combat.surprise, false);
-    assert.equal(C.upNext(combat).some((f) => f.kind === 'enemy'), true);
+  // Designer ruling 2026-11-14: no surprise round. Everyone can act in
+  // round 1, and an old save's flag is dropped on the way in.
+  test('there is no surprise round: everyone is up in round 1, and an old flag is dropped', () => {
+    const { c, combat } = setup({ surprise: true });
+    assert.equal(combat.round, 1);
+    assert.equal('surprise' in combat, false);
+    assert.equal(C.pick(combat, byKind(combat, 'enemy')[0].id), true);
+    c.combat = { ...JSON.parse(JSON.stringify(combat)), surprise: true };
+    const back = C.normalizeCampaign(JSON.parse(JSON.stringify(c)));
+    assert.equal('surprise' in back.combat, false);
+    assert.equal(back.combat.fighters.length, combat.fighters.length);
+  });
+
+  test('the round count goes up each time the line has gone through everyone', () => {
+    const { combat } = setup();
+    for (let round = 1; round <= 3; round++) {
+      assert.equal(combat.round, round);
+      for (const f of combat.fighters) {
+        while (C.turnsLeft(f)) { C.pick(combat, f.id); C.endTurn(combat); }
+      }
+      assert.equal(C.roundOver(combat), true);
+      C.nextRound(combat);
+    }
+    assert.equal(combat.round, 4);
+  });
+
+  test('fight ids never collide with a hero\'s or an enemy\'s', () => {
+    const { c, combat } = setup();
+    const outside = new Set([...c.heroes, ...c.enemies].map((x) => x.id));
+    const inside = combat.fighters.flatMap((f) => [f.id, ...(f.members || []).map((m) => m.id)]);
+    assert.equal(inside.some((id) => outside.has(id)), false);
+    // A hostile save that reuses a hero's id for a member gets a fresh one.
+    const raw = JSON.parse(JSON.stringify({ ...c, combat }));
+    raw.combat.fighters.find((f) => f.kind === 'enemy').members[0].id = c.heroes[0].id;
+    const back = C.normalizeCampaign(raw);
+    const m = back.combat.fighters.find((f) => f.kind === 'enemy').members[0];
+    assert.notEqual(m.id, c.heroes[0].id);
+  });
+
+  test('memberIn finds one enemy in the fight; restoreMember puts it back to full', () => {
+    const { combat, goblin } = setup();
+    const group = byKind(combat, 'enemy')[0];
+    const m = group.members[1];
+    const found = C.memberIn(combat, m.id);
+    assert.equal(found.fighter, group);
+    assert.equal(found.member, m);
+    assert.equal(C.memberIn(combat, 'nobody'), null);
+    assert.equal(C.memberIn(null, m.id), null);
+    m.vitals.health = 0;
+    m.vitals.effects.push({ id: 'condition.slow', stacks: 2 });
+    C.restoreMember(goblin, m);
+    assert.deepEqual([m.vitals.health, m.vitals.effects.length], [6, 0]);
+  });
+
+  test('settleCombat: a fighter whose hero or stat card is gone leaves the fight', () => {
+    const { c, combat, ogre } = setup();
+    c.combat = combat;
+    c.heroes.splice(0, 1);
+    c.enemies.splice(c.enemies.indexOf(ogre), 1);
+    C.settleCombat(c);
+    assert.equal(c.combat.fighters.filter((f) => f.kind === 'hero').length, 2);
+    assert.equal(c.combat.fighters.filter((f) => f.kind === 'enemy').length, 1);
   });
 });
 

@@ -361,10 +361,13 @@ Hard offset shadows are the theme's woodcut signature. Floating layers use soft 
 | Loadout row (`.load-row`) | `--space-3` × `--space-3` | 1.5px `--line`; chosen = 2px `--accent` + warm fill | `--r-sm` | none |
 | Modal (`.modal__card`) | `--space-5` | 1px `--line-hair` + inset 5px gold rule | `--r-modal` | `--shadow-modal` |
 | Hero card (`.hero-card`, Game Master Tools) | `--space-3-5` | 1px `--line-hair`; downed = `--danger-bright` + a "Downed" label | `--r-md` | `--shadow-hair` |
+| Fighter (`.fighter`, Combat tab) | `--space-3-5` | 1px `--line-hair`; acting = `--line-gold`; down = dashed, no fill, bars greyscale + a "Down" label | `--r-md` | `--shadow-hair` (none when down) |
 
 Cards sit on `--bg-card`. A selected card gets the accent border and `--bg-parchment2`.
 
 A **hero card** is the sheet's Action tab in miniature, built from the sheet's own parts so a GM reads it the way a player reads their sheet: `.vital` / `.cell` bars (tap = the calculator), `.wounds` / `.pip`, `.combat-grid` / `.combat-cell` for the four defences, and `.effects` / `.effect-row` for Boons & Conditions (with the hero's own stepper hook and no tick button). The calculator aimed at a hero adds an **Armor Piercing** toggle (the Poison toggle's look); damage otherwise has the hero's Armor taken off.
+
+A **fighter** (Combat tab) is drawn from the same parts (`vitalParts()` in `main.js`): compact in Up Next and Gone This Round — name, turns left, a quiet outlined **Go**, each body's Health bar and Wounds, and any Boons & Conditions on it — and whole for whoever is acting, with an enemy's attacks as the sheet's roll rows. **End Turn / Start Round N** is the screen's one ember button; Go stays outlined so a list of them never competes with it. A group's members each get a line (name, Down, **✎**); the ✎ opens an action sheet (Health, Mana, Clear a Wound, Add a Boon or Condition, Back to Full). Down is greyed, never by colour alone: a dashed edge, greyscale bars, muted name, and the word.
 
 ---
 

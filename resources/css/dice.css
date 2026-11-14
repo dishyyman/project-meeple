@@ -57,6 +57,9 @@
 .app[data-modal="enemy-menu"] .modal--enemy-menu { display: flex; }
 .app[data-modal="enemy-form"] .modal--enemy-form { display: flex; }
 .app[data-modal="enemy-del"]  .modal--enemy-del  { display: flex; }
+.app[data-modal="combat-start"] .modal--combat-start { display: flex; }
+.app[data-modal="combat-end"]   .modal--combat-end   { display: flex; }
+.app[data-modal="member-menu"]  .modal--member-menu  { display: flex; }
 .modal__scrim { position: absolute; inset: 0; background: var(--scrim); }
 /* No max-width. The .modal's own padding is the single place a card's inset is
    decided — a second constraint here meant the padding could be tightened all

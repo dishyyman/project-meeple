@@ -65,7 +65,7 @@ Built and checked by `campaign.js` — `newCampaign()`, and `normalizeCampaign()
 | Card | `healthBase` (null = no class), `manaMax`, `woundsMax`, `patchesMax`, `base { evasion, armor, fortitude, speed }`, `build { … }` | The build half of every derived stat, from the player's device (`mechanics.js` `heroCard()`). Stored, not derived, on purpose: the GM's device has no build to derive it from |
 | Vitals | `health`, `mana`, `wounds`, `patches`, `effects[] { id, stacks }` | Changed only through `mechanics.js` `vitals` rules |
 | Enemy | `id`, `name`, `tags[]`, `turns`, `stats { hp, mana, wounds, evasion, armor, fortitude, speed }`, `attacks[] { id, name, toHit, damage, piercing, mana, tags[], desc }`, `notes` | Shaped as a future monster-compendium entry; a campaign keeps its own copy. Empty `wounds` = one HP bar, downed at 0 |
-| Fight | `round`, `surprise`, `current`, `fighters[] { id, kind, heroId / enemyId, turns, taken, members[] { id, n, vitals } }` | A group sharing one turn is one fighter with several members, each with its own vitals |
+| Fight | `round`, `current`, `fighters[] { id, kind, heroId / enemyId, turns, taken, members[] { id, n, vitals } }` | A group sharing one turn is one fighter with several members, each with its own vitals. Fight ids are minted against the campaign's hero and enemy ids, so an id names one of them. An older save's `surprise` flag is dropped on load |
 
 ## A4. Relationships
 

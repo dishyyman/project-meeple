@@ -285,8 +285,9 @@ spotting, downtime activities, weather, traps. These are rulings a GM makes; the
 only needs to *show* them, which the Rules screen now does.
 
 **Game Master Tools record, they don't rule** (`prd.md` Feature 7): the Combat tab
-lets the GM pick who acts next from those with turns left and marks a surprise round
-as party-only — it never computes an initiative order.
+lets the GM pick who acts next from those with turns left and counts the rounds — it
+never computes an initiative order, and there is no surprise-round mode (designer
+ruling, 2026-11-14).
 
 ---
 
