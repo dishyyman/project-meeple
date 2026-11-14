@@ -30,6 +30,17 @@
             <span class="poison-toggle__box" aria-hidden="true"></span>
             <span class="poison-toggle__label" data-bind="calcPoisonLabel"></span>
           </button>
+        <!-- Game Master Tools only: damage the GM enters on a HERO has the
+             hero's Armor taken off it (damageAfterArmor() in mechanics.js),
+             and this is the way out of that for an Armor Piercing hit. Shown
+             on Health with a hero open, never on the player's own sheet —
+             there the player enters the number that lands. The same toggle as
+             Poison's above, because it is the same kind of switch: it changes
+             what one button will do. -->
+        <button class="poison-toggle" data-pierce-toggle aria-pressed="false" hidden>
+            <span class="poison-toggle__box" aria-hidden="true"></span>
+            <span class="poison-toggle__label" data-bind="calcPierceLabel"></span>
+          </button>
         <div class="calc-actions">
           <button class="btn-heal" data-calc-apply="heal" data-bind="calcHeal">Heal</button>
           <button class="btn-damage" data-calc-apply="damage" data-bind="calcDamage">Damage</button>

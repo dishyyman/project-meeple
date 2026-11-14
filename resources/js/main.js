@@ -642,6 +642,14 @@
     campaignsEdit: false,        // Campaigns list in edit mode (reorder/delete)
     campaignDeleting: null,      // campaign id awaiting delete confirmation
     campaignForm: null,          // { id } while the new/rename form is open; id null = new
+    calcTarget: null,            // hero id when the calculator is aimed at a hero, else the open character
+    pierce: false,               // the calculator's Armor Piercing toggle (heroes only)
+    effectTarget: null,          // hero id when the Boons & Conditions picker is aimed at a hero
+    heroMenu: null,              // hero id whose options sheet is open
+    heroForm: null,              // { id } while the typed-in hero form is open; id null = new
+    heroNotes: null,             // hero id whose notes are open
+    heroDeleting: null,          // hero id awaiting the remove confirmation
+    heroFileFor: null,           // hero id an "Update from File" is for, while the picker is open
     // Character creation. `null` when the wizard is not running — the draft is
     // deliberately NOT a half-built entry in the roster, so abandoning creation
     // leaves nothing behind to clean up. See startCreate().
@@ -1850,6 +1858,7 @@
     setText('campaignName', c.name);
     setText('campaignSub', c.subtitle);
     renderCampaignTabs();
+    renderParty();
   }
 
   const CAMPAIGN_TABS = ['party', 'enemies', 'combat'];
@@ -1951,6 +1960,415 @@
     renderCampaigns();
     // Deleted from inside it: there is nothing left to show, so back to the list.
     if (app.getAttribute('data-view') === 'campaign') app.setAttribute('data-view', 'campaigns');
+  }
+
+  /* ---- the Party tab ----------------------------------------------------
+     Heroes are cards (campaign.js): the BUILD half of every stat as numbers,
+     plus vitals the GM changes. Everything that moves a hero goes through
+     mechanics.js `vitals` — the very rules the player's own sheet uses — so a
+     hit the GM enters cascades through Wounds, clears Boons and downs a hero
+     exactly as it would on the player's phone. */
+  const V = M.vitals;
+  const { damageAfterArmor } = window.MEEPLE_MECHANICS;
+
+  const heroIn = (c, id) => (c ? c.heroes.find((h) => h.id === id) || null : null);
+  // The hero a control belongs to: every card carries [data-hero].
+  const heroOf = (el) => {
+    const card = el && el.closest('[data-hero]');
+    return card ? heroIn(activeCampaign(), card.dataset.hero) : null;
+  };
+
+  function heroCardHtml(h) {
+    const c = h.card, v = h.vitals;
+    const downed = V.isDowned(c, v);
+    const cells = (cur, max) => {
+      let html = '';
+      for (let i = 0; i < max; i++) html += `<span class="cell${i < cur ? ' is-on' : ''}"></span>`;
+      return html;
+    };
+    const hpMax = V.healthMax(c, v);
+    const health = `<div class="vital" data-resource="health">
+        <div class="vital__head">
+          <span class="eyebrow vital__label">Health</span>
+          <span class="vital__value">${v.health} / ${hpMax}</span>
+        </div>
+        <div class="vital__row">
+          <button class="vital__track" type="button" data-hero-calc="health" aria-label="Damage or heal ${esc(h.name)}">${cells(v.health, hpMax)}</button>
+        </div>
+      </div>`;
+    // Mana only for someone who has a pool — a fighter's card stays short.
+    const mana = c.manaMax ? `<div class="vital" data-resource="mana">
+        <div class="vital__head">
+          <span class="eyebrow vital__label">Mana</span>
+          <span class="vital__value">${v.mana} / ${c.manaMax}</span>
+        </div>
+        <div class="vital__row">
+          <button class="vital__track" type="button" data-hero-calc="mana" aria-label="Spend or restore ${esc(h.name)}'s Mana">${cells(v.mana, c.manaMax)}</button>
+        </div>
+      </div>` : '';
+    let pips = '';
+    for (let i = 0; i < c.woundsMax; i++) {
+      const on = i < v.wounds;
+      pips += `<button class="pip${on ? ' is-on' : ''}" data-hero-wound="${i}"`
+        + ` aria-label="Set ${esc(h.name)}'s Wounds to ${i + 1}${on && i + 1 === v.wounds ? ', or tap again for ' + i : ''}">`
+        + `${on ? WOUND_ICON : ''}</button>`;
+    }
+    const wounds = c.woundsMax ? `<div class="wounds">
+        <span class="eyebrow wounds__label">Wounds</span>
+        <div class="wounds__pips">${pips}</div>
+      </div>` : '';
+    const defences = [
+      { label: 'Evasion',   value: String(V.evasion(c, v)) },
+      { label: 'Armor',     value: modLabel(V.armor(c, v)) },
+      { label: 'Fortitude', value: String(V.fortitude(c, v)) },
+      { label: 'Speed',     value: String(V.speed(c, v)) },
+    ];
+    const effects = v.effects.map((e) => effectRow(e, { step: 'data-hero-effect-step', tick: false })).join('');
+    return `<article class="hero-card" data-hero="${esc(h.id)}"${downed ? ' data-downed' : ''} aria-label="${esc(h.name)}">
+      <div class="hero-card__head">
+        <div class="hero-card__who">
+          <h3 class="hero-card__name">${esc(h.name)}</h3>
+          <p class="hero-card__label">${esc(h.label)}</p>
+        </div>
+        ${downed ? '<span class="hero-card__state">Downed</span>' : ''}
+        <button class="icon-btn hero-card__more" data-hero-menu aria-label="Options for ${esc(h.name)}">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
+        </button>
+      </div>
+      ${health}${mana}${wounds}
+      <div class="combat-grid">${defences.map(combatCell).join('')}</div>
+      <div class="effects">${effects}<button class="effect-add" data-hero-effect-open aria-label="Add a boon or condition to ${esc(h.name)}"><svg class="plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="M12 5v14"/></svg></button></div>
+    </article>`;
+  }
+
+  function renderParty() {
+    const c = activeCampaign();
+    const heroes = c ? c.heroes : [];
+    showBlock('partyEmpty', !heroes.length);
+    fillList('party', heroes.map(heroCardHtml).join(''));
+  }
+
+  /* After any change to a hero: save the campaign, repaint the party, and
+     say what the rules did that the GM did not ask for — a hero going down,
+     or a Wound taking their Boons. A toast, not the player's Downed window:
+     that window speaks to "you", and the GM is not the one downed. */
+  function heroChanged(c, h, out = {}) {
+    saveCampaign(c);
+    renderParty();
+    if (out.downed) showToast(`${h.name} is downed.`, 'warn');
+    else if (out.boonsLost) showToast(`${h.name}'s Boons were cleared by the Wound.`, 'warn');
+  }
+
+  /* ---- the calculator, pointed at a hero ------------------------------
+     The player's own calculator, re-aimed: state.calcTarget names the hero,
+     and the Apply branch hands the number to applyHeroCalc() instead of the
+     open character. Damage to a hero's Health has the hero's Armor taken off
+     (damageAfterArmor — the guide's rule, and the designer's ruling that the
+     GM side applies it), with Armor Piercing as the way out. */
+  function openHeroCalc(h, resource) {
+    openCalc(resource);
+    state.calcTarget = h.id;
+    const v = h.vitals, c = h.card;
+    setText('calcTitle', `${h.name} · ${resource === 'mana' ? 'Mana' : 'Health'}`);
+    setText('calcCur', resource === 'mana' ? v.mana : v.health);
+    setText('calcMax', resource === 'mana' ? c.manaMax : V.healthMax(c, v));
+    paintCalcPoison();
+    paintCalcPierce();
+  }
+
+  function paintCalcPierce() {
+    const el = $('.modal--calc [data-pierce-toggle]');
+    if (!el) return;
+    const h = state.calcTarget ? heroIn(activeCampaign(), state.calcTarget) : null;
+    const on = !!h && state.calcResource !== 'mana';
+    el.hidden = !on;
+    if (!on) return;
+    el.setAttribute('aria-pressed', String(state.pierce));
+    setText('calcPierceLabel', `Armor Piercing — ignore Armor ${modLabel(V.armor(h.card, h.vitals))}`);
+  }
+
+  function applyHeroCalc(isHeal, raw) {
+    const c = activeCampaign();
+    const h = heroIn(c, state.calcTarget);
+    const resource = state.calcResource;
+    const pierce = state.pierce, poison = state.applyPoison;
+    closeCalc();
+    if (!h) return;
+    const card = h.card, v = h.vitals;
+    let out = {};
+    if (isHeal) {
+      let amt = clampInt(raw);
+      // Healing RECEIVED: the hero's own Poison, as on the player's sheet.
+      if (poison && resource !== 'mana') amt = Math.max(0, amt + M.poisonHealPenalty(v));
+      V.heal(card, v, resource, amt);
+    } else {
+      const amt = resource === 'mana' ? raw : damageAfterArmor(raw, V.armor(card, v), pierce);
+      out = V.damage(card, v, resource, amt);
+    }
+    heroChanged(c, h, out);
+  }
+
+  /* ---- Wounds and effects on a hero ---------------------------------- */
+
+  // Tapping the pip that is the last one taken clears it; any other sets the
+  // count to that pip — exactly the sheet's gesture.
+  function tapHeroWound(h, i) {
+    const out = V.setWounds(h.card, h.vitals, (i + 1 === h.vitals.wounds) ? i : i + 1);
+    heroChanged(activeCampaign(), h, out);
+  }
+
+  // The player's Boons & Conditions picker, pointed at a hero.
+  function openHeroEffects(h) {
+    state.effectTarget = h.id;
+    openEffectPicker();
+  }
+
+  function addHeroEffect(id) {
+    const c = activeCampaign();
+    const h = heroIn(c, state.effectTarget);
+    closeModal();
+    if (!h) return;
+    V.addEffect(h.vitals, id);
+    heroChanged(c, h);
+  }
+
+  function stepHeroEffect(h, spec) {
+    const [id, deltaStr] = spec.split(':');
+    V.bumpEffect(h.vitals, id, parseInt(deltaStr, 10));
+    heroChanged(activeCampaign(), h);
+  }
+
+  /* ---- from a character file -------------------------------------------
+     The SAME file a player already makes with Share, read by the SAME
+     parser and validated by the SAME applySave() as the Characters list's
+     Import — so a hostile file can do no more here than it can there.
+
+     What differs is that nothing is KEPT but the card. The character is
+     built on a scratch copy and thrown away; the file's content snapshot is
+     BORROWED for the length of the calculation and handed back, so a player
+     on a newer compendium still shows their real numbers without the GM's
+     own library changing underneath them (docs/character-file.md §6a). */
+  function unmergeEntries(ids) {
+    if (!ids.length) return;
+    const drop = new Set(ids);
+    const prune = (list) => {
+      if (!list) return;
+      for (let i = list.length - 1; i >= 0; i--) if (drop.has(list[i].id)) list.splice(i, 1);
+    };
+    prune(LIBRARY.classes); prune(LIBRARY.subclasses); prune(LIBRARY.traits); prune(LIBRARY.skills);
+    prune(ARMOR); prune(WEAPONS); prune(EQUIPMENT);
+    for (const id of ids) { SKILLS.delete(id); ITEMS.delete(id); }
+  }
+
+  function withBorrowedEntries(bag, fn) {
+    const wanted = {};
+    for (const [id, e] of Object.entries(bag || {})) if (!byLibraryId(id)) wanted[id] = e;
+    const added = mergeEntries(wanted);
+    try { return fn(); } finally { unmergeEntries(added); }
+  }
+
+  /* One character out of a file → what a hero needs: name, label, card, and
+     the player's current vitals. `character` is borrowed and put back — the
+     open character must be exactly what it was, whatever applySave() does. */
+  function heroFromSource(source, entries) {
+    const keep = character;
+    try {
+      return withBorrowedEntries(entries, () => {
+        character = newCharacter('');
+        applySave(source);
+        return {
+          name: character.name || 'Unnamed',
+          label: buildMeta(character.build),
+          card: M.heroCard(character),
+          vitals: {
+            health: character.health, mana: character.mana, wounds: character.wounds,
+            patches: character.patches, effects: character.effects.map((e) => ({ ...e })),
+          },
+          characterId: typeof source.id === 'string' ? source.id : null,
+        };
+      });
+    } finally {
+      character = keep;
+    }
+  }
+
+  function openHeroFilePicker(forHeroId = null) {
+    // Set AFTER closing: closeModal() forgets a half-finished hero act, and
+    // this one is not finished until the file comes back.
+    closeModal();
+    state.heroFileFor = forHeroId;
+    const input = $('[data-hero-file]');
+    if (!input) return;
+    input.value = '';     // so the same file twice still fires change
+    input.click();
+  }
+
+  function readHeroFile(input) {
+    const file = input.files && input.files[0];
+    const forId = state.heroFileFor;
+    state.heroFileFor = null;
+    if (!file) return;
+    readMeepleFile(file, (text) => importHeroes(text, file.name, forId));
+  }
+
+  /* Add or update the heroes a file holds.
+       · "Update from File" on a hero (forId): only THAT hero, matched by the
+         player's character id; a file without them says so.
+       · "From a File": one character joins (or updates, if already here); a
+         file of several asks which — every one, or a single hero — through
+         the same sheet the Settings import asks its question in. */
+  function importHeroes(text, filename, forId = null) {
+    const read = parseCharacterFile(text, filename);
+    if (read.error) { showImportResult({ ok: false, ...read.error }); return; }
+    const { file } = read;
+    const c = activeCampaign();
+    if (!c) return;
+
+    if (forId) {
+      const h = heroIn(c, forId);
+      const src = h && file.characters.find((s) => s.id && s.id === h.characterId);
+      if (!src) {
+        showImportResult({ ok: false, title: 'Not in that file',
+          text: `${filename} does not hold ${h ? h.name : 'this hero'}. Ask their player for a new file from Share.` });
+        return;
+      }
+      takeHero(c, file, src);
+      return;
+    }
+    if (file.characters.length === 1) { takeHero(c, file, file.characters[0]); return; }
+
+    const names = file.characters.map((s, i) => ({ i, name: (typeof s.name === 'string' && s.name.trim()) || 'Unnamed' }));
+    askFile({
+      title: 'Who is joining?',
+      text: `${filename} holds ${names.length} characters.`,
+      notes: [],
+      actions: [{ mode: 'all', label: `All ${names.length}` },
+        ...names.map((n) => ({ mode: String(n.i), label: n.name }))],
+      run: (mode) => {
+        const picked = mode === 'all' ? file.characters : [file.characters[Number(mode)]].filter(Boolean);
+        for (const src of picked) takeHero(c, file, src, { quiet: picked.length > 1 });
+        if (picked.length > 1) showToast(`${picked.length} heroes joined the party.`);
+      },
+    });
+  }
+
+  /* One character into the party. Already here (same player character id)?
+     Then this is a NEWER card: refreshHero() replaces it and keeps the vitals
+     the GM has been tracking. Otherwise a new hero, starting from the
+     player's own current health and effects. */
+  function takeHero(c, file, src, { quiet = false } = {}) {
+    const got = heroFromSource(src, file.entries);
+    const existing = got.characterId && c.heroes.find((h) => h.characterId === got.characterId);
+    if (existing) {
+      CMP.refreshHero(existing, got);
+      saveCampaign(c);
+      renderParty();
+      if (!quiet) showToast(`${existing.name}'s card is up to date.`);
+      return;
+    }
+    if (c.heroes.length >= CMP.LIMITS.HEROES) {
+      showImportResult({ ok: false, title: 'The party is full',
+        text: `A campaign holds up to ${CMP.LIMITS.HEROES} heroes.` });
+      return;
+    }
+    c.heroes.push(CMP.newHero({ ...got, source: 'file' }));
+    saveCampaign(c);
+    renderParty();
+    if (!quiet) showToast(`${got.name} joined the party.`);
+  }
+
+  /* ---- a hero's options, form, notes and removal ----------------------- */
+
+  function openHeroMenu(h) {
+    state.heroMenu = h.id;
+    setText('heroMenuName', h.name);
+    setText('heroMenuSource', h.source === 'file' ? 'From the player’s file' : 'Typed in by you');
+    // Typed in → the GM edits the numbers. From a file → the player's device
+    // owns them, so a newer file is how they change.
+    $('[data-hero-edit]').hidden = h.source === 'file';
+    $('[data-hero-update]').hidden = h.source !== 'file';
+    app.setAttribute('data-modal', 'hero-menu');
+  }
+
+  const heroField = (k) => $(`[data-hero-field="${k}"]`);
+  const HERO_NUMBERS = ['hp', 'mana', 'wounds', 'patches', 'evasion', 'armor', 'fortitude', 'speed'];
+
+  function openHeroForm(h = null) {
+    state.heroForm = { id: h ? h.id : null };
+    setText('heroFormTitle', h ? 'Edit Hero' : 'Add Hero');
+    setText('heroFormSave', h ? 'Save' : 'Add');
+    const card = h ? h.card : null;
+    // A new hero starts from the class base block — where every character
+    // begins (mechanics.js RULES.BASE_STATS) — and a common Wound track.
+    const base = window.MEEPLE_MECHANICS.RULES.BASE_STATS;
+    const values = card
+      ? { hp: card.healthBase ?? 1, mana: card.manaMax, wounds: card.woundsMax, patches: card.patchesMax, ...card.build }
+      : { hp: 10, mana: 0, wounds: 4, patches: 3, ...base };
+    heroField('name').value = h ? h.name : '';
+    heroField('label').value = h ? h.label : '';
+    for (const k of HERO_NUMBERS) heroField(k).value = String(values[k] ?? 0);
+    $('[data-hero-error]').hidden = true;
+    app.setAttribute('data-modal', 'hero-form');
+    heroField('name').focus();
+  }
+
+  function saveHeroForm() {
+    const f = state.heroForm;
+    const c = activeCampaign();
+    if (!f || !c) return;
+    const name = heroField('name').value.trim();
+    if (!name) { $('[data-hero-error]').hidden = false; heroField('name').focus(); return; }
+    const n = Object.fromEntries(HERO_NUMBERS.map((k) => [k, heroField(k).value]));
+    const card = CMP.manualCard(n);
+    const label = heroField('label').value.trim();
+    if (f.id) {
+      const h = heroIn(c, f.id);
+      if (h) CMP.refreshHero(h, { name, label, card });
+    } else if (c.heroes.length < CMP.LIMITS.HEROES) {
+      c.heroes.push(CMP.newHero({ name, label, card }));
+    }
+    closeModal();
+    saveCampaign(c);
+    renderParty();
+  }
+
+  function openHeroNotes(h) {
+    state.heroNotes = h.id;
+    setText('heroNotesTitle', `Notes · ${h.name}`);
+    $('[data-hero-notes]').value = h.notes;
+    app.setAttribute('data-modal', 'hero-notes');
+    $('[data-hero-notes]').focus();
+  }
+
+  function saveHeroNotes() {
+    const c = activeCampaign();
+    const h = heroIn(c, state.heroNotes);
+    const text = $('[data-hero-notes]').value.slice(0, CMP.LIMITS.TEXT);
+    closeModal();
+    if (!h) return;
+    h.notes = text;
+    CMP.touch(h);
+    saveCampaign(c);
+    // A save with no other visible result — the card does not show notes.
+    showToast('Notes saved.');
+  }
+
+  function askRemoveHero(h) {
+    state.heroDeleting = h.id;
+    setText('heroDelName', h.name);
+    app.setAttribute('data-modal', 'hero-del');
+  }
+
+  function removeHero() {
+    const c = activeCampaign();
+    const id = state.heroDeleting;
+    closeModal();
+    if (!c) return;
+    const at = c.heroes.findIndex((h) => h.id === id);
+    if (at === -1) return;
+    c.heroes.splice(at, 1);
+    saveCampaign(c);
+    renderParty();
   }
 
   /* ------------------------------------------------------------------ */
@@ -2710,7 +3128,11 @@
   // A tracked boon/condition: its text from the catalog, its stack count from
   // the character. `kind` only becomes a class — CSS decides what a boon looks
   // like versus a condition.
-  function effectRow(entry) {
+  //
+  // A hero card (Game Master Tools) draws the same row with its own stepper
+  // hook, so a press there moves the HERO's stacks, never the open
+  // character's — and without the tick button, which speaks to the player.
+  function effectRow(entry, { step = 'data-effect-step', tick = true } = {}) {
     const def = effectById(entry.id);
     if (!def) return '';
     return `<div class="effect-row effect-row--${def.kind}">
@@ -2719,11 +3141,11 @@
         <div class="effect-row__effect">${esc(def.effect)}</div>
       </div>
       <div class="effect-row__controls">
-        ${tickButton(def, entry)}
+        ${tick ? tickButton(def, entry) : ''}
         <div class="effect-step">
-          <button class="effect-step__btn" data-effect-step="${esc(def.id)}:-1" aria-label="${esc(def.name)}: one fewer stack">−</button>
+          <button class="effect-step__btn" ${step}="${esc(def.id)}:-1" aria-label="${esc(def.name)}: one fewer stack">−</button>
           <span class="effect-step__count">${entry.stacks}</span>
-          <button class="effect-step__btn" data-effect-step="${esc(def.id)}:1" aria-label="${esc(def.name)}: one more stack">+</button>
+          <button class="effect-step__btn" ${step}="${esc(def.id)}:1" aria-label="${esc(def.name)}: one more stack">+</button>
         </div>
       </div>
     </div>`;
@@ -4247,7 +4669,7 @@
     // Nothing to clear on an empty list, and a control that does nothing is
     // a control that teaches the player to distrust the others.
     if (clear) clear.hidden = character.effects.length === 0;
-    const rows = character.effects.map(effectRow).join('');
+    const rows = character.effects.map((e) => effectRow(e)).join('');
     fillList('effects', `${rows}<button class="effect-add" data-effect-open aria-label="Add a boon or condition"><svg class="plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="M12 5v14"/></svg></button>`);
   }
 
@@ -4729,7 +5151,11 @@
     // Same reset as showRoll's, and the same reason: the choice belongs to the
     // healing in front of you, not to the last one.
     state.applyPoison = false;
+    // Aimed at the open character unless openHeroCalc() re-aims it after.
+    state.calcTarget = null;
+    state.pierce = false;
     paintCalcPoison();
+    paintCalcPierce();
     app.setAttribute('data-modal', 'calc');
     calcInput().focus();
     calcInput().select();
@@ -4744,11 +5170,16 @@
   function paintCalcPoison() {
     const el = $('.modal--calc [data-poison-toggle]');
     if (!el) return;
-    const on = state.calcResource !== 'mana' && poisonOffered();
+    // Whose Poison: a hero's when the calculator is aimed at one.
+    const h = state.calcTarget ? heroIn(activeCampaign(), state.calcTarget) : null;
+    const poisoned = h ? M.stacksOf(h.vitals, 'condition.poison') > 0 : poisonOffered();
+    const on = state.calcResource !== 'mana' && poisoned;
     el.hidden = !on;
     if (!on) return;
     el.setAttribute('aria-pressed', String(state.applyPoison));
-    setText('calcPoisonLabel', `Apply my Poison (${poisonHealPenalty()})`);
+    setText('calcPoisonLabel', h
+      ? `Apply ${h.name}'s Poison (${M.poisonHealPenalty(h.vitals)})`
+      : `Apply my Poison (${poisonHealPenalty()})`);
   }
   /* ---- downed ------------------------------------------------------
      Announced by the damage cascade when the last Wound lands. Nothing here
@@ -4821,6 +5252,14 @@
     // declining, and nothing may stay armed against the next press.
     state.campaignDeleting = null;
     state.campaignForm = null;
+    // And for a hero: the calculator or picker re-aimed at one, its options,
+    // its form, its notes, its removal.
+    state.calcTarget = null;
+    state.effectTarget = null;
+    state.heroMenu = null;
+    state.heroForm = null;
+    state.heroNotes = null;
+    state.heroDeleting = null;
     // Same reasoning for the creation slot picker: while this is set, every
     // data-pick row is routed into the draft rather than the live character.
     state.wizPick = null;
@@ -8324,7 +8763,7 @@
       // processed below never has its own element pulled out from under it.
       if (state.openStat && !e.target.closest('.stat-card')) showStatPop(null);
 
-      const t = e.target.closest('[data-nav],[data-tab],[data-edit-tab],[data-edit-attr],[data-skill-rank],[data-toggle],[data-step],[data-calc],[data-menu],[data-wound],[data-wound-reset],[data-calc-step],[data-calc-apply],[data-action],[data-key],[data-dice-back],[data-dice-roll],[data-roll],[data-roll-again],[data-inv-add],[data-inv-open],[data-item-save],[data-bp-step],[data-bp-edit],[data-bp-delete],[data-mod-add],[data-mod-remove],[data-stat-toggle],[data-effect-open],[data-effect-add],[data-effect-step],[data-effect-tick],[data-effects-clear],[data-tick-confirm],[data-skill-edit],[data-skill-draft],[data-skill-filter],[data-skill-save],[data-detail],[data-gear-add],[data-armor-add],[data-detail-remove],[data-pick],[data-tag],[data-note-add],[data-note-save],[data-note-cancel],[data-note-edit],[data-note-delete],[data-note-del-confirm],[data-portrait-pick],[data-portrait-remove],[data-portrait-menu],[data-rest],[data-patch],[data-patch-confirm],[data-poison-toggle],[data-adv],[data-rules-toggle],[data-id-save],[data-portrait-crop],[data-crop-save],[data-crop-reset],[data-open-character],[data-wiz],[data-wiz-step],[data-wiz-expand],[data-wiz-pick],[data-wiz-attr],[data-wiz-skill],[data-wiz-sec],[data-wiz-slot],[data-wiz-clear],[data-wiz-pick-group],[data-equip-drop],[data-roster-edit],[data-char-del],[data-char-del-confirm],[data-char-export],[data-import-open],[data-share-format],[data-share-send],[data-backup-export],[data-compendium-export],[data-compendium-reset],[data-file-open],[data-file-apply],[data-ap-mode],[data-ap-theme],[data-toast-dismiss],[data-toast-action],[data-campaigns-edit],[data-campaign-new],[data-open-campaign],[data-campaign-del],[data-campaign-del-open],[data-campaign-del-confirm],[data-campaign-tab],[data-campaign-menu],[data-campaign-rename],[data-campaign-save]');
+      const t = e.target.closest('[data-nav],[data-tab],[data-edit-tab],[data-edit-attr],[data-skill-rank],[data-toggle],[data-step],[data-calc],[data-menu],[data-wound],[data-wound-reset],[data-calc-step],[data-calc-apply],[data-action],[data-key],[data-dice-back],[data-dice-roll],[data-roll],[data-roll-again],[data-inv-add],[data-inv-open],[data-item-save],[data-bp-step],[data-bp-edit],[data-bp-delete],[data-mod-add],[data-mod-remove],[data-stat-toggle],[data-effect-open],[data-effect-add],[data-effect-step],[data-effect-tick],[data-effects-clear],[data-tick-confirm],[data-skill-edit],[data-skill-draft],[data-skill-filter],[data-skill-save],[data-detail],[data-gear-add],[data-armor-add],[data-detail-remove],[data-pick],[data-tag],[data-note-add],[data-note-save],[data-note-cancel],[data-note-edit],[data-note-delete],[data-note-del-confirm],[data-portrait-pick],[data-portrait-remove],[data-portrait-menu],[data-rest],[data-patch],[data-patch-confirm],[data-poison-toggle],[data-adv],[data-rules-toggle],[data-id-save],[data-portrait-crop],[data-crop-save],[data-crop-reset],[data-open-character],[data-wiz],[data-wiz-step],[data-wiz-expand],[data-wiz-pick],[data-wiz-attr],[data-wiz-skill],[data-wiz-sec],[data-wiz-slot],[data-wiz-clear],[data-wiz-pick-group],[data-equip-drop],[data-roster-edit],[data-char-del],[data-char-del-confirm],[data-char-export],[data-import-open],[data-share-format],[data-share-send],[data-backup-export],[data-compendium-export],[data-compendium-reset],[data-file-open],[data-file-apply],[data-ap-mode],[data-ap-theme],[data-toast-dismiss],[data-toast-action],[data-campaigns-edit],[data-campaign-new],[data-open-campaign],[data-campaign-del],[data-campaign-del-open],[data-campaign-del-confirm],[data-campaign-tab],[data-campaign-menu],[data-campaign-rename],[data-campaign-save],[data-pierce-toggle],[data-hero-add],[data-hero-import],[data-hero-menu],[data-hero-calc],[data-hero-wound],[data-hero-effect-open],[data-hero-effect-step],[data-hero-edit],[data-hero-update],[data-hero-notes-open],[data-hero-notes-save],[data-hero-remove],[data-hero-del-confirm],[data-hero-save]');
       if (!t) return;
       /* The app root is STATE, never a control. It carries data-view, data-tab,
          data-edit-tab, data-campaign-tab, data-menu and data-modal so the stylesheet can switch on
@@ -8395,6 +8834,7 @@
       // --- boons & conditions ---
       if (t.hasAttribute('data-effect-open')) { openEffectPicker(); return; }
       if (t.dataset.effectAdd) {
+        if (state.effectTarget) { addHeroEffect(t.dataset.effectAdd); return; }
         addEffect(t.dataset.effectAdd);
         renderEffects(); renderDerived(); save(); closeModal();
         return;
@@ -8472,6 +8912,33 @@
       if (t.hasAttribute('data-campaign-menu'))      { app.setAttribute('data-modal', 'campaign-menu'); return; }
       if (t.hasAttribute('data-campaign-rename'))    { openCampaignForm(activeCampaignId); return; }
       if (t.hasAttribute('data-campaign-save'))      { saveCampaignForm(); return; }
+      // --- Game Master Tools: the Party tab ---
+      if (t.hasAttribute('data-hero-add'))           { openHeroForm(null); return; }
+      if (t.hasAttribute('data-hero-import'))        { openHeroFilePicker(null); return; }
+      if (t.hasAttribute('data-hero-save'))          { saveHeroForm(); return; }
+      if (t.hasAttribute('data-hero-notes-save'))    { saveHeroNotes(); return; }
+      if (t.hasAttribute('data-hero-del-confirm'))   { removeHero(); return; }
+      // From a hero's options sheet: the hero is the one it was opened for.
+      if (t.matches('[data-hero-edit],[data-hero-update],[data-hero-notes-open],[data-hero-remove]')) {
+        const h = heroIn(activeCampaign(), state.heroMenu);
+        if (!h) { closeModal(); return; }
+        if (t.hasAttribute('data-hero-edit')) openHeroForm(h);
+        else if (t.hasAttribute('data-hero-update')) openHeroFilePicker(h.id);
+        else if (t.hasAttribute('data-hero-notes-open')) openHeroNotes(h);
+        else askRemoveHero(h);
+        return;
+      }
+      // On a hero card: the hero is the card's own [data-hero].
+      if (t.matches('[data-hero-menu],[data-hero-calc],[data-hero-wound],[data-hero-effect-open],[data-hero-effect-step]')) {
+        const h = heroOf(t);
+        if (!h) return;
+        if (t.hasAttribute('data-hero-menu')) openHeroMenu(h);
+        else if (t.dataset.heroCalc) openHeroCalc(h, t.dataset.heroCalc === 'mana' ? 'mana' : 'health');
+        else if (t.dataset.heroWound !== undefined) tapHeroWound(h, parseInt(t.dataset.heroWound, 10));
+        else if (t.hasAttribute('data-hero-effect-open')) openHeroEffects(h);
+        else stepHeroEffect(h, t.dataset.heroEffectStep);
+        return;
+      }
       if (t.dataset.charDel)                       { askDeleteCharacter(t.dataset.charDel); return; }
       if (t.hasAttribute('data-char-del-confirm')) { deleteCharacter(); return; }
       if (t.dataset.charExport)                    { exportCharacter(t.dataset.charExport); return; }
@@ -8671,6 +9138,7 @@
          calculator has nothing to redraw but the control itself. Neither
          saves — nothing about the character has changed yet; the toggle only
          decides what the Heal button will do when it is pressed. */
+      if (t.hasAttribute('data-pierce-toggle')) { state.pierce = !state.pierce; paintCalcPierce(); return; }
       if (t.hasAttribute('data-poison-toggle')) {
         state.applyPoison = !state.applyPoison;
         if (t.closest('.modal--calc')) paintCalcPoison();
@@ -8680,6 +9148,7 @@
 
       if (t.dataset.calcStep) { bumpCalc(parseInt(t.dataset.calcStep, 10)); return; }
       if (t.dataset.calcApply) {
+        if (state.calcTarget) { applyHeroCalc(t.dataset.calcApply === 'heal', calcInput().value); return; }
         const raw = calcInput().value;
         const isHeal = t.dataset.calcApply === 'heal';
         /* Poison reduces healing RECEIVED, so it is applied here rather than
@@ -8896,6 +9365,8 @@
     // The attribute dropdowns report through change, not click, so they need
     // their own delegated listener.
     app.addEventListener('change', (e) => {
+      const heroPicker = e.target.closest('[data-hero-file]');
+      if (heroPicker) { readHeroFile(heroPicker); return; }
       const picker = e.target.closest('[data-import-file]');
       if (picker) { readImportFile(picker); return; }
       // Settings' picker, serving both the backup and the compendium imports.
@@ -9203,7 +9674,11 @@
     // keyboard: Enter in the calc field heals, Esc closes
     const ci = calcInput();
     if (ci) ci.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') { heal(state.calcResource, ci.value); closeCalc(); renderVitals(); renderDerived(); save(); }
+      if (e.key === 'Enter') {
+        // Enter heals, as it always has — a hero's health when aimed at one.
+        if (state.calcTarget) { applyHeroCalc(true, ci.value); return; }
+        heal(state.calcResource, ci.value); closeCalc(); renderVitals(); renderDerived(); save();
+      }
       if (e.key === 'Escape') closeCalc();
     });
   }

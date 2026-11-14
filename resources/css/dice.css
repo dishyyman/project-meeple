@@ -50,6 +50,10 @@
 .app[data-modal="campaign-form"] .modal--campaign-form { display: flex; }
 .app[data-modal="campaign-menu"] .modal--campaign-menu { display: flex; }
 .app[data-modal="campaign-del"]  .modal--campaign-del  { display: flex; }
+.app[data-modal="hero-menu"]  .modal--hero-menu  { display: flex; }
+.app[data-modal="hero-form"]  .modal--hero-form  { display: flex; }
+.app[data-modal="hero-notes"] .modal--hero-notes { display: flex; }
+.app[data-modal="hero-del"]   .modal--hero-del   { display: flex; }
 .modal__scrim { position: absolute; inset: 0; background: var(--scrim); }
 /* No max-width. The .modal's own padding is the single place a card's inset is
    decided — a second constraint here meant the padding could be tightened all
@@ -140,6 +144,10 @@
   text-align: left;
 }
 .action-sheet__row + .action-sheet__row { border-top: 1px solid var(--line-hair); }
+/* A row a sheet does not offer this time (a hero's "Edit" when the numbers
+   are the player's). display: flex above beats the browser's own [hidden]
+   rule, so it is restated — same as .poison-toggle and .btn-dashed. */
+.action-sheet__row[hidden] { display: none; }
 .action-sheet__row:active { background: var(--wash-lift); }
 /* The list clips its corners (overflow: hidden), which would cut the usual
    outset focus ring down to a stray line under the row — so it is drawn

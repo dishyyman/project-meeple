@@ -114,10 +114,11 @@ project-meeple/
     │   ├── compendium.spec.js # 8 — Flow 9; malformed compendiums; launch safety net and its grace period
     │   ├── keyboard.spec.js   # 6 — Enter/Space on custom buttons, Shift+Enter holds
     │   ├── dialogs.spec.js    # 7 — dialog markup, focus in/kept/back, Escape (Cancel on sheets and alerts), the shell made inert
-    │   ├── a11y.spec.js       # 31 — axe on every screen and main modal, incl. the Rest sheet, Downed notice, portrait sheet, the Undo toast, the campaign screens and their popups (Chrome); collapsible tap targets, note state, reduced motion (both)
+    │   ├── a11y.spec.js       # 32 — axe on every screen and main modal, incl. the Rest sheet, Downed notice, portrait sheet, the Undo toast, the campaign screens, the Party tab with a hero and its popups (Chrome); collapsible tap targets, note state, reduced motion (both)
     │   ├── rules.spec.js      # 1 — Flow 10 (marked known bug, §10)
     │   ├── frame.spec.js      # 5 — desktop frame: default, toggle remembered, full mode fits, narrow window locks; manifest + icons resolve; opaque iOS status bar
     │   ├── phone.spec.js      # 6 — iphone project ONLY: fills the screen, no toggle, page never scrolls (campaign screens too), both tab bars on screen, fields ≥16px, Add a Portrait takes a tap
+    │   ├── party.spec.js      # 9 — Flow 15: a file's hero matches the sheet, Armor and Armor Piercing, Wounds and Boons move the defences, downed, a newer file keeps the vitals, several characters ask who, hostile file, typed-in hero edit/notes/remove/reload; the open character and the GM's compendium never change
     │   ├── popups.spec.js     # 6 — sheet / alert / notice: Rest, Advantage, Patch, tick, Downed; every one has a way out; Escape is Cancel
     │   ├── portrait.spec.js   # 5 — Flow 13: real clicks on the sheet's uploader and the Edit frame, the icon menu, Remove → Undo
     │   └── security.spec.js   # 10 — Flow 12, hostile ids, CSP, size limit
@@ -207,6 +208,10 @@ Each flow lists the steps and the result that must hold. These are the E2E suite
 **Steps:** on a character with no photo, tap **Add a Portrait** on the sheet → pick a photo. On Edit → Dossier, tap the frame → the portrait menu → **Adjust**; then **Remove Photo** → **Undo** on the toast → reload.
 **Expected:** the sheet's button takes a real tap (nothing stacked over it) and opens the picker. On Edit, an empty frame shows a camera and "Add photo" and goes straight to the picker; a filled one shows a pencil badge and opens the menu — Choose New Photo / Adjust / Remove Photo, each with an icon. Remove takes the photo off at once (screen and storage) and the toast offers Undo for 6 seconds; Undo puts it back exactly, and it survives the reload.
 
+### Flow 15 — The Party (Game Master Tools)
+**Steps:** in a campaign, **From a File** → a player's `.meeple.json`. Tap the hero's Health → Damage 5; again with **Armor Piercing**. Tap their last Wound pip. Add a Condition with the "+". Options → **Update from File** with a newer file. **Add Hero** → type one in → Edit, Notes, Remove.
+**Expected:** the card shows exactly what the player's sheet shows (HP, Wounds, Evasion, Armor, Fortitude, Speed, Boons & Conditions); damage has the hero's Armor taken off unless Armor Piercing is on; a Wound clears Boons and lowers Armor and Speed; the last Wound marks the card Downed with the downed profile; the newer file updates the card and keeps the HP the GM was tracking; a file of several characters asks who is joining; a hostile file's text stays text. The open character's save and the GM's compendium (`meeple.imported-entries`) never change.
+
 ### Flow 14 — Campaigns (Game Master Tools)
 **Steps:** Home → **Game Master Tools** → **New Campaign** → name and subtitle → Create. Switch Party / Enemies / Combat. Options → Edit Name. Back to the list → make two more → Edit → reorder with the arrow keys → delete one → reload.
 **Expected:** the empty list explains itself and New Campaign leads; a campaign needs a name; a new one opens on Party with its name and subtitle; the tab bar says which tab is selected; rename shows in the header and the list; the order and the deletion are saved and survive a reload; the Characters list's edit mode never shows on the Campaigns list. A hand-edited save is cleaned up on load (bad ids skipped, text stays text). If storage refuses a write, the campaign stays for the session and the storage alert says so.
@@ -241,6 +246,7 @@ Each flow lists the steps and the result that must hold. These are the E2E suite
 | Popup shapes: sheet, alert, notice — layout, a visible way out, Escape is Cancel, general wording | `e2e/popups.spec.js` |
 | Flow 13 (portrait add / adjust / remove → Undo), by real clicks so a covered control fails | `e2e/portrait.spec.js`; the tap on a phone in `e2e/phone.spec.js` |
 | Flow 14 (campaigns: create, rename, tabs, reorder, delete, tampered save, storage refusing writes) | `e2e/campaigns.spec.js` |
+| Flow 15 (the Party: heroes from files and typed in, Armor, Wounds, effects, updates) | `e2e/party.spec.js` |
 | No JavaScript errors during any browser test | `e2e/helpers/test.js` (every test, automatically) |
 | Chrome and Safari (WebKit) | every browser test runs in both |
 | Keyboard: custom buttons, the hold gestures, Wound pips | `e2e/keyboard.spec.js` (real key presses, never `press()`) |

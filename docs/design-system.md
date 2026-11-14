@@ -360,8 +360,11 @@ Hard offset shadows are the theme's woodcut signature. Floating layers use soft 
 | Collapsible row (`.collapse`) | `--space-3` × `--space-3-5` head and body | 1px `--line-hair`; body top 1px `--line-soft` | `--r-sm` | `--shadow-hair` (none inside a container) |
 | Loadout row (`.load-row`) | `--space-3` × `--space-3` | 1.5px `--line`; chosen = 2px `--accent` + warm fill | `--r-sm` | none |
 | Modal (`.modal__card`) | `--space-5` | 1px `--line-hair` + inset 5px gold rule | `--r-modal` | `--shadow-modal` |
+| Hero card (`.hero-card`, Game Master Tools) | `--space-3-5` | 1px `--line-hair`; downed = `--danger-bright` + a "Downed" label | `--r-md` | `--shadow-hair` |
 
 Cards sit on `--bg-card`. A selected card gets the accent border and `--bg-parchment2`.
+
+A **hero card** is the sheet's Action tab in miniature, built from the sheet's own parts so a GM reads it the way a player reads their sheet: `.vital` / `.cell` bars (tap = the calculator), `.wounds` / `.pip`, `.combat-grid` / `.combat-cell` for the four defences, and `.effects` / `.effect-row` for Boons & Conditions (with the hero's own stepper hook and no tick button). The calculator aimed at a hero adds an **Armor Piercing** toggle (the Poison toggle's look); damage otherwise has the hero's Armor taken off.
 
 ---
 

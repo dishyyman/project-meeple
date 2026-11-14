@@ -30,7 +30,27 @@
       <div class="camp-scroll">
         <div class="camp-page camp-page--party" role="tabpanel" aria-label="Party">
           <div class="rule"><span class="rule__label">&#10022; Party &#10022;</span></div>
-          <p class="camp-empty">No heroes yet. Soon you&rsquo;ll add them by hand, or from the character file a player sends you.</p>
+          <!-- Only while the party is empty — renderParty() hides it after. -->
+          <p class="camp-empty" data-block="partyEmpty">No heroes yet. Add them by hand, or from the character file a player sends you.</p>
+          <!-- One card per hero, painted by renderParty(). Every control on a
+               card reads WHICH hero from the card's own [data-hero], so the
+               buttons carry only what they do. -->
+          <div class="party" data-list="party"></div>
+          <!-- Two ways in, side by side: typed in, or the .meeple.json a
+               player already sends with Share. The file's own Import button
+               glyph, so the same picture means "from a file" everywhere. -->
+          <div class="party-add">
+            <button class="btn-dashed" data-hero-add>
+              <svg class="plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="M12 5v14"/></svg><span>Add Hero</span>
+            </button>
+            <button class="btn-dashed" data-hero-import>
+              <svg class="btn-dashed__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V3"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/></svg><span>From a File</span>
+            </button>
+          </div>
+          <!-- The picker itself, out of view and out of the tab order like the
+               Characters list's: the button above is the control. -->
+          <input class="visually-hidden" type="file" data-hero-file
+                 accept=".json,application/json" tabindex="-1" aria-hidden="true">
         </div>
         <div class="camp-page camp-page--enemies" role="tabpanel" aria-label="Enemies">
           <div class="rule"><span class="rule__label">&#10022; Enemies &#10022;</span></div>

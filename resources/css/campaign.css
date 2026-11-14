@@ -73,3 +73,69 @@
   font-family: var(--font-body); font-style: italic; font-size: var(--fs-body);
   line-height: 1.55; color: var(--ink-muted);
 }
+
+/* ---- the Party tab: hero cards ----
+   A hero card is the sheet's Action tab in miniature, built from its own
+   parts so a GM reads it the way a player reads their sheet: .vital and
+   .cell for the bars, .wounds and .pip for the Wound track, .combat-grid
+   for the four defences, .effects and .effect-row for Boons & Conditions
+   (sheet.css, inventory.css). What is here is the card that holds them and
+   the few places a smaller card needs them tighter. */
+.party { display: flex; flex-direction: column; gap: var(--space-3); }
+
+.hero-card {
+  display: flex; flex-direction: column; gap: var(--space-3);
+  border: 1px solid var(--line-hair); border-radius: var(--r-md);
+  background: var(--bg-card); padding: var(--space-3-5);
+  box-shadow: var(--shadow-hair);
+}
+/* Downed reads from across the table: the card takes the danger edge, and
+   a word says it (never colour alone). */
+.hero-card[data-downed] { border-color: var(--danger-bright); }
+
+.hero-card__head { display: flex; align-items: center; gap: var(--space-3); }
+.hero-card__who { flex: 1; min-width: 0; }
+.hero-card__name {
+  margin: 0;
+  font-family: var(--font-display); font-size: var(--fs-title); font-weight: 400;
+  line-height: 1.15; color: var(--ink); overflow-wrap: anywhere;
+}
+.hero-card__label {
+  margin: var(--space-0-5) 0 0;
+  font-family: var(--font-body); font-style: italic; font-size: var(--fs-note); color: var(--ink-faint);
+}
+.hero-card__label:empty { display: none; }
+.hero-card__state {
+  flex-shrink: 0;
+  padding: var(--space-0-5) var(--space-2);
+  border: 1px solid var(--danger-bright); border-radius: var(--r-xs);
+  font-family: var(--font-label); font-size: var(--fs-caption);
+  letter-spacing: 0.1em; text-transform: uppercase; color: var(--danger-bright);
+}
+/* The ⋯ — an .icon-btn, a size down so it does not outweigh the name. */
+.hero-card__more { width: 36px; height: 36px; flex-shrink: 0; }
+
+/* The sheet spaces these for a full page; inside a card the card's own gap
+   does it. */
+.hero-card .vital { margin-bottom: 0; }
+.hero-card .wounds { padding-top: 0; border-top: 0; }
+.hero-card .combat-grid { margin-top: 0; }
+.hero-card .combat-cell { padding: var(--space-2) var(--space-0-5) var(--space-1-5); }
+.hero-card .combat-cell__value { font-size: var(--fs-display); }
+
+/* Add Hero / From a File, side by side — two equal ways in. The dashed
+   button brings its own top margin (primitives.css); the grid keeps it. */
+.party-add { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-2-5); }
+
+/* ---- the typed-in hero form ---- */
+.hero-form__lead {
+  margin: 0 0 var(--space-3);
+  font-family: var(--font-body); font-style: italic; font-size: var(--fs-note);
+  line-height: 1.5; color: var(--ink-muted);
+}
+/* Eight numbers, two to a row, as the Edit page's bio fields are. */
+.hero-form__grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 var(--space-3); }
+
+/* The form is the tallest card in the app: bounded by the frame, and the
+   card scrolls rather than pushing Save off the bottom. */
+.modal--hero-form .modal__card { max-height: 100%; overflow-y: auto; }

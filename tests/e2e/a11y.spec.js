@@ -147,6 +147,27 @@ test('axe: modals — campaign form, options sheet, delete alert', async ({ page
   await expectClean(page);
 });
 
+// Game Master Tools, Party: a hero from a file, then each of its popups.
+test('axe: Party tab with a hero, and the hero popups', async ({ page }) => {
+  await openApp(page);
+  await newCampaign(page, 'The Ashen Road');
+  const [chooser] = await Promise.all([page.waitForEvent('filechooser'), press(page, '[data-hero-import]')]);
+  await chooser.setFiles(require('path').join(__dirname, '..', 'fixtures', 'files', 'elara.meeple.json'));
+  await expect(page.locator('.hero-card')).toHaveCount(1);
+  await expectClean(page);
+  await press(page, '.hero-card [data-hero-calc="health"]');
+  await expect.poll(() => appAttr(page, 'data-modal')).toBe('calc');
+  await expectClean(page);
+  await page.keyboard.press('Escape');
+  await press(page, '.hero-card [data-hero-menu]');
+  await expect.poll(() => appAttr(page, 'data-modal')).toBe('hero-menu');
+  await expectClean(page);
+  await page.keyboard.press('Escape');
+  await press(page, '[data-hero-add]');
+  await expect.poll(() => appAttr(page, 'data-modal')).toBe('hero-form');
+  await expectClean(page);
+});
+
 test('axe: modal — Delete character', async ({ page }) => {
   await openApp(page);
   await press(page, '[data-nav="characters"]');
