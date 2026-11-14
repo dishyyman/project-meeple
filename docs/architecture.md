@@ -189,8 +189,9 @@ project-meeple/              # repo root = site root (GitHub Pages serves it as-
 ├── pages/                   # one HTML fragment per screen (structure only)
 │   ├── home.html  characters.html  sheet.html  edit.html
 │   ├── rules.html  settings.html  create.html  menu.html
+│   ├── campaigns.html  campaign.html              # Game Master Tools
 │   ├── toast.html
-│   └── modals/              # dice.html  inventory.html  character.html
+│   └── modals/              # dice.html  inventory.html  character.html  campaign.html
 ├── resources/
 │   ├── css/                 # style.css (import index), tokens.css, one file per screen
 │   ├── js/

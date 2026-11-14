@@ -1,0 +1,25 @@
+/* MEEPLE · campaigns.css
+   The Campaigns list (§27) — Game Master Tools. Mirrors pages/campaigns.html.
+   Part of the stylesheet loaded by style.css. Appearance only — no layout
+   decisions that belong to structure, and no values that belong in tokens.css.
+
+   Almost nothing lives here, on purpose. The list is built from the
+   Characters list's own parts — .topbar, .text-btn, .roster-lead,
+   .persona-card and its edit-mode furniture, .btn-dashed--lead — so a GM
+   meets a screen they already know, and a change to those parts reaches
+   both lists at once (characters.css §7 and §23). What is here is only
+   what a campaign has that a character does not. */
+
+/* ----------------------------------------------------------------- */
+/* 27. CAMPAIGNS LIST                                                 */
+/* ----------------------------------------------------------------- */
+
+/* A campaign has no portrait, so its card's picture slot holds a crest: a
+   folded map on the parchment, in gold. Same box as a portrait — the cards
+   line up with the Characters list's — with the hatch taken away so the
+   glyph is the only mark in it. */
+.persona-card__portrait--crest {
+  display: flex; align-items: center; justify-content: center;
+  background-image: none;
+  color: var(--gold);
+}

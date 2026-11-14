@@ -70,22 +70,43 @@ test('the page itself never scrolls, on any screen', async ({ page }) => {
     expect(await appAttr(page, 'data-tab')).toBe(tab);
     await check(`sheet / ${tab}`);
   }
-  for (const view of ['edit', 'rules', 'settings', 'characters']) {
+  for (const view of ['edit', 'rules', 'settings', 'characters', 'campaigns']) {
     await press(page, `[data-nav="${view}"]`);
     expect(await appAttr(page, 'data-view')).toBe(view);
     await check(view);
   }
+  // Game Master Tools: one campaign, each of its tabs.
+  await press(page, '[data-campaign-new]');
+  await page.fill('[data-campaign-name]', 'The Ashen Road');
+  await press(page, '[data-campaign-save]');
+  await expect.poll(() => appAttr(page, 'data-view')).toBe('campaign');
+  for (const tab of ['party', 'enemies', 'combat']) {
+    await press(page, `.tabbar__btn[data-campaign-tab="${tab}"]`);
+    await check(`campaign / ${tab}`);
+  }
 });
 
+// Two screens have one now — the sheet and a campaign (Game Master Tools) —
+// so each is found inside its own screen and checked in turn.
 test('the tab bar is entirely on screen', async ({ page }) => {
   await openApp(page);
-  await openFirstCharacter(page);
-  const tabbar = await page.locator('.tabbar').boundingBox();
   const { width, height } = page.viewportSize();
-  expect(tabbar.y).toBeGreaterThan(0);
-  expect(tabbar.y + tabbar.height).toBeLessThanOrEqual(height);
-  expect(tabbar.x).toBeGreaterThanOrEqual(0);
-  expect(tabbar.x + tabbar.width).toBeLessThanOrEqual(width);
+  const onScreen = async (where) => {
+    const tabbar = await page.locator(`${where} .tabbar`).boundingBox();
+    expect(tabbar.y, where).toBeGreaterThan(0);
+    expect(tabbar.y + tabbar.height, where).toBeLessThanOrEqual(height);
+    expect(tabbar.x, where).toBeGreaterThanOrEqual(0);
+    expect(tabbar.x + tabbar.width, where).toBeLessThanOrEqual(width);
+  };
+  await openFirstCharacter(page);
+  await onScreen('.screen--sheet');
+
+  await press(page, '[data-nav="campaigns"]');
+  await press(page, '[data-campaign-new]');
+  await page.fill('[data-campaign-name]', 'The Ashen Road');
+  await press(page, '[data-campaign-save]');
+  await expect.poll(() => appAttr(page, 'data-view')).toBe('campaign');
+  await onScreen('.screen--campaign');
 });
 
 test('no text field is under 16px, so iOS never zooms the page on focus', async ({ page }) => {

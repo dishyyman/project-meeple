@@ -213,6 +213,9 @@
   /* ------------------------------------------------------------------ */
   let character = SEED_CHARACTER;
   let roster = [];        // [{ id, name, build, portrait, portraitView }]
+  // Game Master Tools — every campaign, whole, in list order (see CAMPAIGNS).
+  let campaigns = [];
+  let activeCampaignId = null;
 
   // The six core attributes, in the order the guide lists them. Fixed game
   // structure rather than library content, so it lives in code beside
@@ -635,7 +638,10 @@
     // is closed. Not stored with the character: which file you chose to hand
     // someone once is not a fact about who they are.
     share: null,
-    drag: null,                  // live roster drag — see beginRosterDrag()
+    drag: null,                  // live list drag (roster or campaigns) — see beginListDrag()
+    campaignsEdit: false,        // Campaigns list in edit mode (reorder/delete)
+    campaignDeleting: null,      // campaign id awaiting delete confirmation
+    campaignForm: null,          // { id } while the new/rename form is open; id null = new
     // Character creation. `null` when the wizard is not running — the draft is
     // deliberately NOT a half-built entry in the roster, so abandoning creation
     // leaves nothing behind to clean up. See startCreate().
@@ -815,6 +821,9 @@
   const ROSTER_KEY   = 'meeple.roster';
   const saveKey      = (id) => `meeple.character.${id}`;
   const portraitKey  = (id) => `${saveKey(id)}.portrait`;
+  // Game Master Tools: the campaign list, and one key per campaign.
+  const CAMPAIGNS_KEY = 'meeple.campaigns';
+  const campaignKey   = (id) => `meeple.campaign.${id}`;
 
   /* ---- is this device actually keeping what we write? ----------------
      Every write below can fail — a full quota (usually portraits), or storage
@@ -849,6 +858,11 @@
   const heldSaves = new Map();
   const heldPortraits = new Map();
   let rosterFailing = false;   // the last roster index write was refused
+  // Campaigns are held the same way: id → the campaign JSON storage refused.
+  // The campaign in memory is already that version (all are held in memory),
+  // so this map only remembers what still needs writing.
+  const heldCampaigns = new Map();
+  let campaignsIndexFailing = false;
 
   /* The notice is DERIVED, never set: it is up while anything is held or the
      roster index is behind, and down only when all of it has landed. Before
@@ -862,7 +876,7 @@
      not ten times. */
   let storageFailing = false;
   function settleStorage() {
-    const ok = !heldSaves.size && !rosterFailing;
+    const ok = !heldSaves.size && !rosterFailing && !heldCampaigns.size && !campaignsIndexFailing;
     if (ok === !storageFailing) return;
     storageFailing = !ok;
     const text = $('[data-storage-alert-text]');
@@ -876,6 +890,9 @@
   // because an import and a play edit mean different things by it.
   const writeSave = (id, json) => {
     try { localStorage.setItem(saveKey(id), json); return true; } catch (_) { return false; }
+  };
+  const writeCampaign = (id, json) => {
+    try { localStorage.setItem(campaignKey(id), json); return true; } catch (_) { return false; }
   };
   const writePortrait = (id, portrait) => {
     try {
@@ -908,6 +925,9 @@
     }
     for (const [id, p] of heldPortraits) {
       if (writePortrait(id, p)) heldPortraits.delete(id);
+    }
+    for (const [id, json] of heldCampaigns) {
+      if (writeCampaign(id, json)) heldCampaigns.delete(id);
     }
   }
 
@@ -1492,7 +1512,7 @@
     state.rosterEdit = !state.rosterEdit;
     // Leaving edit mode abandons any half-finished act rather than carrying it
     // into read mode, where its confirmation would have no context.
-    if (!state.rosterEdit) { state.charDeleting = null; endRosterDrag(); }
+    if (!state.rosterEdit) { state.charDeleting = null; endListDrag(); }
     renderRoster();
   }
 
@@ -1515,21 +1535,50 @@
 
   /* ---- dragging a row ------------------------------------------------
      Pointer events rather than HTML5 drag-and-drop, because the latter does
-     not fire on touch at all — and this list is read on a phone first.
+     not fire on touch at all — and these lists are read on a phone first.
 
      The dragged row follows the finger through --drag-y; every other row is
      offset by one row-height through --shift-y to open the gap it will land
      in. Both are continuous values, so both are custom properties the
      stylesheet interprets, exactly as writeView() does for portrait framing.
-     Nothing here decides what a number LOOKS like. */
-  function beginRosterDrag(id, startY) {
-    const card = $(`[data-row="${CSS.escape(id)}"]`);
-    if (!card || roster.length < 2) return;
-    const cards = $$('.persona-card');
+     Nothing here decides what a number LOOKS like.
+
+     Two lists reorder this way — the Characters roster and the Campaigns
+     list — so the drag is written once, over a NAMED list. Each name says
+     where its items live, which grip attribute it uses, whether it is in
+     edit mode, and how to move and repaint. Rows are always looked up INSIDE
+     their own [data-list], because both lists use .persona-card and both
+     are in the document at once. */
+  const DRAG_LISTS = {
+    roster: {
+      grip: 'data-char-grip',
+      editing: () => state.rosterEdit,
+      items: () => roster,
+      move: (id, to) => moveCharacter(id, to),
+      render: () => renderRoster(),
+    },
+    campaigns: {
+      grip: 'data-campaign-grip',
+      editing: () => state.campaignsEdit,
+      items: () => campaigns,
+      move: (id, to) => moveCampaign(id, to),
+      render: () => renderCampaigns(),
+    },
+  };
+  const rowsOf = (list) => $$(`[data-list="${list}"] .persona-card`);
+  const rowOf = (list, id) => $(`[data-list="${list}"] [data-row="${CSS.escape(id)}"]`);
+
+  // Which named list a grip belongs to, or null.
+  const gripList = (grip) => Object.keys(DRAG_LISTS).find((k) => grip.hasAttribute(DRAG_LISTS[k].grip)) || null;
+
+  function beginListDrag(list, id, startY) {
+    const L = DRAG_LISTS[list];
+    const card = rowOf(list, id);
+    if (!card || L.items().length < 2) return;
+    const cards = rowsOf(list);
+    const at = L.items().findIndex((r) => r.id === id);
     state.drag = {
-      id, startY,
-      from: roster.findIndex((r) => r.id === id),
-      to: roster.findIndex((r) => r.id === id),
+      list, id, startY, from: at, to: at,
       // Measured once at the start: reading offsetHeight during the drag would
       // be reading a layout this very drag is transforming.
       step: cards.length > 1
@@ -1538,21 +1587,22 @@
       cards,
     };
     card.setAttribute('data-dragging', '');
-    app.setAttribute('data-dragging-roster', '');
+    app.setAttribute('data-dragging-list', '');
   }
 
-  function moveRosterDrag(y) {
+  function moveListDrag(y) {
     const d = state.drag;
     // A zero step means the rows have no measurable height — the list is
     // hidden, or laid out to nothing. Dividing by it below would make every
-    // drag land at the far end of the roster, so there is nothing to do.
+    // drag land at the far end of the list, so there is nothing to do.
     if (!d || !d.step) return;
     const dy = y - d.startY;
-    const card = $(`[data-row="${CSS.escape(d.id)}"]`);
+    const card = rowOf(d.list, d.id);
     if (card) card.style.setProperty('--drag-y', `${dy}px`);
 
     // Where the row would land: how many whole row-heights it has travelled.
-    const to = Math.max(0, Math.min(roster.length - 1, d.from + Math.round(dy / d.step)));
+    const n = DRAG_LISTS[d.list].items().length;
+    const to = Math.max(0, Math.min(n - 1, d.from + Math.round(dy / d.step)));
     if (to === d.to) return;
     d.to = to;
 
@@ -1569,9 +1619,9 @@
     });
   }
 
-  function endRosterDrag(commit) {
+  function endListDrag(commit) {
     const d = state.drag;
-    app.removeAttribute('data-dragging-roster');
+    app.removeAttribute('data-dragging-list');
     if (!d) return;
     state.drag = null;
     // The transforms are thrown away rather than animated home: the repaint
@@ -1583,8 +1633,9 @@
       el.style.removeProperty('--drag-y');
       el.style.removeProperty('--shift-y');
     }
-    if (commit && d.to !== d.from) moveCharacter(d.id, d.to);
-    else renderRoster();
+    const L = DRAG_LISTS[d.list];
+    if (commit && d.to !== d.from) L.move(d.id, d.to);
+    else L.render();
   }
 
   /* ---- deleting ------------------------------------------------------- */
@@ -1647,6 +1698,259 @@
       portrait: character.portrait, portraitView: character.portraitView,
     };
     if (at === -1) roster.push(row); else roster[at] = row;
+  }
+
+  /* ================================================================== */
+  /* CAMPAIGNS — Game Master Tools                                      */
+  /* ------------------------------------------------------------------ */
+  /* The GM's side of the app (docs/prd.md Feature 7). The DATA — shapes, */
+  /* the normalizer every campaign passes through on the way in, combat   */
+  /* turn tracking — is resources/js/campaign.js, pure and unit-tested.  */
+  /* What is here is the same three things the roster has: storage,     */
+  /* the list (with edit mode), and the screen for one campaign.         */
+  /*                                                                    */
+  /* Storage mirrors characters: an index plus one key per campaign —    */
+  /*   meeple.campaigns          { ids: [...], activeId }                */
+  /*   meeple.campaign.<id>      one campaign, whole                     */
+  /* so one campaign's write can fail without touching another's, and a  */
+  /* later sync can carry each as one document (architecture.md          */
+  /* Decision 12). Campaigns are small — a party's numbers and a list of */
+  /* stat blocks — so every campaign is held in memory once loaded.      */
+  /* ================================================================== */
+  const CMP = window.MEEPLE_CAMPAIGN;
+
+  /* Load every campaign the index names. Each is rebuilt by
+     normalizeCampaign(), so a record someone edited by hand, or one written
+     by an older version, arrives clamped and tidy — or not at all. The KEY is
+     the identity: an index id that is not a safe token is skipped, and the
+     record's own id field is overwritten with the key it was read from. */
+  function loadCampaigns() {
+    let idx = {};
+    try { idx = JSON.parse(localStorage.getItem(CAMPAIGNS_KEY) || '{}') || {}; } catch (_) { idx = {}; }
+    const ids = Array.isArray(idx.ids)
+      ? [...new Set(idx.ids.filter((id) => typeof id === 'string' && CMP.SAFE_ID.test(id)))]
+      : [];
+    campaigns = [];
+    for (const id of ids) {
+      let raw = null;
+      try { raw = JSON.parse(localStorage.getItem(campaignKey(id))); } catch (_) { raw = null; }
+      const c = CMP.normalizeCampaign(raw);
+      if (!c) continue;   // the index names a record that is gone or junk
+      c.id = id;
+      campaigns.push(c);
+    }
+    activeCampaignId = campaigns.some((c) => c.id === idx.activeId) ? idx.activeId : null;
+  }
+
+  const activeCampaign = () => campaigns.find((c) => c.id === activeCampaignId) || null;
+
+  const writeCampaignsIndex = () => {
+    try {
+      localStorage.setItem(CAMPAIGNS_KEY, JSON.stringify({ ids: campaigns.map((c) => c.id), activeId: activeCampaignId }));
+      return true;
+    } catch (_) { return false; }
+  };
+
+  /* Persist one campaign after a change. touch() first — every change bumps
+     its revision and time, which is what a later sync orders by. A refused
+     write is HELD (see HELD COPIES above) and raises the storage notice;
+     the campaign in memory is already the newest copy, so play goes on. */
+  function saveCampaign(c) {
+    CMP.touch(c);
+    retryHeld();
+    const json = JSON.stringify(c);
+    const ok = writeCampaign(c.id, json);
+    if (ok) heldCampaigns.delete(c.id); else heldCampaigns.set(c.id, json);
+    campaignsIndexFailing = !writeCampaignsIndex();
+    settleStorage();
+    return ok;
+  }
+
+  /* ---- the list ------------------------------------------------------
+     The Characters list's own parts, so a GM meets a screen they know.
+     The meta line is the GM's subtitle when there is one, otherwise what is
+     in the campaign — never a type or a session count the app made up. */
+  function campaignMeta(c) {
+    if (c.subtitle) return c.subtitle;
+    const count = (k, one, many) => `${k} ${k === 1 ? one : many}`;
+    return `${count(c.heroes.length, 'hero', 'heroes')} · ${count(c.enemies.length, 'enemy', 'enemies')}`;
+  }
+
+  function renderCampaigns() {
+    const editing = state.campaignsEdit;
+    $('[data-list="campaigns"]')?.toggleAttribute('data-editing', editing);
+    setText('campaignsEdit', editing ? 'Done' : 'Edit');
+    const toggle = $('[data-campaigns-edit]');
+    if (toggle) toggle.disabled = !campaigns.length;
+    $('.screen--campaigns')?.toggleAttribute('data-empty', !campaigns.length);
+    showBlock('campaignsLead', !campaigns.length);
+
+    fillList('campaigns', campaigns.map((c) => `
+      <div class="persona-card" data-row="${esc(c.id)}"${c.id === activeCampaignId ? ' data-current' : ''}>
+        <div class="persona-card__main">
+          <button class="persona-card__del" data-campaign-del="${esc(c.id)}" aria-label="Delete ${esc(c.name)}"${editing ? '' : ' tabindex="-1"'}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M8 12h8"/></svg>
+          </button>
+          <button class="persona-card__open" data-open-campaign="${esc(c.id)}"${editing ? ' disabled' : ''}>
+            <span class="persona-card__portrait persona-card__portrait--crest" aria-hidden="true">
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M14.106 5.553a2 2 0 0 0 1.788 0l3.659-1.83A1 1 0 0 1 21 4.619v12.764a1 1 0 0 1-.553.894l-4.553 2.277a2 2 0 0 1-1.788 0l-4.212-2.106a2 2 0 0 0-1.788 0l-3.659 1.83A1 1 0 0 1 3 19.381V6.618a1 1 0 0 1 .553-.894l4.553-2.277a2 2 0 0 1 1.788 0z"/><path d="M15 5.764v15"/><path d="M9 3.236v15"/></svg>
+            </span>
+            <span class="persona-card__body">
+              <span class="persona-card__name">${esc(c.name)}</span>
+              <span class="persona-card__meta">${esc(campaignMeta(c))}</span>
+            </span>
+            <svg class="persona-card__chevron" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+          </button>
+          <button class="persona-card__grip" data-campaign-grip="${esc(c.id)}"${editing ? '' : ' tabindex="-1"'}
+                  aria-label="Reorder ${esc(c.name)} — use the arrow keys, or drag">
+            <span></span><span></span><span></span>
+          </button>
+        </div>
+      </div>`).join(''));
+  }
+
+  function toggleCampaignsEdit() {
+    state.campaignsEdit = !state.campaignsEdit;
+    // Leaving edit mode abandons a half-finished act, as the roster's does.
+    if (!state.campaignsEdit) { state.campaignDeleting = null; endListDrag(); }
+    renderCampaigns();
+  }
+
+  // The array IS the display order — a splice and an index write, as for
+  // characters. Focus follows the row, so a keyboard reorder keeps its place.
+  function moveCampaign(id, to) {
+    const from = campaigns.findIndex((c) => c.id === id);
+    if (from === -1) return;
+    const at = Math.max(0, Math.min(campaigns.length - 1, to));
+    if (at === from) return;
+    campaigns.splice(at, 0, campaigns.splice(from, 1)[0]);
+    campaignsIndexFailing = !writeCampaignsIndex();
+    settleStorage();
+    renderCampaigns();
+    $(`[data-campaign-grip="${CSS.escape(id)}"]`)?.focus();
+  }
+
+  /* ---- one campaign ---------------------------------------------------- */
+
+  // Opening a campaign always lands on Party, for the reason opening a
+  // character lands on Action: a visit starts fresh rather than resuming.
+  function openCampaign(id) {
+    if (!campaigns.some((c) => c.id === id)) return;
+    activeCampaignId = id;
+    campaignsIndexFailing = !writeCampaignsIndex();
+    settleStorage();
+    app.setAttribute('data-campaign-tab', 'party');
+    renderCampaign();
+    app.setAttribute('data-view', 'campaign');
+  }
+
+  function renderCampaign() {
+    const c = activeCampaign();
+    if (!c) return;
+    setText('campaignName', c.name);
+    setText('campaignSub', c.subtitle);
+    renderCampaignTabs();
+  }
+
+  const CAMPAIGN_TABS = ['party', 'enemies', 'combat'];
+
+  // The tab is STATE on .app; the buttons are painted from it, so the bar
+  // cannot drift from the page actually showing. aria-current says which
+  // tab is selected to a screen reader, which the colour alone cannot.
+  function renderCampaignTabs() {
+    const now = app.getAttribute('data-campaign-tab');
+    $$('.tabbar__btn[data-campaign-tab]').forEach((b) => {
+      if (b.dataset.campaignTab === now) b.setAttribute('aria-current', 'page');
+      else b.removeAttribute('aria-current');
+    });
+  }
+
+  function setCampaignTab(tab) {
+    if (!CAMPAIGN_TABS.includes(tab)) return;
+    app.setAttribute('data-campaign-tab', tab);
+    renderCampaignTabs();
+    const scroller = $('.camp-scroll');
+    if (scroller) scroller.scrollTop = 0;
+  }
+
+  /* ---- new / rename -----------------------------------------------------
+     One form for both. `id` null is a new campaign; otherwise the campaign
+     being renamed. The name field takes focus, which watchModals() keeps. */
+  const campaignField = (k) => $(`[data-campaign-${k}]`);
+
+  function openCampaignForm(id = null) {
+    const c = id ? campaigns.find((x) => x.id === id) : null;
+    if (id && !c) return;
+    state.campaignForm = { id: c ? c.id : null };
+    setText('campaignFormTitle', c ? 'Edit Campaign' : 'New Campaign');
+    setText('campaignFormSave', c ? 'Save' : 'Create');
+    campaignField('name').value = c ? c.name : '';
+    campaignField('subtitle').value = c ? c.subtitle : '';
+    campaignField('error').hidden = true;
+    app.setAttribute('data-modal', 'campaign-form');
+    campaignField('name').focus();
+  }
+
+  function saveCampaignForm() {
+    const f = state.campaignForm;
+    if (!f) return;
+    const name = campaignField('name').value.trim();
+    // Said where it happened, as the character's name is (.status--error).
+    if (!name) {
+      campaignField('error').hidden = false;
+      campaignField('name').focus();
+      return;
+    }
+    const subtitle = campaignField('subtitle').value.trim();
+    if (f.id) {
+      const c = campaigns.find((x) => x.id === f.id);
+      if (!c) { closeModal(); return; }
+      c.name = name.slice(0, CMP.LIMITS.NAME);
+      c.subtitle = subtitle.slice(0, CMP.LIMITS.SUBTITLE);
+      saveCampaign(c);
+      closeModal();
+      renderCampaign();
+      renderCampaigns();
+      return;
+    }
+    // A new campaign opens straight away, as a new character does: the
+    // GM made it to use it, and the empty Party tab says what comes next.
+    const c = CMP.newCampaign({ name, subtitle });
+    campaigns.push(c);
+    saveCampaign(c);
+    closeModal();
+    renderCampaigns();
+    openCampaign(c.id);
+  }
+
+  /* ---- delete ----------------------------------------------------------- */
+
+  function askDeleteCampaign(id) {
+    const c = campaigns.find((x) => x.id === id);
+    if (!c) return;
+    state.campaignDeleting = id;
+    setText('campaignDelName', c.name);
+    app.setAttribute('data-modal', 'campaign-del');
+  }
+
+  // Permanent, as the alert says. The record goes, any held copy goes (or
+  // retryHeld() would write it straight back), and the index is rewritten.
+  function deleteCampaign() {
+    const id = state.campaignDeleting;
+    state.campaignDeleting = null;
+    closeModal();
+    const at = campaigns.findIndex((c) => c.id === id);
+    if (at === -1) return;
+    try { localStorage.removeItem(campaignKey(id)); } catch (_) { /* storage unavailable — the list still drops it */ }
+    heldCampaigns.delete(id);
+    campaigns.splice(at, 1);
+    if (activeCampaignId === id) activeCampaignId = null;
+    campaignsIndexFailing = !writeCampaignsIndex();
+    settleStorage();
+    if (!campaigns.length) state.campaignsEdit = false;
+    renderCampaigns();
+    // Deleted from inside it: there is nothing left to show, so back to the list.
+    if (app.getAttribute('data-view') === 'campaign') app.setAttribute('data-view', 'campaigns');
   }
 
   /* ------------------------------------------------------------------ */
@@ -2525,7 +2829,9 @@
      writeView(), which has always taken the element for this reason. */
   function renderRoster() {
     const editing = state.rosterEdit;
-    app.setAttribute('data-roster', editing ? 'edit' : 'read');
+    // On the LIST, not on .app: the Campaigns list uses the same cards, and
+    // must not grow delete buttons because this one is in edit mode.
+    $('[data-list="roster"]')?.toggleAttribute('data-editing', editing);
     // The toggle names the mode it goes TO, which is the convention every
     // list-edit button follows. Disabled with nothing to edit.
     setText('rosterEdit', editing ? 'Done' : 'Edit');
@@ -2535,8 +2841,7 @@
     // An empty roster is a different screen, not a list with nothing in it:
     // the lead line explains it and Create takes the accent. Both are the
     // stylesheet's business, so this only states the fact.
-    if (roster.length) app.removeAttribute('data-roster-empty');
-    else app.setAttribute('data-roster-empty', '');
+    $('.screen--characters')?.toggleAttribute('data-empty', !roster.length);
     showBlock('rosterLead', !roster.length);
 
     fillList('roster', roster.length ? roster.map((r) => `
@@ -4512,6 +4817,10 @@
     // would arm the next confirm button press against a character nobody was
     // looking at.
     state.charDeleting = null;
+    // Same for a campaign: dismissing its confirmation or its form is
+    // declining, and nothing may stay armed against the next press.
+    state.campaignDeleting = null;
+    state.campaignForm = null;
     // Same reasoning for the creation slot picker: while this is set, every
     // data-pick row is routed into the draft rather than the live character.
     state.wizPick = null;
@@ -8015,10 +8324,10 @@
       // processed below never has its own element pulled out from under it.
       if (state.openStat && !e.target.closest('.stat-card')) showStatPop(null);
 
-      const t = e.target.closest('[data-nav],[data-tab],[data-edit-tab],[data-edit-attr],[data-skill-rank],[data-toggle],[data-step],[data-calc],[data-menu],[data-wound],[data-wound-reset],[data-calc-step],[data-calc-apply],[data-action],[data-key],[data-dice-back],[data-dice-roll],[data-roll],[data-roll-again],[data-inv-add],[data-inv-open],[data-item-save],[data-bp-step],[data-bp-edit],[data-bp-delete],[data-mod-add],[data-mod-remove],[data-stat-toggle],[data-effect-open],[data-effect-add],[data-effect-step],[data-effect-tick],[data-effects-clear],[data-tick-confirm],[data-skill-edit],[data-skill-draft],[data-skill-filter],[data-skill-save],[data-detail],[data-gear-add],[data-armor-add],[data-detail-remove],[data-pick],[data-tag],[data-note-add],[data-note-save],[data-note-cancel],[data-note-edit],[data-note-delete],[data-note-del-confirm],[data-portrait-pick],[data-portrait-remove],[data-portrait-menu],[data-rest],[data-patch],[data-patch-confirm],[data-poison-toggle],[data-adv],[data-rules-toggle],[data-id-save],[data-portrait-crop],[data-crop-save],[data-crop-reset],[data-open-character],[data-wiz],[data-wiz-step],[data-wiz-expand],[data-wiz-pick],[data-wiz-attr],[data-wiz-skill],[data-wiz-sec],[data-wiz-slot],[data-wiz-clear],[data-wiz-pick-group],[data-equip-drop],[data-roster-edit],[data-char-del],[data-char-del-confirm],[data-char-export],[data-import-open],[data-share-format],[data-share-send],[data-backup-export],[data-compendium-export],[data-compendium-reset],[data-file-open],[data-file-apply],[data-ap-mode],[data-ap-theme],[data-toast-dismiss],[data-toast-action]');
+      const t = e.target.closest('[data-nav],[data-tab],[data-edit-tab],[data-edit-attr],[data-skill-rank],[data-toggle],[data-step],[data-calc],[data-menu],[data-wound],[data-wound-reset],[data-calc-step],[data-calc-apply],[data-action],[data-key],[data-dice-back],[data-dice-roll],[data-roll],[data-roll-again],[data-inv-add],[data-inv-open],[data-item-save],[data-bp-step],[data-bp-edit],[data-bp-delete],[data-mod-add],[data-mod-remove],[data-stat-toggle],[data-effect-open],[data-effect-add],[data-effect-step],[data-effect-tick],[data-effects-clear],[data-tick-confirm],[data-skill-edit],[data-skill-draft],[data-skill-filter],[data-skill-save],[data-detail],[data-gear-add],[data-armor-add],[data-detail-remove],[data-pick],[data-tag],[data-note-add],[data-note-save],[data-note-cancel],[data-note-edit],[data-note-delete],[data-note-del-confirm],[data-portrait-pick],[data-portrait-remove],[data-portrait-menu],[data-rest],[data-patch],[data-patch-confirm],[data-poison-toggle],[data-adv],[data-rules-toggle],[data-id-save],[data-portrait-crop],[data-crop-save],[data-crop-reset],[data-open-character],[data-wiz],[data-wiz-step],[data-wiz-expand],[data-wiz-pick],[data-wiz-attr],[data-wiz-skill],[data-wiz-sec],[data-wiz-slot],[data-wiz-clear],[data-wiz-pick-group],[data-equip-drop],[data-roster-edit],[data-char-del],[data-char-del-confirm],[data-char-export],[data-import-open],[data-share-format],[data-share-send],[data-backup-export],[data-compendium-export],[data-compendium-reset],[data-file-open],[data-file-apply],[data-ap-mode],[data-ap-theme],[data-toast-dismiss],[data-toast-action],[data-campaigns-edit],[data-campaign-new],[data-open-campaign],[data-campaign-del],[data-campaign-del-open],[data-campaign-del-confirm],[data-campaign-tab],[data-campaign-menu],[data-campaign-rename],[data-campaign-save]');
       if (!t) return;
       /* The app root is STATE, never a control. It carries data-view, data-tab,
-         data-edit-tab, data-menu and data-modal so the stylesheet can switch on
+         data-edit-tab, data-campaign-tab, data-menu and data-modal so the stylesheet can switch on
          them, and three of those names are also hooks in the selector above —
          data-edit-tab joined data-tab and data-action there — so a click that
          lands on no control at all (a modal scrim, the padding beside a row)
@@ -8152,6 +8461,17 @@
 
       // --- roster edit mode ---
       if (t.hasAttribute('data-roster-edit'))      { toggleRosterEdit(); return; }
+      // --- Game Master Tools: the campaign list and one campaign ---
+      if (t.hasAttribute('data-campaigns-edit'))     { toggleCampaignsEdit(); return; }
+      if (t.hasAttribute('data-campaign-new'))       { openCampaignForm(null); return; }
+      if (t.dataset.openCampaign)                    { openCampaign(t.dataset.openCampaign); return; }
+      if (t.dataset.campaignDel)                     { askDeleteCampaign(t.dataset.campaignDel); return; }
+      if (t.hasAttribute('data-campaign-del-open'))  { askDeleteCampaign(activeCampaignId); return; }
+      if (t.hasAttribute('data-campaign-del-confirm')) { deleteCampaign(); return; }
+      if (t.dataset.campaignTab)                     { setCampaignTab(t.dataset.campaignTab); return; }
+      if (t.hasAttribute('data-campaign-menu'))      { app.setAttribute('data-modal', 'campaign-menu'); return; }
+      if (t.hasAttribute('data-campaign-rename'))    { openCampaignForm(activeCampaignId); return; }
+      if (t.hasAttribute('data-campaign-save'))      { saveCampaignForm(); return; }
       if (t.dataset.charDel)                       { askDeleteCharacter(t.dataset.charDel); return; }
       if (t.hasAttribute('data-char-del-confirm')) { deleteCharacter(); return; }
       if (t.dataset.charExport)                    { exportCharacter(t.dataset.charExport); return; }
@@ -8234,6 +8554,9 @@
         // backup line has to weigh a file built out of every character, which
         // is work nobody should pay for until they are looking at it.
         if (t.dataset.nav === 'settings') renderSettings();
+        // The campaign list starts in read mode on every visit, as a fresh
+        // screen should, and is repainted so a renamed campaign shows.
+        if (t.dataset.nav === 'campaigns') { state.campaignsEdit = false; endListDrag(); renderCampaigns(); }
         app.setAttribute('data-view', t.dataset.nav);
         resetPull();
         // Edit Character is reached FROM the drawer, so navigation has to
@@ -8451,14 +8774,15 @@
        touch. setPointerCapture means the gesture keeps reporting to the grip
        even when the finger outruns it, which on a fast drag it always does. */
     app.addEventListener('pointerdown', (e) => {
-      const grip = e.target.closest('[data-char-grip]');
-      if (!grip || !state.rosterEdit) return;
+      const grip = e.target.closest('[data-char-grip],[data-campaign-grip]');
+      const list = grip && gripList(grip);
+      if (!list || !DRAG_LISTS[list].editing()) return;
       e.preventDefault();                       // or the browser starts a text selection
       // Guarded rather than assumed: without capture the drag simply ends when
       // the finger leaves the grip, which is worse but still works. Throwing
       // here would break reordering outright.
       if (grip.setPointerCapture) grip.setPointerCapture(e.pointerId);
-      beginRosterDrag(grip.dataset.charGrip, e.clientY);
+      beginListDrag(list, grip.getAttribute(DRAG_LISTS[list].grip), e.clientY);
     });
     // On the DOCUMENT, not the app. Pointer capture normally keeps these
     // arriving at the grip, but where it is unavailable the events go to
@@ -8466,13 +8790,13 @@
     // outside .app. Listening higher up means the drag still tracks, and more
     // importantly still ENDS, instead of freezing mid-gesture.
     document.addEventListener('pointermove', (e) => {
-      if (state.drag) moveRosterDrag(e.clientY);
+      if (state.drag) moveListDrag(e.clientY);
     });
     // Both endings commit. A cancelled pointer (a system gesture taking over,
     // say) still leaves the row where the player dragged it, because throwing
     // the move away would be the more surprising of the two outcomes.
-    document.addEventListener('pointerup', () => endRosterDrag(true));
-    document.addEventListener('pointercancel', () => endRosterDrag(true));
+    document.addEventListener('pointerup', () => endListDrag(true));
+    document.addEventListener('pointercancel', () => endListDrag(true));
 
     /* ---- keyboard: custom buttons, and the holds ----------------------
        Two gaps the Codex review found, closed in one place.
@@ -8522,13 +8846,15 @@
        arrow keys. Accessibility outranks performance in this project's order
        of priorities, and this is the cheap half of honouring that. */
     app.addEventListener('keydown', (e) => {
-      const grip = e.target.closest && e.target.closest('[data-char-grip]');
-      if (!grip || !state.rosterEdit) return;
+      const grip = e.target.closest && e.target.closest('[data-char-grip],[data-campaign-grip]');
+      const list = grip && gripList(grip);
+      if (!list || !DRAG_LISTS[list].editing()) return;
       const delta = e.key === 'ArrowUp' ? -1 : e.key === 'ArrowDown' ? 1 : 0;
       if (!delta) return;
       e.preventDefault();
-      const id = grip.dataset.charGrip;
-      moveCharacter(id, roster.findIndex((r) => r.id === id) + delta);
+      const L = DRAG_LISTS[list];
+      const id = grip.getAttribute(L.grip);
+      L.move(id, L.items().findIndex((r) => r.id === id) + delta);
     });
 
     /* The wizard's origin step reports through input, not click. The draft is
@@ -8616,6 +8942,20 @@
       if (app.getAttribute('data-modal') !== 'backpack') return;
       if (e.key === 'ArrowLeft')  { e.preventDefault(); stepBackpack(-1); }
       if (e.key === 'ArrowRight') { e.preventDefault(); stepBackpack(1); }
+    });
+
+    // Campaign form: Enter in either field saves. Both are one-line inputs,
+    // so Enter has no other job there.
+    ['name', 'subtitle'].forEach((k) => {
+      const field = $(`[data-campaign-${k}]`);
+      if (field) field.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') { e.preventDefault(); saveCampaignForm(); }
+      });
+    });
+    // Typing a name clears the complaint about not having one.
+    const cName = $('[data-campaign-name]');
+    if (cName) cName.addEventListener('input', () => {
+      if (cName.value.trim()) $('[data-campaign-error]').hidden = true;
     });
 
     // item form: Enter in the name field saves, Escape closes from either.
@@ -8885,6 +9225,9 @@
     // Builds the roster, migrates a pre-roster install, and opens a character
     // — so it stands in for the old load() + loadPortrait() pair.
     loadRoster();
+    // Independent of the roster: campaigns hold their own copies of heroes.
+    loadCampaigns();
+    renderCampaigns();
     // Paints the Home card and the Settings section from the stored flag.
     // Independent of the roster and cheap, so its order against the rest of
     // init() does not matter — it runs here simply because the markup exists.

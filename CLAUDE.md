@@ -22,7 +22,7 @@ Framework-free web app (vanilla HTML/CSS/JS) — no build step, no runtime depen
 
 The app deliberately keeps behavior, structure, and appearance apart. Preserve this:
 - **`index.html`** — the shell, and nothing else: the device frame, the `.app` state root, the script tags. ~60 lines. No screen markup lives here.
-- **`pages/`** — one HTML fragment per screen (`home`, `characters`, `sheet`, `edit`, `rules`, `settings`, `create`, `menu`), plus `pages/modals/` grouped by owner (`dice`, `inventory`, `character`), and `pages/toast.html` (the transient confirmation, loaded last). Structure + hooks only: semantic classes and `data-*` state attributes, **never** inline styles.
+- **`pages/`** — one HTML fragment per screen (`home`, `characters`, `sheet`, `edit`, `rules`, `settings`, `create`, `menu`, and Game Master Tools' `campaigns`, `campaign`), plus `pages/modals/` grouped by owner (`dice`, `inventory`, `character`, `campaign`), and `pages/toast.html` (the transient confirmation, loaded last). Structure + hooks only: semantic classes and `data-*` state attributes, **never** inline styles.
 - **`resources/js/boot.js`** — fetches every fragment in `pages/`, injects them into `.app` in a fixed order, then resolves `window.MEEPLE_READY`. Adding a screen means adding a file and one entry in its `PAGES` array.
 - **`resources/css/style.css`** — an index of `@import`s and nothing else. The import order IS the cascade; it follows the original §1–§25 numbering deliberately.
 - **`resources/css/tokens.css`** — ALL design tokens. To re-skin, edit here — never hardcode colors/sizes elsewhere. The remaining CSS files are one per screen, mirroring `pages/`.

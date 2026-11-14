@@ -1,5 +1,7 @@
 /* MEEPLE · characters.css
-   Characters list (§7) and roster edit mode (§23).
+   Characters list (§7) and list edit mode (§23) — the card, its edit-mode
+   furniture and its drag are shared with the Campaigns list (campaigns.css),
+   which is built from the same parts.
    Part of the stylesheet loaded by style.css. Appearance only — no layout
    decisions that belong to structure, and no values that belong in tokens.css. */
 
@@ -58,9 +60,12 @@
 /* ----------------------------------------------------------------- */
 /* 23. ROSTER EDIT MODE — reorder, export, delete                     */
 /* ----------------------------------------------------------------- */
-/* Edit mode is data-roster="edit" on .app, alongside data-view and the
-   rest. In it a Personae row stops being navigation and becomes a thing
-   you act ON, which is why the chevron gives way to a grip and two
+/* Edit mode is [data-editing] on the LIST (`[data-list="roster"]`,
+   `[data-list="campaigns"]`), written by renderRoster() / renderCampaigns().
+   Per list rather than on .app, because two lists now use these cards: the
+   Characters list left in edit mode must not put delete buttons on the
+   Campaigns list. In it a row stops being navigation and becomes a thing
+   you act ON, which is why the chevron gives way to a grip and the
    controls appear that are not there the rest of the time. */
 
 /* The Edit / Done affordance. A text button, because that is what a list
@@ -85,9 +90,9 @@
   opacity: 0; pointer-events: none;
   transition: width 140ms ease, opacity 140ms ease, margin 140ms ease;
 }
-.app[data-roster="edit"] .persona-card__del,
-.app[data-roster="edit"] .persona-card__export,
-.app[data-roster="edit"] .persona-card__grip {
+[data-editing] .persona-card__del,
+[data-editing] .persona-card__export,
+[data-editing] .persona-card__grip {
   width: 30px; opacity: 1; pointer-events: auto;
 }
 .persona-card__del {
@@ -104,7 +109,7 @@
   cursor: grab;
 }
 .persona-card__grip span { display: block; width: 15px; height: 1.5px; background: currentColor; border-radius: 1px; }
-.app[data-roster="edit"] .persona-card__chevron { display: none; }
+[data-editing] .persona-card__chevron { display: none; }
 
 /* Export used to be a labelled button under the row, on the grounds that it
    is about this character where delete and reorder are about the list. It now
@@ -141,7 +146,7 @@
 @media (prefers-reduced-motion: reduce) {
   .persona-card[data-shift] { transition: none; }
 }
-.app[data-dragging-roster] { -webkit-user-select: none; user-select: none; }
+.app[data-dragging-list] { -webkit-user-select: none; user-select: none; }
 
 /* A roster with nothing in it. Reachable now that the last character can be
    deleted, so it says what to do rather than showing a bare gap.
@@ -166,10 +171,12 @@
    so Create leads and Import stays quiet beside it without either changing
    size or place.
 
-   Keyed to the app, not the button: the same button trailing a real roster is
-   a minor add and must stay dashed, or every list screen would end in a slab
-   of rust competing with the characters. */
-.app[data-roster-empty] .btn-dashed--lead {
+   Keyed to the SCREEN being empty ([data-empty], written by the list's
+   render), not the button: the same button trailing a real list is a minor
+   add and must stay dashed, or every list screen would end in a slab of rust
+   competing with what it lists. Per screen, so an empty roster does not light
+   up the Campaigns button, or the other way round. */
+[data-empty] .btn-dashed--lead {
   border: 1.5px solid var(--accent-deep);
   background: var(--accent);
   color: var(--on-accent);

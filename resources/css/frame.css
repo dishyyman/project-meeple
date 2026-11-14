@@ -71,6 +71,8 @@
 .screen { display: none; height: 100%; }
 .app[data-view="home"]       .screen--home       { display: block; }
 .app[data-view="characters"] .screen--characters { display: block; }
+.app[data-view="campaigns"]  .screen--campaigns  { display: block; }
+.app[data-view="campaign"]   .screen--campaign   { display: flex; flex-direction: column; }
 .app[data-view="sheet"]      .screen--sheet       { display: flex; flex-direction: column; }
 .app[data-view="edit"]       .screen--edit        { display: flex; flex-direction: column; }
 .app[data-view="create"]     .screen--create      { display: flex; flex-direction: column; }

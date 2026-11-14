@@ -47,6 +47,9 @@
 .app[data-modal="share"] .modal--share { display: flex; }
 .app[data-modal="downed"] .modal--downed { display: flex; }
 .app[data-modal="wiz-pick"] .modal--wiz-pick { display: flex; }
+.app[data-modal="campaign-form"] .modal--campaign-form { display: flex; }
+.app[data-modal="campaign-menu"] .modal--campaign-menu { display: flex; }
+.app[data-modal="campaign-del"]  .modal--campaign-del  { display: flex; }
 .modal__scrim { position: absolute; inset: 0; background: var(--scrim); }
 /* No max-width. The .modal's own padding is the single place a card's inset is
    decided — a second constraint here meant the padding could be tightened all

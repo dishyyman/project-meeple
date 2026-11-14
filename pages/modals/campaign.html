@@ -1,0 +1,86 @@
+    <!-- ================= CAMPAIGN: NEW / RENAME =================
+         One form for both: openCampaignForm() writes the heading and the
+         button's word ("New Campaign" / Create, or "Edit Campaign" / Save)
+         and fills the fields. A form, so it keeps the item editor's layout —
+         title, fields, Cancel | Save — rather than a sheet or an alert.
+
+         Only a name is needed. The subtitle is the GM's own line for
+         whatever they want under the name — "One-shot", "Session 7",
+         "Fridays" — because nothing about a campaign's type or length is
+         formal (docs/prd.md Feature 7). -->
+    <div class="modal modal--campaign-form">
+      <div class="modal__scrim" data-modal="close"></div>
+      <div class="modal__card" role="dialog" aria-modal="true" aria-labelledby="campaign-form-title" tabindex="-1">
+        <div class="modal__head">
+          <div class="modal__title" id="campaign-form-title" data-bind="campaignFormTitle"></div>
+          <button class="modal__close" data-modal="close" aria-label="Close"></button>
+        </div>
+        <label class="field">
+          <span class="field__label">Name</span>
+          <input class="field__input" data-campaign-name type="text" maxlength="60" placeholder="The Ashen Road" autocomplete="off">
+        </label>
+        <label class="field">
+          <span class="field__label">Subtitle <span class="field__optional">optional</span></span>
+          <input class="field__input" data-campaign-subtitle type="text" maxlength="80" placeholder="One-shot, session 7, Fridays…" autocomplete="off">
+        </label>
+        <p class="field__error status status--error" data-campaign-error hidden>A campaign needs a name.</p>
+        <div class="form-actions">
+          <button class="btn-ghost" data-modal="close">Cancel</button>
+          <button class="btn-save" data-campaign-save data-bind="campaignFormSave"></button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= CAMPAIGN OPTIONS =================
+         What the header's menu button opens. A SHEET (dice.css §11a): pick
+         one of a few things, Cancel apart at the foot, the destructive one
+         last and red. -->
+    <div class="modal modal--campaign-menu modal--action-sheet">
+      <div class="modal__scrim" data-modal="close"></div>
+      <div class="action-sheet" role="dialog" aria-modal="true" aria-labelledby="campaign-menu-title" tabindex="-1">
+        <div class="action-sheet__grab" aria-hidden="true"></div>
+        <div class="action-sheet__head">
+          <div class="action-sheet__title" id="campaign-menu-title" data-bind="campaignName"></div>
+        </div>
+        <div class="action-sheet__list">
+          <!-- The drawer's Edit Character pencil: the same picture for the
+               same job. -->
+          <button class="action-sheet__row" data-campaign-rename>
+            <span class="action-sheet__icon" aria-hidden="true">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/><path d="m15 5 4 4"/></svg>
+            </span>
+            <span class="action-sheet__text"><span class="action-sheet__label">Edit Name</span></span>
+            <svg class="action-sheet__chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+          </button>
+          <button class="action-sheet__row action-sheet__row--danger" data-campaign-del-open>
+            <span class="action-sheet__icon" aria-hidden="true">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
+            </span>
+            <span class="action-sheet__text"><span class="action-sheet__label">Delete Campaign</span></span>
+          </button>
+        </div>
+        <button class="action-sheet__cancel" data-modal="close">Cancel</button>
+      </div>
+    </div>
+
+    <!-- ================= DELETE CAMPAIGN CONFIRM =================
+         An ALERT (dice.css §11a). A campaign is a party, a bestiary and a fight
+         in progress, none of which the app can rebuild, so it asks first —
+         the way deleting a character does. The heroes' players keep their own
+         characters; only the GM's copies go. -->
+    <div class="modal modal--campaign-del">
+      <div class="modal__scrim" data-modal="close"></div>
+      <div class="modal__card alert" role="dialog" aria-modal="true" aria-labelledby="campaign-del-title" aria-describedby="campaign-del-text" tabindex="-1">
+        <span class="alert__icon alert__icon--danger" aria-hidden="true">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
+        </span>
+        <div class="alert__title" id="campaign-del-title">Delete campaign?</div>
+        <p class="alert__text" id="campaign-del-text"><strong data-bind="campaignDelName"></strong> will be deleted from this device
+          &mdash; its party, its enemies and any fight in progress.</p>
+        <p class="alert__meta">Players keep their own characters.</p>
+        <div class="alert__actions">
+          <button class="btn-ghost" data-modal="close">Cancel</button>
+          <button class="btn-save btn-save--danger" data-campaign-del-confirm>Delete</button>
+        </div>
+      </div>
+    </div>

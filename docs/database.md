@@ -32,8 +32,8 @@
 | `meeple.library` | device | A compendium installed in place of the built-in one (`library-schema.md`) |
 | `meeple.imported-entries` | device | Content entries that filled gaps, from an imported character or a compendium Add |
 | `meeple.account` | device | Placeholder `{ signedIn, name }` — no real account behind it |
-| `meeple.campaigns` | device | *(Game Master Tools — written from its Phase 1)* `{ ids: [...], activeId }`, the campaign list, as `meeple.roster` is for characters |
-| `meeple.campaign.<id>` | campaign | *(Game Master Tools)* One campaign: heroes, enemies, the fight in progress (A3b) |
+| `meeple.campaigns` | device | *(Game Master Tools)* `{ ids: [...], activeId }`, the campaign list in display order, as `meeple.roster` is for characters |
+| `meeple.campaign.<id>` | campaign | *(Game Master Tools)* One campaign: heroes, enemies, the fight in progress (A3b). Not yet in Settings → Backup |
 | `meeple:frame` | device | Preview frame preference (`phone` / `full`). Desktop only — on a phone the app is always full and this is ignored, not overwritten |
 
 **Not stored, by design:**

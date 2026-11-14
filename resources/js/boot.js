@@ -32,6 +32,8 @@
   const PAGES = [
     'pages/home.html',
     'pages/characters.html',
+    'pages/campaigns.html',
+    'pages/campaign.html',
     'pages/sheet.html',
     'pages/edit.html',
     'pages/rules.html',
@@ -41,6 +43,7 @@
     'pages/modals/dice.html',
     'pages/modals/inventory.html',
     'pages/modals/character.html',
+    'pages/modals/campaign.html',
     'pages/toast.html'
   ];
 

@@ -68,7 +68,25 @@ const SCREENS = [
   ['Settings', async (page) => press(page, '[data-nav="settings"]')],
   ['Create Character — step 1', async (page) => { await press(page, '[data-nav="characters"]'); await press(page, '[data-action="create-character"]'); }],
   ['Menu drawer', async (page) => { await toSheet(page); await press(page, '[data-menu="open"]'); }],
+  ['Campaigns (empty)', async (page) => press(page, '[data-nav="campaigns"]')],
+  ['Campaigns (one, edit mode)', async (page) => {
+    await newCampaign(page, 'The Ashen Road');
+    await press(page, '[data-nav="campaigns"]');
+    await press(page, '[data-campaigns-edit]');
+  }],
+  ['Campaign — Party', async (page) => newCampaign(page, 'The Ashen Road', 'Session 7')],
+  ['Campaign — Combat', async (page) => { await newCampaign(page, 'A'); await press(page, '.tabbar__btn[data-campaign-tab="combat"]'); }],
 ];
+
+// Through the form, as a GM does. Lands inside the new campaign.
+async function newCampaign(page, name, subtitle = '') {
+  await press(page, '[data-nav="campaigns"]');
+  await press(page, '[data-campaign-new]');
+  await page.fill('[data-campaign-name]', name);
+  if (subtitle) await page.fill('[data-campaign-subtitle]', subtitle);
+  await press(page, '[data-campaign-save]');
+  await expect.poll(() => appAttr(page, 'data-view')).toBe('campaign');
+}
 
 // [name, opener on the Action tab, data-modal it opens]
 const MODALS = [
@@ -110,6 +128,22 @@ test('axe: modal — Advantage chooser', async ({ page }) => {
   await page.locator('[data-roll="tohit"]:visible').first().focus();
   await page.keyboard.press('Shift+Enter');
   await expect.poll(() => appAttr(page, 'data-modal')).toBe('adv');
+  await expectClean(page);
+});
+
+test('axe: modals — campaign form, options sheet, delete alert', async ({ page }) => {
+  await openApp(page);
+  await press(page, '[data-nav="campaigns"]');
+  await press(page, '[data-campaign-new]');
+  await expect.poll(() => appAttr(page, 'data-modal')).toBe('campaign-form');
+  await expectClean(page);
+  await page.fill('[data-campaign-name]', 'A');
+  await press(page, '[data-campaign-save]');
+  await press(page, '[data-campaign-menu]');
+  await expect.poll(() => appAttr(page, 'data-modal')).toBe('campaign-menu');
+  await expectClean(page);
+  await press(page, '[data-campaign-del-open]');
+  await expect.poll(() => appAttr(page, 'data-modal')).toBe('campaign-del');
   await expectClean(page);
 });
 

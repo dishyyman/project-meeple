@@ -1,0 +1,63 @@
+    <!-- ================= CAMPAIGN (Game Master Tools) =================
+         One campaign, laid out as the character sheet is: a header band,
+         a scrolling middle, and a bottom tab bar with three tabs. The tab is
+         `data-campaign-tab` on .app — deliberately not the sheet's data-tab,
+         for the same reason the editor has its own: one shared attribute
+         would let a choice made here decide which sheet tab a player lands
+         on. The stylesheet does the switching (campaign.css).
+
+         Phase 1 builds the frame; the tabs fill in over the next phases
+         (docs/prd.md Feature 7): Party, then Enemies, then Combat. -->
+    <section class="screen screen--campaign">
+
+      <!-- The sheet's hero, shorter and without a portrait: a hatch band
+           with the name over it, and the same two glass buttons. -->
+      <div class="camp-hero">
+        <button class="glass-btn camp-hero__back" data-nav="campaigns" aria-label="Campaigns">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
+        </button>
+        <button class="glass-btn camp-hero__menu" data-campaign-menu aria-label="Campaign options">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16"/><path d="M4 12h16"/><path d="M4 19h16"/></svg>
+        </button>
+        <div class="camp-hero__caption">
+          <h2 class="camp-hero__name" data-bind="campaignName"></h2>
+          <!-- The GM's own line — "One-shot, Friday", "Session 7". Empty is
+               fine, and :empty collapses it. -->
+          <p class="camp-hero__sub" data-bind="campaignSub"></p>
+        </div>
+      </div>
+
+      <div class="camp-scroll">
+        <div class="camp-page camp-page--party" role="tabpanel" aria-label="Party">
+          <div class="rule"><span class="rule__label">&#10022; Party &#10022;</span></div>
+          <p class="camp-empty">No heroes yet. Soon you&rsquo;ll add them by hand, or from the character file a player sends you.</p>
+        </div>
+        <div class="camp-page camp-page--enemies" role="tabpanel" aria-label="Enemies">
+          <div class="rule"><span class="rule__label">&#10022; Enemies &#10022;</span></div>
+          <p class="camp-empty">No enemies yet. Their stat cards will live here.</p>
+        </div>
+        <div class="camp-page camp-page--combat" role="tabpanel" aria-label="Combat">
+          <div class="rule"><span class="rule__label">&#10022; Combat &#10022;</span></div>
+          <p class="camp-empty">No fight in progress.</p>
+        </div>
+      </div>
+
+      <!-- The sheet's tab bar, the GM's three tabs. aria-current is written
+           by renderCampaignTabs() so the selected tab is said, not only seen. -->
+      <nav class="tabbar" aria-label="Campaign">
+        <button class="tabbar__btn" data-campaign-tab="party">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          <span>Party</span>
+        </button>
+        <button class="tabbar__btn" data-campaign-tab="enemies">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12.5 17-.5-1-.5 1h1z"/><path d="M15 22a1 1 0 0 0 1-1v-1a2 2 0 0 0 1.56-3.25 8 8 0 1 0-11.12 0A2 2 0 0 0 8 20v1a1 1 0 0 0 1 1z"/><circle cx="15" cy="12" r="1"/><circle cx="9" cy="12" r="1"/></svg>
+          <span>Enemies</span>
+        </button>
+        <!-- The sheet's Action glyph (crossed swords): the same picture for
+             "the fight" on both sides of the app. -->
+        <button class="tabbar__btn" data-campaign-tab="combat">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m13 19 6-6"/><path d="M14.5 17.5 3.586 6.586A2 2 0 013 5.172V3h2.172a2 2 0 011.414.586L17.5 14.5"/><path d="m14.828 6.172 2.586-2.586A2 2 0 0118.828 3H21v2.172a2 2 0 01-.586 1.414l-2.586 2.586"/><path d="m16 16 4 4"/><path d="m19 21 2-2"/><path d="m5 14 4 4"/><path d="m5 21-2-2"/><path d="M7.5 16.5 4 20"/></svg>
+          <span>Combat</span>
+        </button>
+      </nav>
+    </section>

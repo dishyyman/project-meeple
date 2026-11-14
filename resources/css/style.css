@@ -40,4 +40,6 @@
 @import url("edit.css");        /* §20 edit character  §21 portrait cropper */
 @import url("create.css");      /* §22 creation wizard §24 loadout          */
 @import url("settings.css");    /* §25                                      */
+@import url("campaigns.css");   /* §27 campaign list (Game Master Tools)    */
+@import url("campaign.css");    /* §28 one campaign: header, tabs, modals   */
 @import url("toast.css");       /* §26 transient confirmation               */

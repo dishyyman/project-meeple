@@ -374,7 +374,8 @@ Cards sit on `--bg-card`. A selected card gets the accent border and `--bg-parch
 | **Mobile navigation** | The character sheet has a bottom tab bar: Action · Character · Gear. Labels are Marcellus `--fs-caption` uppercase. Inactive is `--ink-faint`; active is `--accent-bright`. Top edge is a `--rule-strong` line. |
 | **Sidebar** | None — the app is a single phone-width column. |
 | **Modals** | Centered card over a scrim; one open at a time (`data-modal` on `.app`). Each card is a named `role="dialog"`: focus moves onto the dialog when it opens (or stays on the field its opener focused), Tab stays inside it, the page behind is `inert` (and so is the shell outside `.app`, such as the frame toggle), and focus returns to the opener on close. Escape closes every sheet, alert and notice (§12.1) and any modal whose scrim is its only exit (roll result, calculator); forms keep Escape inert so a half-filled form isn't lost. |
-| **Mechanism** | Screens, tabs, modals and the drawer switch via `data-view`, `data-tab`, `data-modal`, `data-menu` on `.app`; CSS decides what shows. |
+| **Mechanism** | Screens, tabs, modals and the drawer switch via `data-view`, `data-tab`, `data-modal`, `data-menu` on `.app`; CSS decides what shows. A campaign's tabs use `data-campaign-tab`, never `data-tab`, so the two screens can't set each other's tab. |
+| **Lists** | Characters and Campaigns (Game Master Tools) are built from the same parts: `.topbar` with an Edit / Done `.text-btn`, `.persona-card` rows, a `.roster-lead` line while empty, and a trailing `.btn-dashed--lead`. Edit mode is `[data-editing]` on the **list** and the empty-list accent is `[data-empty]` on the **screen**, never on `.app`, so one list's state can't show on the other. A new list screen reuses these and adds only what it lacks (a campaign's crest: `.persona-card__portrait--crest`). |
 
 ### 12.1 Popup shapes — sheet, alert, notice
 

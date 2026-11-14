@@ -1,0 +1,30 @@
+    <!-- ================= CAMPAIGNS LIST (Game Master Tools) =================
+         The GM's home, built as the Characters list is: the same top bar, the
+         same Edit / Done toggle, the same cards, the same dashed button
+         trailing the list. A GM who has used the player side already knows
+         this screen — which is the point (Jakob's Law, and docs/prd.md
+         Feature 7). -->
+    <section class="screen screen--campaigns scroll">
+      <div class="topbar topbar--between">
+        <button class="icon-btn icon-btn--back" data-nav="home" aria-label="Back">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
+        </button>
+        <h2 class="title">Campaigns</h2>
+        <!-- "Edit" or "Done", written by renderCampaigns(), as the roster's is. -->
+        <button class="text-btn" data-campaigns-edit data-bind="campaignsEdit"></button>
+      </div>
+      <div class="divider"></div>
+      <div class="section-pad">
+        <!-- Only while there is no campaign — the list says everything once
+             there is one. Shares the roster's lead style. -->
+        <p class="roster-lead" data-block="campaignsLead">
+          No campaigns yet. A campaign holds your party, your enemies and the fight in progress.
+        </p>
+        <!-- One card per campaign, painted by renderCampaigns(). [data-editing]
+             on this list is what shows each card's delete and drag grip. -->
+        <div data-list="campaigns"></div>
+        <button class="btn-dashed btn-dashed--lead" data-campaign-new>
+          <svg class="plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="M12 5v14"/></svg><span>New Campaign</span>
+        </button>
+      </div>
+    </section>

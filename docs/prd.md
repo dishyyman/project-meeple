@@ -239,7 +239,9 @@ A place for a GM to run a game: campaigns holding a party of heroes, enemy stat 
 - **Enemies:** stat cards — HP, Mana (optional), Wounds (optional), Evasion, Armor, Fortitude, Speed, turns per round, attacks and abilities with roll boxes. Import and export, toward a future monster compendium.
 - **Combat:** choose the enemies (a group can share one turn), optionally a surprise round. Pick who acts next from those with turns left; end their turn; a new round resets everyone. Damage takes Armor off automatically, with an Armor Piercing toggle.
 
-**Build phases** — 0 groundwork (rules split into hero card + vitals, `campaign.js`) *(done)*, 1 campaign list and shell, 2 Party, 3 Enemies, 4 Combat.
+**Build phases** — 0 groundwork (rules split into hero card + vitals, `campaign.js`) *(done)*, 1 campaign list and shell *(done)*, 2 Party, 3 Enemies, 4 Combat.
+
+**Not yet:** campaigns are not in Settings → Backup, and there is no campaign file to export — both belong with Phase 3's enemy import/export.
 
 **Acceptance Criteria**
 - A hero's numbers on the GM's screen equal the player's sheet for the same state (`unit/mechanics.test.js`, "the hero card").

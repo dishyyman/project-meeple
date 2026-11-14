@@ -1,0 +1,75 @@
+/* MEEPLE · campaign.css
+   One campaign (§28) — Game Master Tools: its header, its three tabs, and
+   the campaign popups. Mirrors pages/campaign.html and
+   pages/modals/campaign.html.
+   Part of the stylesheet loaded by style.css. Appearance only — no layout
+   decisions that belong to structure, and no values that belong in tokens.css.
+
+   Laid out as the character sheet is (sheet.css), and borrowing its parts
+   where they fit whole: .glass-btn for the header's buttons, .rule for the
+   section headings, .tabbar / .tabbar__btn for the bottom bar. What is here
+   is what differs. */
+
+/* ----------------------------------------------------------------- */
+/* 28. CAMPAIGN                                                       */
+/* ----------------------------------------------------------------- */
+
+/* ---- header ----
+   The sheet's hero, shorter and without a portrait — a campaign has no face,
+   and the room is better spent on the tabs below. The same parchment hatch
+   the empty hero shows, the same scrim under the name, the same two glass
+   buttons hung from the status bar's clearance. */
+.camp-hero {
+  position: relative; flex-shrink: 0;
+  min-height: calc(var(--statusbar-clear) + 128px);
+  display: flex; align-items: flex-end;
+  /* Top: clear of the glass buttons — where they hang (statusbar − 2px), their
+     42px, and a gap — so a long two-line name never runs up under them. */
+  padding: calc(var(--statusbar-clear) - 2px + 42px + var(--space-2-5)) var(--space-5) var(--space-4);
+  background-color: var(--bg-parchment2);
+  background-image:
+    linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0) 75%),
+    repeating-linear-gradient(45deg, var(--hatch) 0 8px, transparent 8px 16px);
+}
+.camp-hero__back { position: absolute; top: calc(var(--statusbar-clear) - 2px); left: var(--space-4); }
+.camp-hero__menu { position: absolute; top: calc(var(--statusbar-clear) - 2px); right: var(--space-4); }
+.camp-hero__caption { min-width: 0; }
+.camp-hero__name {
+  margin: 0;
+  font-family: var(--font-display); font-size: var(--fs-stat); font-weight: 400;
+  line-height: 1.1; color: var(--on-dark); overflow-wrap: anywhere;
+}
+.camp-hero__sub {
+  margin: var(--space-1) 0 0;
+  font-family: var(--font-body); font-style: italic; font-size: var(--fs-input);
+  color: var(--on-dark-soft);
+}
+.camp-hero__sub:empty { display: none; }
+
+/* ---- the scrolling middle ---- */
+.camp-scroll {
+  flex: 1; min-height: 0; overflow-y: auto;
+  -webkit-overflow-scrolling: touch; overscroll-behavior-y: contain;
+  scroll-padding-block: var(--space-2);   /* focus-ring room, see .scroll */
+  padding: 0 var(--space-4) var(--space-8);
+}
+
+/* ---- the three tabs ----
+   Switched by data-campaign-tab on .app; the stylesheet shows one page and
+   colours one button, exactly as frame.css and sheet.css do for data-tab. */
+.camp-page { display: none; }
+.app[data-campaign-tab="party"]   .camp-page--party,
+.app[data-campaign-tab="enemies"] .camp-page--enemies,
+.app[data-campaign-tab="combat"]  .camp-page--combat { display: block; }
+
+.app[data-campaign-tab="party"]   .tabbar__btn[data-campaign-tab="party"],
+.app[data-campaign-tab="enemies"] .tabbar__btn[data-campaign-tab="enemies"],
+.app[data-campaign-tab="combat"]  .tabbar__btn[data-campaign-tab="combat"] { color: var(--accent-bright); }
+
+/* A tab with nothing in it yet says so in a line of prose, the way the
+   roster's lead line does — no box, no affordance of its own. */
+.camp-empty {
+  margin: 0;
+  font-family: var(--font-body); font-style: italic; font-size: var(--fs-body);
+  line-height: 1.55; color: var(--ink-muted);
+}

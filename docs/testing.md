@@ -110,13 +110,14 @@ project-meeple/
     │   ├── characterization.spec.js-snapshots/   # the recorded baselines
     │   ├── smoke.spec.js      # 2 — Flows 1, 2
     │   ├── data-safety.spec.js # 19 — Flows 6, 7, 7b, 7c (full round trip), 8, 11; storage refusing writes; held changes; import outcomes; old saves
+    │   ├── campaigns.spec.js  # 11 — Flow 14: create, name required, rename, tabs, reorder, delete (list and inside), lists' edit modes kept apart, tampered save, storage refusing writes
     │   ├── compendium.spec.js # 8 — Flow 9; malformed compendiums; launch safety net and its grace period
     │   ├── keyboard.spec.js   # 6 — Enter/Space on custom buttons, Shift+Enter holds
     │   ├── dialogs.spec.js    # 7 — dialog markup, focus in/kept/back, Escape (Cancel on sheets and alerts), the shell made inert
-    │   ├── a11y.spec.js       # 26 — axe on every screen and main modal, incl. the Rest sheet, Downed notice, portrait sheet and the Undo toast (Chrome); collapsible tap targets, note state, reduced motion (both)
+    │   ├── a11y.spec.js       # 31 — axe on every screen and main modal, incl. the Rest sheet, Downed notice, portrait sheet, the Undo toast, the campaign screens and their popups (Chrome); collapsible tap targets, note state, reduced motion (both)
     │   ├── rules.spec.js      # 1 — Flow 10 (marked known bug, §10)
     │   ├── frame.spec.js      # 5 — desktop frame: default, toggle remembered, full mode fits, narrow window locks; manifest + icons resolve; opaque iOS status bar
-    │   ├── phone.spec.js      # 6 — iphone project ONLY: fills the screen, no toggle, page never scrolls, tab bar on screen, fields ≥16px, Add a Portrait takes a tap
+    │   ├── phone.spec.js      # 6 — iphone project ONLY: fills the screen, no toggle, page never scrolls (campaign screens too), both tab bars on screen, fields ≥16px, Add a Portrait takes a tap
     │   ├── popups.spec.js     # 6 — sheet / alert / notice: Rest, Advantage, Patch, tick, Downed; every one has a way out; Escape is Cancel
     │   ├── portrait.spec.js   # 5 — Flow 13: real clicks on the sheet's uploader and the Edit frame, the icon menu, Remove → Undo
     │   └── security.spec.js   # 10 — Flow 12, hostile ids, CSP, size limit
@@ -206,6 +207,10 @@ Each flow lists the steps and the result that must hold. These are the E2E suite
 **Steps:** on a character with no photo, tap **Add a Portrait** on the sheet → pick a photo. On Edit → Dossier, tap the frame → the portrait menu → **Adjust**; then **Remove Photo** → **Undo** on the toast → reload.
 **Expected:** the sheet's button takes a real tap (nothing stacked over it) and opens the picker. On Edit, an empty frame shows a camera and "Add photo" and goes straight to the picker; a filled one shows a pencil badge and opens the menu — Choose New Photo / Adjust / Remove Photo, each with an icon. Remove takes the photo off at once (screen and storage) and the toast offers Undo for 6 seconds; Undo puts it back exactly, and it survives the reload.
 
+### Flow 14 — Campaigns (Game Master Tools)
+**Steps:** Home → **Game Master Tools** → **New Campaign** → name and subtitle → Create. Switch Party / Enemies / Combat. Options → Edit Name. Back to the list → make two more → Edit → reorder with the arrow keys → delete one → reload.
+**Expected:** the empty list explains itself and New Campaign leads; a campaign needs a name; a new one opens on Party with its name and subtitle; the tab bar says which tab is selected; rename shows in the header and the list; the order and the deletion are saved and survive a reload; the Characters list's edit mode never shows on the Campaigns list. A hand-edited save is cleaned up on load (bad ids skipped, text stays text). If storage refuses a write, the campaign stays for the session and the storage alert says so.
+
 ---
 
 ## 6. Coverage
@@ -235,6 +240,7 @@ Each flow lists the steps and the result that must hold. These are the E2E suite
 | Flow 10 (rules lookup) — written, marked known bug | `e2e/rules.spec.js`, §10 |
 | Popup shapes: sheet, alert, notice — layout, a visible way out, Escape is Cancel, general wording | `e2e/popups.spec.js` |
 | Flow 13 (portrait add / adjust / remove → Undo), by real clicks so a covered control fails | `e2e/portrait.spec.js`; the tap on a phone in `e2e/phone.spec.js` |
+| Flow 14 (campaigns: create, rename, tabs, reorder, delete, tampered save, storage refusing writes) | `e2e/campaigns.spec.js` |
 | No JavaScript errors during any browser test | `e2e/helpers/test.js` (every test, automatically) |
 | Chrome and Safari (WebKit) | every browser test runs in both |
 | Keyboard: custom buttons, the hold gestures, Wound pips | `e2e/keyboard.spec.js` (real key presses, never `press()`) |
