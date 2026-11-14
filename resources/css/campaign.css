@@ -282,3 +282,26 @@
 }
 .combat-start__share[hidden] { display: none; }
 .combat-start__share input { width: 20px; height: 20px; margin: 0; accent-color: var(--accent); }
+
+/* ---- the Monster Compendium sheet ----
+   The sheet's own grouped list (.action-sheet__list), one row per stat block.
+   A row is two controls side by side — the row itself adds a copy, the round
+   trash removes one of the GM's own from the compendium — so it is a flex
+   line holding an .action-sheet__row rather than the row alone (a button
+   cannot hold a button). */
+.monster-row { display: flex; align-items: center; }
+.monster-row + .monster-row { border-top: 1px solid var(--line-hair); }
+.monster-row .action-sheet__row { flex: 1; min-width: 0; }
+.monster-row__remove { margin-right: var(--space-3-5); }
+/* "Stock": the built-ins, which cannot be removed — said, so the missing
+   trash reads as a rule rather than a glitch. */
+.monster-row__stock {
+  flex-shrink: 0; margin-right: var(--space-3-5);
+  padding: var(--space-0-5) var(--space-2);
+  border: 1px solid var(--line-warm); border-radius: var(--r-xs);
+  font-family: var(--font-label); font-size: var(--fs-caption);
+  letter-spacing: 0.1em; text-transform: uppercase; color: var(--gold);
+}
+/* The dashed buttons carry their own top margin for trailing a list; in the
+   sheet's column the sheet's gap already spaces them. */
+.monster-add .btn-dashed { margin-top: 0; }

@@ -345,6 +345,47 @@ describe('combat — pick who acts next, round by round', () => {
   });
 });
 
+describe('the Monster Compendium', () => {
+  test('three stock goblins, every one on the same base numbers, read-only by id', () => {
+    const stock = C.stockMonsters(NOW);
+    assert.deepEqual(stock.map((m) => m.name), ['Goblin 1', 'Goblin 2', 'Goblin 3']);
+    for (const m of stock) {
+      assert.deepEqual(m.stats, { hp: 10, mana: 0, wounds: 0, evasion: 10, armor: 0, fortitude: 8, speed: 5 });
+      assert.equal(m.attacks[0].damage, '1d6');
+      assert.equal(C.isStockMonster(m.id), true);
+    }
+    assert.equal(C.isStockMonster('enemy_x'), false);
+    // Frozen: nothing at run time can edit a built-in.
+    assert.throws(() => { 'use strict'; C.STOCK_MONSTERS[0].stats.hp = 99; });
+  });
+
+  test('a campaign takes a COPY: new ids, same name and numbers', () => {
+    const [g] = C.stockMonsters(NOW);
+    const copy = C.freshEnemy(g, NOW);
+    assert.notEqual(copy.id, g.id);
+    assert.notEqual(copy.attacks[0].id, g.attacks[0].id);
+    assert.equal(copy.name, 'Goblin 1');
+    assert.deepEqual(copy.stats, g.stats);
+    copy.stats.hp = 1;
+    assert.equal(C.stockMonsters(NOW)[0].stats.hp, 10);
+  });
+
+  test('the stored half is rebuilt through the one door; a stock id is never shadowed', () => {
+    const list = C.normalizeMonsters({ monsters: [
+      { id: 'enemy_mine', name: 'Wraith', stats: { hp: 30 } },
+      { id: 'stock_goblin_1', name: 'Fake goblin' },
+      'junk', null, [1],
+      { id: '"><b>', name: '<b>Imp</b>', attacks: [{ damage: '1d6);alert(1' }] },
+    ] }, NOW);
+    assert.equal(list.length, 3);
+    assert.equal(list[0].id, 'enemy_mine');
+    assert.notEqual(list[1].id, 'stock_goblin_1');
+    assert.match(list[2].id, C.SAFE_ID);
+    assert.equal(list[2].attacks[0].damage, '');
+    assert.deepEqual(C.normalizeMonsters(null), []);
+  });
+});
+
 describe('enemies: duplicates and the monster file', () => {
   const ogre = () => {
     const e = C.newEnemy({ name: 'Ogre Brute' }, NOW);

@@ -355,6 +355,68 @@
     return copy;
   }
 
+  /* A fresh copy of a stat block: new ids for it and its attacks, the same
+     name and numbers. What a campaign takes from the Monster Compendium, and
+     what a monster file's every enemy becomes on the way in — a copy is the
+     rule, so editing a goblin in one campaign never changes another. */
+  function freshEnemy(enemy, now = nowIso()) {
+    const e = obj(enemy);
+    const copy = normalizeEnemy({ ...e, id: null, attacks: arr(e.attacks).map((a) => ({ ...obj(a), id: null })) }, new Set(), now);
+    copy.rev = 1;
+    copy.updated = now;
+    return copy;
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* THE MONSTER COMPENDIUM — every stat block on this device            */
+  /* ------------------------------------------------------------------ */
+  /* Device-wide, not per campaign: a GM's own catalogue that every
+     campaign's Add Enemy draws from. Two kinds of entry:
+
+       STOCK   built in (below), read-only, never stored — a fresh install
+               has something to add straight away. A stand-in until the
+               game's real monster compendium ships as content.
+       OWN     made with New Enemy, or imported from a monster file. Stored
+               under one key (`meeple.bestiary`, { monsters: [...] }) in the
+               same stat-block shape a campaign's enemies use, and carried
+               by Settings → Backup.
+
+     A campaign takes a COPY (freshEnemy). Deleting it from a campaign never
+     touches the compendium, and editing it there never changes the entry. */
+  const STOCK_MONSTERS = Object.freeze([1, 2, 3].map((n) => Object.freeze({
+    id: `stock_goblin_${n}`,
+    name: `Goblin ${n}`,
+    tags: [],
+    turns: 1,
+    // Base numbers only, every one the same — enough to see the flow, not a
+    // balanced monster (designer request, 2026-11-14).
+    stats: Object.freeze({ hp: 10, mana: 0, wounds: 0, evasion: 10, armor: 0, fortitude: 8, speed: 5 }),
+    attacks: Object.freeze([Object.freeze({ id: `stock_goblin_${n}_atk`, name: 'Rusty Blade', toHit: 3, damage: '1d6' })]),
+    notes: '',
+  })));
+  const STOCK_IDS = new Set(STOCK_MONSTERS.map((m) => m.id));
+  const isStockMonster = (id) => STOCK_IDS.has(id);
+
+  // The stock entries as ordinary stat blocks, through the one door like
+  // everything else, so nothing downstream has to know they are special.
+  function stockMonsters(now = nowIso()) {
+    return STOCK_MONSTERS.map((m) => {
+      const e = normalizeEnemy(JSON.parse(JSON.stringify(m)), new Set(), now);
+      e.rev = 1;
+      return e;
+    });
+  }
+
+  /* The stored half, rebuilt from whatever storage or a backup holds. Ids
+     are kept (a backup restores the same entries) but never a stock id —
+     one of those in the store would be a second copy of a built-in, so it is
+     given a fresh one rather than shadowing the original. */
+  function normalizeMonsters(raw, now = nowIso()) {
+    const used = new Set(STOCK_IDS);
+    return arr(obj(raw).monsters).filter((m) => m && typeof m === 'object' && !Array.isArray(m))
+      .slice(0, LIMITS.ENEMIES).map((m) => normalizeEnemy(m, used, now));
+  }
+
   /* ------------------------------------------------------------------ */
   /* THE MONSTER FILE — enemies, carried between campaigns and GMs      */
   /* ------------------------------------------------------------------ */
@@ -392,12 +454,7 @@
     if (Number(head.schemaVersion) > BESTIARY_VERSION) return { error: 'newer', version: Number(head.schemaVersion) };
     const enemies = raw.enemies.filter((e) => e && typeof e === 'object' && !Array.isArray(e))
       .slice(0, LIMITS.ENEMIES)
-      .map((e) => {
-        const copy = normalizeEnemy({ ...e, id: null, attacks: arr(e.attacks).map((a) => ({ ...obj(a), id: null })) }, new Set(), now);
-        copy.rev = 1;
-        copy.updated = now;
-        return copy;
-      });
+      .map((e) => freshEnemy(e, now));
     if (!enemies.length) return { error: 'empty' };
     return { enemies, title: str(head.title, LIMITS.NAME) };
   }
@@ -620,7 +677,9 @@
     normalizeCard, manualCard, enemyCard, freshVitals, normalizeVitals,
     // records
     newCampaign, normalizeCampaign, copyCampaign, newHero, refreshHero,
-    newEnemy, normalizeEnemy, normalizeAttack, duplicateEnemy,
+    newEnemy, normalizeEnemy, normalizeAttack, duplicateEnemy, freshEnemy,
+    // the Monster Compendium
+    STOCK_MONSTERS, isStockMonster, stockMonsters, normalizeMonsters,
     // the monster file
     BESTIARY_VERSION, bestiaryFile, readBestiary,
     // combat

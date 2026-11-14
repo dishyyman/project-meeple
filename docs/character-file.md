@@ -235,6 +235,14 @@ campaign storage refuses is taken back and reported, as a character is. The
 Characters list's own Import, and a campaign's "From a File", read characters
 only — a campaigns-only backup is pointed back to Settings.
 
+**The Monster Compendium rides along too:** an optional top-level `bestiary`
+array holds the GM's own stat blocks (never the stock ones —
+`bestiary-file.md` §4). No version bump, for the same reason. On Import Backup
+entries are matched by **id**, because a catalogue never wants two copies of
+one entry: **Overwrite Matching / Restore in Place** replaces one already here,
+**Add All as New** leaves it alone; either way the rest are added. A backup may
+hold only monsters ("Import these monsters?").
+
 There is no separate backup format, and that was the point of making
 `characters` an array in v1. One exporter (`characterFile()`, which takes a
 list of ids and is given one id by the Personae list's Export and the whole

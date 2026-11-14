@@ -100,7 +100,7 @@ project-meeple/
     ├── unit/                # node --test
     │   ├── dice.test.js       # 17 — arithmetic, limits, refusals, never eval
     │   ├── mechanics.test.js  # 96 — every rules-gaps §6 rule + §7 rulings; the hero card agrees with the full character; enemies; Armor
-    │   ├── campaign.test.js   # 35 — GM Tools: records, the normalizer vs junk and hostile input, enemies through the vitals rules, turn tracking and the round count, fight ids, members, settling a fight, the monster file
+    │   ├── campaign.test.js   # 38 — GM Tools: records, the normalizer vs junk and hostile input, enemies through the vitals rules, turn tracking and the round count, fight ids, members, settling a fight, the Monster Compendium (stock, copies, the stored half), the monster file
     │   ├── content.test.js    #  7 — the real compendium vs the guide
     │   └── library-check.test.js # 14 — the compendium/entry shape check
     ├── e2e/                 # Playwright — every test runs in Chrome AND Safari
@@ -119,7 +119,7 @@ project-meeple/
     │   ├── frame.spec.js      # 5 — desktop frame: default, toggle remembered, full mode fits, narrow window locks; manifest + icons resolve; opaque iOS status bar
     │   ├── phone.spec.js      # 6 — iphone project ONLY: fills the screen, no toggle, page never scrolls (campaign screens too), both tab bars on screen, fields ≥16px, Add a Portrait takes a tap
     │   ├── combat.spec.js     # 7 — Flow 18: Start Combat (whole party, counts, sharing a turn, no surprise round), the line (pick, End Turn, a boss's three turns, the round count, kept over a reload), Armor per goblin, down greyed and skipped but pickable, the ✎ (manual heal even when down, effects, a Wound cleared, Back to Full), End Fight, a deleted stat card leaving the fight
-    │   ├── enemies.spec.js    # 7 — Flows 16, 17: stat cards made and checked, an enemy crits on a natural 20 only, edit/duplicate/delete, monster files (export, import as copies, refusals, hostile), backups carrying campaigns (restore in place, as copies, campaigns-only)
+    │   ├── enemies.spec.js    # 9 — Flows 16, 17, 19: the Monster Compendium (stock goblins, tap to add a copy, New Enemy saved to both, removal with Undo, campaign deletes never reach it, backups by id), stat cards made and checked, an enemy crits on a natural 20 only, edit/duplicate/delete, monster files (export, import as copies, refusals, hostile), backups carrying campaigns (restore in place, as copies, campaigns-only)
     │   ├── party.spec.js      # 9 — Flow 15: a file's hero matches the sheet, Armor and Armor Piercing, Wounds and Boons move the defences, downed, a newer file keeps the vitals, several characters ask who, hostile file, typed-in hero edit/notes/remove/reload; the open character and the GM's compendium never change
     │   ├── popups.spec.js     # 6 — sheet / alert / notice: Rest, Advantage, Patch, tick, Downed; every one has a way out; Escape is Cancel
     │   ├── portrait.spec.js   # 5 — Flow 13: real clicks on the sheet's uploader and the Edit frame, the icon menu, Remove → Undo
@@ -222,6 +222,10 @@ Each flow lists the steps and the result that must hold. These are the E2E suite
 **Steps:** with a campaign, Settings → **Export Backup** → delete the campaign → **Import Backup** → Overwrite Matching; again → Add All as New. Import a backup with campaigns and no characters, from Settings and from the Characters list.
 **Expected:** the backup line counts characters and campaigns; the file keeps `schemaVersion: 1` and carries `campaigns`; restoring in place brings the campaign back under its own id, adding makes a copy under a new one. A campaigns-only backup restores from Settings ("Campaign imported") and is declined by the Characters list's Import.
 
+### Flow 19 — The Monster Compendium (Game Master Tools)
+**Steps:** Enemies tab → **Add Enemy** → tap Goblin 1, then Goblin 2 → Done. Add Enemy → **New Enemy** → an Ogre. Delete the Ogre from the campaign. Open another campaign → Add Enemy. Remove the Ogre from the compendium → Undo. **Import Monster File** from the sheet. Back up and restore a file holding only monsters, twice.
+**Expected:** the sheet lists Goblin 1–3 marked Stock (no remove), then the GM's own; a tap adds a copy and the sheet stays open ("Goblin 1 added."); New Enemy says it was saved here and to the compendium; deleting from a campaign leaves the compendium alone; every campaign sees the same list; a monster file lands in the compendium, not the campaign; a backup's monsters are matched by id and never doubled.
+
 ### Flow 18 — Combat (Game Master Tools)
 **Steps:** Combat tab → **Start Combat** → 3 Goblins sharing a turn, 1 Ogre (3 turns) → Start. Go on a hero, then another (a mis-tap); End Turn. The Ogre three times. Everyone else; **Start Round 2**. Hit Goblin 2 for 10; hit Goblin 1 for 3 with Armor Piercing; down every goblin. ✎ on Goblin 2 → Health → Heal 4; ✎ → Add a Boon or Condition; ✎ → Back to Full. Hit the Ogre for 50; ✎ → Clear a Wound. Reload. **End Fight** → Escape, then End Fight.
 **Expected:** the whole party joins and there is no surprise option; Up Next is heroes first; the acting card is whole with the enemy's attacks rolling as "Ogre Brute · Greatclub"; the Ogre reads "2 of 3 turns left" and stays up next; the heading counts rounds. Armor comes off each hit (Armor Piercing excepted); a downed goblin says "Down", greys, moves to the end of Up Next and stays pickable, and the round ends without it. Healing an enemy is the number typed (no Poison toggle) and brings a downed one back; ✎ changes this fight only — the stat card is untouched. The fight survives a reload; End Fight asks, heroes keep their vitals, and the enemies' fight is gone.
@@ -263,6 +267,7 @@ Each flow lists the steps and the result that must hold. These are the E2E suite
 | Flow 15 (the Party: heroes from files and typed in, Armor, Wounds, effects, updates) | `e2e/party.spec.js` |
 | Flows 16, 17 (enemies and monster files; backups carrying campaigns) | `e2e/enemies.spec.js`; the file shapes in `unit/campaign.test.js` |
 | Flow 18 (the fight: the line, rounds, Armor, down, the ✎, End Fight) | `e2e/combat.spec.js`; the turn and round rules in `unit/campaign.test.js` |
+| Flow 19 (the Monster Compendium) | `e2e/enemies.spec.js`; stock and copies in `unit/campaign.test.js` |
 | No JavaScript errors during any browser test | `e2e/helpers/test.js` (every test, automatically) |
 | Chrome and Safari (WebKit) | every browser test runs in both |
 | Keyboard: custom buttons, the hold gestures, Wound pips | `e2e/keyboard.spec.js` (real key presses, never `press()`) |

@@ -460,3 +460,37 @@
         <button class="action-sheet__cancel" data-modal="close">Cancel</button>
       </div>
     </div>
+
+    <!-- ================= MONSTER COMPENDIUM =================
+         What Add Enemy opens. A SHEET of every stat block on this device —
+         the stock three first, then the GM's own — painted by
+         renderMonsterPicker(). Tapping one adds a COPY to the campaign and
+         leaves the sheet open, so a GM can add several. The foot holds the
+         two ways to grow the compendium: New Enemy (the editor; saved to the
+         campaign AND the compendium) and Import Monster File (into the
+         compendium only). The compendium is device-wide; deleting an enemy
+         from a campaign never touches it (docs/bestiary-file.md §4). -->
+    <div class="modal modal--monsters modal--action-sheet">
+      <div class="modal__scrim" data-modal="close"></div>
+      <div class="action-sheet" role="dialog" aria-modal="true" aria-labelledby="monsters-title" aria-describedby="monsters-sub" tabindex="-1">
+        <div class="action-sheet__grab" aria-hidden="true"></div>
+        <div class="action-sheet__head">
+          <div class="action-sheet__title" id="monsters-title">Monster Compendium</div>
+          <p class="action-sheet__sub" id="monsters-sub">Tap one to add it to this campaign.</p>
+        </div>
+        <div class="action-sheet__list monster-list" data-list="monsters"></div>
+        <div class="party-add monster-add">
+          <button class="btn-dashed" data-enemy-new>
+            <svg class="plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="M12 5v14"/></svg><span>New Enemy</span>
+          </button>
+          <button class="btn-dashed" data-monsters-import>
+            <svg class="btn-dashed__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V3"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/></svg><span>Import Monster File</span>
+          </button>
+        </div>
+        <!-- Inside the dialog, not on the page: everything outside an open
+             dialog is inert, and an inert input cannot open a picker. -->
+        <input class="visually-hidden" type="file" data-monsters-file
+               accept=".json,application/json" tabindex="-1" aria-hidden="true">
+        <button class="action-sheet__cancel" data-modal="close">Done</button>
+      </div>
+    </div>

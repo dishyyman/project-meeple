@@ -216,6 +216,9 @@
   // Game Master Tools — every campaign, whole, in list order (see CAMPAIGNS).
   let campaigns = [];
   let activeCampaignId = null;
+  // The GM's own Monster Compendium entries — the stored half; the stock
+  // three are campaign.js's and never stored (see loadMonsters()).
+  let monsters = [];
 
   // The six core attributes, in the order the guide lists them. Fixed game
   // structure rather than library content, so it lives in code beside
@@ -837,6 +840,8 @@
   // Game Master Tools: the campaign list, and one key per campaign.
   const CAMPAIGNS_KEY = 'meeple.campaigns';
   const campaignKey   = (id) => `meeple.campaign.${id}`;
+  // The Monster Compendium: device-wide, one key, { monsters: [...] }.
+  const MONSTERS_KEY  = 'meeple.bestiary';
 
   /* ---- is this device actually keeping what we write? ----------------
      Every write below can fail — a full quota (usually portraits), or storage
@@ -876,6 +881,9 @@
   // so this map only remembers what still needs writing.
   const heldCampaigns = new Map();
   let campaignsIndexFailing = false;
+  // The Monster Compendium's one key refused its last write. Small and
+  // rewritten whole, so there is nothing to hold but the list in memory.
+  let monstersFailing = false;
 
   /* The notice is DERIVED, never set: it is up while anything is held or the
      roster index is behind, and down only when all of it has landed. Before
@@ -889,7 +897,7 @@
      not ten times. */
   let storageFailing = false;
   function settleStorage() {
-    const ok = !heldSaves.size && !rosterFailing && !heldCampaigns.size && !campaignsIndexFailing;
+    const ok = !heldSaves.size && !rosterFailing && !heldCampaigns.size && !campaignsIndexFailing && !monstersFailing;
     if (ok === !storageFailing) return;
     storageFailing = !ok;
     const text = $('[data-storage-alert-text]');
@@ -2293,7 +2301,7 @@
     const { file } = read;
     if (!file.characters.length) {
       showImportResult({ ok: false, title: 'No characters in that file',
-        text: `${filename} is a backup of campaigns only. Heroes come from a player's character file.` });
+        text: `${filename} is a backup of Game Master Tools data only. Heroes come from a player's character file.` });
       return;
     }
     const c = activeCampaign();
@@ -2647,6 +2655,15 @@
     } else if (c.enemies.length < CMP.LIMITS.ENEMIES) {
       clean.rev = 1;
       c.enemies.push(clean);
+      /* A new stat block goes into the Monster Compendium too (designer
+         ruling, 2026-11-14), as its own copy: made once, there for every
+         campaign — and this campaign's copy can be edited without changing
+         it. */
+      if (monsters.length < CMP.LIMITS.ENEMIES) {
+        monsters.push(CMP.freshEnemy(clean));
+        saveMonsters();
+      }
+      showToast(`${clean.name} saved here and to the compendium.`);
     }
     closeModal();
     // An edited stat card reaches into a fight in progress: its numbers are
@@ -2715,24 +2732,107 @@
     showToast(whole ? `${list.length} ${list.length === 1 ? 'enemy' : 'enemies'} exported.` : 'Monster file saved.');
   }
 
-  function openEnemiesFilePicker() {
-    const input = $('[data-enemies-file]');
+  /* ---- the Monster Compendium -------------------------------------------
+     Device-wide (campaign.js): the stock three, then the GM's own. Add Enemy
+     opens it; tapping an entry adds a COPY to the open campaign, so nothing
+     done to that enemy in the campaign — edited, fought, deleted — ever
+     reaches the compendium. New Enemy saves to both; a monster file imports
+     into the compendium only, and is added from there like anything else. */
+  function loadMonsters() {
+    let raw = null;
+    try { raw = JSON.parse(localStorage.getItem(MONSTERS_KEY)); } catch (_) { raw = null; }
+    monsters = CMP.normalizeMonsters(raw);
+  }
+
+  function saveMonsters() {
+    try {
+      localStorage.setItem(MONSTERS_KEY, JSON.stringify({ monsters }));
+      monstersFailing = false;
+    } catch (_) { monstersFailing = true; }
+    settleStorage();
+    return !monstersFailing;
+  }
+
+  const allMonsters = () => [...CMP.stockMonsters(), ...monsters];
+  const monsterIn = (id) => allMonsters().find((m) => m.id === id) || null;
+
+  const MONSTER_ICON = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m12.5 17-.5-1-.5 1h1z"/><path d="M15 22a1 1 0 0 0 1-1v-1a2 2 0 0 0 1.56-3.25 8 8 0 1 0-11.12 0A2 2 0 0 0 8 20v1a1 1 0 0 0 1 1z"/><circle cx="15" cy="12" r="1"/><circle cx="9" cy="12" r="1"/></svg>';
+
+  function openMonsterPicker() {
+    renderMonsterPicker();
+    app.setAttribute('data-modal', 'monsters');
+  }
+
+  // One row per stat block: the row adds a copy; the GM's own carry a trash
+  // to take them out of the compendium, the stock ones say "Stock" instead.
+  function renderMonsterPicker() {
+    fillList('monsters', allMonsters().map((m) => {
+      const stock = CMP.isStockMonster(m.id);
+      return `<div class="monster-row">
+        <button class="action-sheet__row" data-monster-add="${esc(m.id)}" aria-label="Add ${esc(m.name)} — ${esc(enemySummary(m))}">
+          <span class="action-sheet__icon" aria-hidden="true">${MONSTER_ICON}</span>
+          <span class="action-sheet__text">
+            <span class="action-sheet__label">${esc(m.name)}</span>
+            <span class="action-sheet__note">${esc(enemySummary(m))}</span>
+          </span>
+        </button>
+        ${stock
+          ? '<span class="monster-row__stock">Stock</span>'
+          : `<button class="icon-act icon-act--delete monster-row__remove" data-monster-remove="${esc(m.id)}" aria-label="Remove ${esc(m.name)} from the compendium">${ATTACK_TRASH_SVG}</button>`}
+      </div>`;
+    }).join(''));
+  }
+
+  // A copy into the open campaign. The sheet stays open: a GM building an
+  // encounter adds several, and Done is right there.
+  function addMonster(id) {
+    const c = activeCampaign();
+    const m = monsterIn(id);
+    if (!c || !m) return;
+    if (c.enemies.length >= CMP.LIMITS.ENEMIES) { showToast('This campaign is full of enemies.', 'warn'); return; }
+    c.enemies.push(CMP.freshEnemy(m));
+    saveCampaign(c);
+    renderEnemies();
+    showToast(`${m.name} added.`);
+  }
+
+  // The GM's own only — and only from the compendium: every campaign keeps
+  // the copies it already took. Undo, as for a portrait, rather than a
+  // confirmation: nothing in play depends on the entry.
+  function removeMonster(id) {
+    const at = monsters.findIndex((m) => m.id === id);
+    if (at === -1) return;
+    const [gone] = monsters.splice(at, 1);
+    saveMonsters();
+    renderMonsterPicker();
+    $('.modal--monsters [data-enemy-new]')?.focus();
+    showToast(`${gone.name} removed from the compendium.`, 'ok', {
+      label: 'Undo',
+      run: () => {
+        monsters.splice(Math.min(at, monsters.length), 0, gone);
+        saveMonsters();
+        renderMonsterPicker();
+      },
+    });
+  }
+
+  function openMonstersFilePicker() {
+    const input = $('[data-monsters-file]');
     if (!input) return;
     input.value = '';
     input.click();
   }
 
-  function readEnemiesFile(input) {
+  function readMonstersFile(input) {
     const file = input.files && input.files[0];
     if (!file) return;
-    readMeepleFile(file, (text) => importEnemies(text, file.name));
+    readMeepleFile(file, (text) => importMonsters(text, file.name));
   }
 
-  // Every enemy in the file, added as COPIES — a monster file is a catalogue
-  // to draw from, never a claim on a card already here.
-  function importEnemies(text, filename) {
-    const c = activeCampaign();
-    if (!c) return;
+  // Every enemy in the file, into the COMPENDIUM as copies — a monster file
+  // is a catalogue to draw from, never a claim on an entry already here.
+  // The GM then adds from the list, the one way an enemy enters a campaign.
+  function importMonsters(text, filename) {
     let raw;
     try { raw = JSON.parse(text); } catch (_) { raw = null; }
     const read = CMP.readBestiary(raw);
@@ -2745,12 +2845,12 @@
       showImportResult({ ok: false, ...msg });
       return;
     }
-    const room = CMP.LIMITS.ENEMIES - c.enemies.length;
+    const room = CMP.LIMITS.ENEMIES - monsters.length;
     const taken = read.enemies.slice(0, Math.max(0, room));
-    c.enemies.push(...taken);
-    saveCampaign(c);
-    renderEnemies();
-    showToast(taken.length === 1 ? `${taken[0].name} added.` : `${taken.length} enemies added.`);
+    monsters.push(...taken);
+    saveMonsters();
+    renderMonsterPicker();
+    showToast(taken.length === 1 ? `${taken[0].name} added to the compendium.` : `${taken.length} monsters added to the compendium.`);
   }
 
   /* ---- the Combat tab ---------------------------------------------------
@@ -7431,7 +7531,8 @@
     const sources = file.characters.filter((c) => c && typeof c === 'object');
     // A backup from a GM with campaigns and no characters is still a backup.
     const hasCampaigns = Array.isArray(file.campaigns) && file.campaigns.some((c) => c && typeof c === 'object');
-    if (!sources.length && !hasCampaigns) {
+    const hasMonsters = Array.isArray(file.bestiary) && file.bestiary.some((m) => m && typeof m === 'object');
+    if (!sources.length && !hasCampaigns && !hasMonsters) {
       return { error: { title: 'Nothing to import', text: 'That file holds no characters.' } };
     }
     return { file: { ...file, characters: sources } };
@@ -7442,7 +7543,7 @@
     if (read.error) { showImportResult({ ok: false, ...read.error }); return; }
     if (!read.file.characters.length) {
       showImportResult({ ok: false, title: 'No characters in that file',
-        text: `${filename} holds campaigns but no characters. Restore it from Settings → Backup.` });
+        text: `${filename} holds Game Master Tools data (campaigns or monsters) but no characters. Restore it from Settings → Backup.` });
       return;
     }
     // The Characters screen's own Import button ADDS, and never asks. Its
@@ -7835,9 +7936,11 @@
   function renderBackupNote() {
     const count = roster.length;
     const camps = campaigns.length;
+    const mons = monsters.length;
     const parts = [
       count ? `${count} character${count === 1 ? '' : 's'}` : '',
       camps ? `${camps} campaign${camps === 1 ? '' : 's'}` : '',
+      mons ? `${mons} monster${mons === 1 ? '' : 's'}` : '',
     ].filter(Boolean);
     setText('backupNote', parts.length ? parts.join(' · ') : 'Nothing yet — nothing to export.');
   }
@@ -7847,7 +7950,7 @@
      getting a character through an attachment limit, and this one is a backup
      — a backup that quietly drops every portrait is not a backup. */
   function exportBackup() {
-    if (!roster.length && !campaigns.length) return;
+    if (!roster.length && !campaigns.length && !monsters.length) return;
     /* Unsaved edits belong in the backup — and this is the button the storage
        notice sends the player to, so it is MOST needed exactly when storage
        refuses the save below. That is fine: a refused save is held, and
@@ -7861,6 +7964,9 @@
        (docs/character-file.md §6). The in-memory copies are the newest —
        including any storage refused — which is exactly what a backup is for. */
     if (campaigns.length) file.campaigns = campaigns.map((c) => JSON.parse(JSON.stringify(c)));
+    // The GM's own Monster Compendium entries, the same way: optional, so no
+    // version bump. The stock three are built in and never travel.
+    if (monsters.length) file.bestiary = monsters.map((m) => JSON.parse(JSON.stringify(m)));
     // Named as a backup whatever the count — see backupFilename().
     deliverCharacterFile(file, { via: 'save', name: backupFilename(file) });
     showToast('Backup saved.');
@@ -8170,12 +8276,15 @@
     )).length;
     const head = file.meepleCharacter || {};
 
+    const mons = (Array.isArray(file.bestiary) ? file.bestiary : []).filter((m) => m && typeof m === 'object').length;
     const holds = [n ? nameList(names) : '', camps.length
-      ? `${camps.length === 1 ? 'the campaign' : `${camps.length} campaigns:`} ${nameList(campNames)}` : '']
-      .filter(Boolean).join(n && camps.length ? ', and ' : '');
+      ? `${camps.length === 1 ? 'the campaign' : `${camps.length} campaigns:`} ${nameList(campNames)}` : '',
+    mons ? `${mons} monster${mons === 1 ? '' : 's'} for your compendium` : '']
+      .filter(Boolean).join(', and ');
     askFile({
-      title: !n ? (camps.length === 1 ? 'Import this campaign?' : `Import ${camps.length} campaigns?`)
-        : n === 1 ? 'Import this character?' : `Import ${n} characters?`,
+      title: n ? (n === 1 ? 'Import this character?' : `Import ${n} characters?`)
+        : camps.length ? (camps.length === 1 ? 'Import this campaign?' : `Import ${camps.length} campaigns?`)
+        : 'Import these monsters?',
       text: `${filename} holds ${holds}.`,
       notes: [
         head.exported ? { text: `Exported ${head.exported}.` } : null,
@@ -8208,16 +8317,52 @@
      campaigns too, so one window reports the whole file. */
   function importBackup(file, mode) {
     const camps = importBackupCampaigns(file.campaigns, mode);
-    const extra = campaignsSentence(camps);
-    if (file.characters.length) { importCharacters(file, mode, { extra, extraFailed: camps.unsaved.length > 0 }); return; }
+    const mons = importBackupMonsters(file.bestiary, mode);
+    const extra = [campaignsSentence(camps), mons.sentence].filter(Boolean).join(' ');
+    const failed = camps.unsaved.length > 0 || mons.failed;
+    if (file.characters.length) { importCharacters(file, mode, { extra, extraFailed: failed }); return; }
     const any = camps.added.length + camps.replaced.length;
     showImportResult({
-      ok: !camps.unsaved.length,
-      title: camps.unsaved.length ? (any ? 'Partly imported' : 'Not imported')
+      ok: !failed,
+      title: failed ? (any || mons.count ? 'Partly imported' : 'Not imported')
+        : !any ? 'Monsters imported'
         : any === 1 ? 'Campaign imported' : 'Campaigns imported',
       text: extra,
     });
     renderSettings();
+  }
+
+  /* The GM's compendium entries in a backup, matched by id — the compendium
+     is a catalogue, so two copies of the same entry are never wanted:
+       overwrite  — an entry already here is replaced; the rest are added
+       add        — an entry already here is left alone; the rest are added
+     Through normalizeMonsters(), the one door. A refused write takes the
+     whole merge back and says so, as a campaign's does. */
+  function importBackupMonsters(list, mode) {
+    const incoming = CMP.normalizeMonsters({ monsters: Array.isArray(list) ? list : [] });
+    if (!incoming.length) return { count: 0, failed: false, sentence: '' };
+    const before = monsters.slice();
+    let added = 0, replaced = 0;
+    for (const m of incoming) {
+      const at = monsters.findIndex((x) => x.id === m.id);
+      if (at === -1) { if (monsters.length < CMP.LIMITS.ENEMIES) { monsters.push(m); added++; } }
+      else if (mode === 'overwrite') { monsters[at] = m; replaced++; }
+    }
+    const count = added + replaced;
+    if (count && !saveMonsters()) {
+      // Taken back: what is on disk is what was there before, so the
+      // storage notice has nothing standing to report about the compendium.
+      monsters = before;
+      monstersFailing = false;
+      settleStorage();
+      return { count: 0, failed: true, sentence: 'The monsters could not be imported — this browser’s storage is full or blocked.' };
+    }
+    const n = (k) => `${k} monster${k === 1 ? '' : 's'}`;
+    const parts = [];
+    if (added) parts.push(`${n(added)} ${added === 1 ? 'was' : 'were'} added to your compendium.`);
+    if (replaced) parts.push(`${n(replaced)} ${replaced === 1 ? 'was' : 'were'} replaced with the version in the file.`);
+    if (!count) parts.push('Every monster in it is already in your compendium.');
+    return { count, failed: false, sentence: parts.join(' ') };
   }
 
   function askCompendiumImport(bag) {
@@ -9590,7 +9735,7 @@
       // processed below never has its own element pulled out from under it.
       if (state.openStat && !e.target.closest('.stat-card')) showStatPop(null);
 
-      const t = e.target.closest('[data-nav],[data-tab],[data-edit-tab],[data-edit-attr],[data-skill-rank],[data-toggle],[data-step],[data-calc],[data-menu],[data-wound],[data-wound-reset],[data-calc-step],[data-calc-apply],[data-action],[data-key],[data-dice-back],[data-dice-roll],[data-roll],[data-roll-again],[data-inv-add],[data-inv-open],[data-item-save],[data-bp-step],[data-bp-edit],[data-bp-delete],[data-mod-add],[data-mod-remove],[data-stat-toggle],[data-effect-open],[data-effect-add],[data-effect-step],[data-effect-tick],[data-effects-clear],[data-tick-confirm],[data-skill-edit],[data-skill-draft],[data-skill-filter],[data-skill-save],[data-detail],[data-gear-add],[data-armor-add],[data-detail-remove],[data-pick],[data-tag],[data-note-add],[data-note-save],[data-note-cancel],[data-note-edit],[data-note-delete],[data-note-del-confirm],[data-portrait-pick],[data-portrait-remove],[data-portrait-menu],[data-rest],[data-patch],[data-patch-confirm],[data-poison-toggle],[data-adv],[data-rules-toggle],[data-id-save],[data-portrait-crop],[data-crop-save],[data-crop-reset],[data-open-character],[data-wiz],[data-wiz-step],[data-wiz-expand],[data-wiz-pick],[data-wiz-attr],[data-wiz-skill],[data-wiz-sec],[data-wiz-slot],[data-wiz-clear],[data-wiz-pick-group],[data-equip-drop],[data-roster-edit],[data-char-del],[data-char-del-confirm],[data-char-export],[data-import-open],[data-share-format],[data-share-send],[data-backup-export],[data-compendium-export],[data-compendium-reset],[data-file-open],[data-file-apply],[data-ap-mode],[data-ap-theme],[data-toast-dismiss],[data-toast-action],[data-campaigns-edit],[data-campaign-new],[data-open-campaign],[data-campaign-del],[data-campaign-del-open],[data-campaign-del-confirm],[data-campaign-tab],[data-campaign-menu],[data-campaign-rename],[data-campaign-save],[data-pierce-toggle],[data-hero-add],[data-hero-import],[data-hero-menu],[data-hero-calc],[data-hero-wound],[data-hero-effect-open],[data-hero-effect-step],[data-hero-edit],[data-hero-update],[data-hero-notes-open],[data-hero-notes-save],[data-hero-remove],[data-hero-del-confirm],[data-hero-save],[data-enemy-new],[data-enemies-import],[data-enemies-export],[data-enemy-menu],[data-enemy-edit],[data-enemy-dup],[data-enemy-export],[data-enemy-remove],[data-enemy-del-confirm],[data-enemy-save],[data-enemy-attack-add],[data-enemy-attack-remove],[data-combat-start-open],[data-combat-start],[data-start-step],[data-start-share],[data-combat-end-open],[data-combat-end],[data-combat-pick],[data-combat-end-turn],[data-combat-next-round],[data-member-edit],[data-member-act],[data-member-calc],[data-member-wound],[data-member-effect-open],[data-member-effect-step]');
+      const t = e.target.closest('[data-nav],[data-tab],[data-edit-tab],[data-edit-attr],[data-skill-rank],[data-toggle],[data-step],[data-calc],[data-menu],[data-wound],[data-wound-reset],[data-calc-step],[data-calc-apply],[data-action],[data-key],[data-dice-back],[data-dice-roll],[data-roll],[data-roll-again],[data-inv-add],[data-inv-open],[data-item-save],[data-bp-step],[data-bp-edit],[data-bp-delete],[data-mod-add],[data-mod-remove],[data-stat-toggle],[data-effect-open],[data-effect-add],[data-effect-step],[data-effect-tick],[data-effects-clear],[data-tick-confirm],[data-skill-edit],[data-skill-draft],[data-skill-filter],[data-skill-save],[data-detail],[data-gear-add],[data-armor-add],[data-detail-remove],[data-pick],[data-tag],[data-note-add],[data-note-save],[data-note-cancel],[data-note-edit],[data-note-delete],[data-note-del-confirm],[data-portrait-pick],[data-portrait-remove],[data-portrait-menu],[data-rest],[data-patch],[data-patch-confirm],[data-poison-toggle],[data-adv],[data-rules-toggle],[data-id-save],[data-portrait-crop],[data-crop-save],[data-crop-reset],[data-open-character],[data-wiz],[data-wiz-step],[data-wiz-expand],[data-wiz-pick],[data-wiz-attr],[data-wiz-skill],[data-wiz-sec],[data-wiz-slot],[data-wiz-clear],[data-wiz-pick-group],[data-equip-drop],[data-roster-edit],[data-char-del],[data-char-del-confirm],[data-char-export],[data-import-open],[data-share-format],[data-share-send],[data-backup-export],[data-compendium-export],[data-compendium-reset],[data-file-open],[data-file-apply],[data-ap-mode],[data-ap-theme],[data-toast-dismiss],[data-toast-action],[data-campaigns-edit],[data-campaign-new],[data-open-campaign],[data-campaign-del],[data-campaign-del-open],[data-campaign-del-confirm],[data-campaign-tab],[data-campaign-menu],[data-campaign-rename],[data-campaign-save],[data-pierce-toggle],[data-hero-add],[data-hero-import],[data-hero-menu],[data-hero-calc],[data-hero-wound],[data-hero-effect-open],[data-hero-effect-step],[data-hero-edit],[data-hero-update],[data-hero-notes-open],[data-hero-notes-save],[data-hero-remove],[data-hero-del-confirm],[data-hero-save],[data-enemy-new],[data-enemy-add],[data-monster-add],[data-monster-remove],[data-monsters-import],[data-enemies-export],[data-enemy-menu],[data-enemy-edit],[data-enemy-dup],[data-enemy-export],[data-enemy-remove],[data-enemy-del-confirm],[data-enemy-save],[data-enemy-attack-add],[data-enemy-attack-remove],[data-combat-start-open],[data-combat-start],[data-start-step],[data-start-share],[data-combat-end-open],[data-combat-end],[data-combat-pick],[data-combat-end-turn],[data-combat-next-round],[data-member-edit],[data-member-act],[data-member-calc],[data-member-wound],[data-member-effect-open],[data-member-effect-step]');
       if (!t) return;
       /* The app root is STATE, never a control. It carries data-view, data-tab,
          data-edit-tab, data-campaign-tab, data-menu and data-modal so the stylesheet can switch on
@@ -9757,7 +9902,10 @@
       }
       // --- Game Master Tools: the Enemies tab ---
       if (t.hasAttribute('data-enemy-new'))          { openEnemyForm(null); return; }
-      if (t.hasAttribute('data-enemies-import'))     { openEnemiesFilePicker(); return; }
+      if (t.hasAttribute('data-enemy-add'))          { openMonsterPicker(); return; }
+      if (t.dataset.monsterAdd)                      { addMonster(t.dataset.monsterAdd); return; }
+      if (t.dataset.monsterRemove)                   { removeMonster(t.dataset.monsterRemove); return; }
+      if (t.hasAttribute('data-monsters-import'))    { openMonstersFilePicker(); return; }
       if (t.hasAttribute('data-enemies-export')) {
         const c = activeCampaign();
         if (c) exportEnemies(c.enemies, c.name, { whole: true });
@@ -10246,8 +10394,8 @@
     // The attribute dropdowns report through change, not click, so they need
     // their own delegated listener.
     app.addEventListener('change', (e) => {
-      const enemiesPicker = e.target.closest('[data-enemies-file]');
-      if (enemiesPicker) { readEnemiesFile(enemiesPicker); return; }
+      const monstersPicker = e.target.closest('[data-monsters-file]');
+      if (monstersPicker) { readMonstersFile(monstersPicker); return; }
       const heroPicker = e.target.closest('[data-hero-file]');
       if (heroPicker) { readHeroFile(heroPicker); return; }
       const picker = e.target.closest('[data-import-file]');
@@ -10585,6 +10733,7 @@
     loadRoster();
     // Independent of the roster: campaigns hold their own copies of heroes.
     loadCampaigns();
+    loadMonsters();
     renderCampaigns();
     // Paints the Home card and the Settings section from the stored flag.
     // Independent of the roster and cheap, so its order against the rest of

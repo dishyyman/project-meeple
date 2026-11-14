@@ -5,7 +5,8 @@
 A **monster file** carries enemy stat blocks out of a campaign — to another
 campaign, another GM, or a future **monster compendium**. Written by
 `exportEnemies()` in `resources/js/main.js` (Enemies tab → **Export all**, or one
-enemy's ⋯ → **Export**) and read by `importEnemies()` (Enemies tab → **Import**),
+enemy's ⋯ → **Export**) and read by `importMonsters()` (Enemies tab → **Add Enemy**
+→ **Import Monster File**, into the Monster Compendium — §4),
 both through `bestiaryFile()` / `readBestiary()` in `resources/js/campaign.js`.
 
 > Not a character file (`character-file.md`) and not a compendium
@@ -66,8 +67,24 @@ The character file's rules (`character-file.md` §6): bump `schemaVersion` only
 for a change that breaks older readers. Adding an optional field to a stat block
 is not one.
 
-## 4. Toward a monster compendium
+## 4. The Monster Compendium
 
-The stat-block shape is the intended compendium entry. When the compendium is
-built, a file of this kind is what it imports; campaigns keep their own
-**copies**, so editing a goblin in one campaign never changes the compendium.
+Every stat block on the device, in this file's stat-block shape (designer
+request, 2026-11-14). **Add Enemy** on a campaign's Enemies tab opens it as a
+sheet:
+
+- **Stock** entries — three built-in goblins (`stock_goblin_1`…`3`, all on the
+  same base numbers) from `STOCK_MONSTERS` in `resources/js/campaign.js`.
+  Read-only, never stored, never in a backup. A stand-in until the game's real
+  monster compendium ships as content.
+- **The GM's own** — made with **New Enemy** (saved to the open campaign *and*
+  here, each its own copy), or imported from a monster file (here only).
+  Stored under `meeple.bestiary` as `{ "monsters": [ …stat blocks… ] }`, read
+  through `normalizeMonsters()` (a stored entry can never take a stock id),
+  removable with Undo, and carried by Settings → Backup as the optional
+  `bestiary` array (`character-file.md` §4b).
+
+Tapping an entry adds a **copy** (`freshEnemy()`: new ids, same name and
+numbers) to the campaign. Campaigns keep their own copies, so editing,
+fighting or deleting a goblin in one campaign never changes the compendium,
+and removing an entry from the compendium never touches a campaign.

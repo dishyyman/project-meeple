@@ -1,7 +1,12 @@
 /* =====================================================================
    MEEPLE — Game Master Tools, phase 3: enemies, monster files, backups
    ---------------------------------------------------------------------
-   docs/testing.md §5, Flows 16 and 17. Pins:
+   docs/testing.md §5, Flows 16, 17 and 19. Pins:
+     · Add Enemy opens the Monster Compendium: the stock three, the GM's
+       own, a tap adds a COPY; New Enemy saves to the campaign and the
+       compendium; a monster file imports into the compendium; the GM's own
+       can be removed (with Undo), the stock ones cannot; deleting from a
+       campaign never touches the compendium;
      · a stat card is made, checked (name, dice), shown and rolled;
      · an ENEMY's roll crits on a natural 20 only — never on the open
        character's Lethality;
@@ -23,9 +28,30 @@ async function newCampaign(page, name = 'The Ashen Road') {
   await press(page, '.tabbar__btn[data-campaign-tab="enemies"]');
 }
 
+// Add Enemy → the Monster Compendium → New Enemy: the editor.
+async function openNewEnemy(page) {
+  await page.getByRole('button', { name: 'Add Enemy' }).click();
+  await expect.poll(() => appAttr(page, 'data-modal')).toBe('monsters');
+  await page.locator('.modal--monsters').getByRole('button', { name: 'New Enemy' }).click();
+  await expect.poll(() => appAttr(page, 'data-modal')).toBe('enemy-form');
+}
+
+// Import Monster File, from inside the compendium sheet (opened if need be).
+async function importMonsterFile(page, file) {
+  if (await appAttr(page, 'data-modal') !== 'monsters') await page.getByRole('button', { name: 'Add Enemy' }).click();
+  const [chooser] = await Promise.all([
+    page.waitForEvent('filechooser'),
+    page.locator('.modal--monsters').getByRole('button', { name: 'Import Monster File' }).click(),
+  ]);
+  await chooser.setFiles(file);
+}
+
+const compendiumNames = (page) => page.locator('.modal--monsters .action-sheet__label').allInnerTexts();
+const storedMonsters = (page) => page.evaluate(() => JSON.parse(localStorage.getItem('meeple.bestiary') || '{"monsters":[]}').monsters);
+
 // The editor, filled in the way a GM does.
 async function makeOgre(page) {
-  await page.getByRole('button', { name: 'New Enemy' }).click();
+  await openNewEnemy(page);
   await page.fill('[data-enemy-field="name"]', 'Ogre Brute');
   await page.fill('[data-enemy-field="tags"]', 'Boss, Large');
   await page.fill('[data-enemy-field="turns"]', '2');
@@ -37,7 +63,7 @@ async function makeOgre(page) {
   await row.locator('[data-attack-field="damage"]').fill('2d8+3');
   await row.locator('[data-attack-field="desc"]').fill('Knockback 2');
   await page.getByRole('button', { name: 'Create' }).click();
-  await expect(page.locator('[data-enemy]')).toHaveCount(1);
+  await expect(page.locator('[data-enemy] .collapse__title', { hasText: 'Ogre Brute' })).toHaveCount(1);
 }
 
 const stored = (page) => page.evaluate(() => {
@@ -51,7 +77,7 @@ test('a stat card: checked as it is made, summarised closed, whole when open', a
   await expect(page.locator('[data-block="enemiesEmpty"]')).toBeVisible();
   await expect(page.locator('[data-enemies-export]')).toBeHidden();
 
-  await page.getByRole('button', { name: 'New Enemy' }).click();
+  await openNewEnemy(page);
   await page.getByRole('button', { name: 'Create' }).click();
   await expect(page.locator('[data-enemy-error]')).toHaveText('An enemy needs a name.');
   await page.fill('[data-enemy-field="name"]', 'Goblin');
@@ -72,6 +98,56 @@ test('a stat card: checked as it is made, summarised closed, whole when open', a
   await expect(card.locator('[data-roll="damage"]')).toHaveText('2d8+3');
   await expect(page.locator('[data-enemies-export]')).toBeVisible();
   expect((await stored(page))[0].enemies[0]).toMatchObject({ name: 'Ogre Brute', turns: 2, tags: ['Boss', 'Large'] });
+});
+
+test('Add Enemy opens the Monster Compendium: stock goblins, tap to add a copy, your own saved there too', async ({ page }) => {
+  await openApp(page);
+  await newCampaign(page);
+  await page.getByRole('button', { name: 'Add Enemy' }).click();
+  expect(await appAttr(page, 'data-modal')).toBe('monsters');
+  expect(await compendiumNames(page)).toEqual(['Goblin 1', 'Goblin 2', 'Goblin 3']);
+  await expect(page.locator('.modal--monsters .monster-row__stock')).toHaveCount(3);
+  await expect(page.locator('.modal--monsters [data-monster-remove]')).toHaveCount(0);
+  await expect(page.locator('.modal--monsters .action-sheet__note').first()).toHaveText('HP 10 · Evasion 10 · Armor 0');
+
+  // A tap adds a copy and leaves the sheet open for the next.
+  await page.locator('[data-monster-add="stock_goblin_1"]').click();
+  await expect(page.locator('.toast')).toContainText('Goblin 1 added.');
+  await page.locator('[data-monster-add="stock_goblin_2"]').click();
+  expect(await appAttr(page, 'data-modal')).toBe('monsters');
+  await page.getByRole('button', { name: 'Done' }).click();
+  await expect(page.locator('[data-enemy] .collapse__title')).toHaveText(['Goblin 1', 'Goblin 2']);
+  const [c] = await stored(page);
+  expect(c.enemies[0].id).not.toBe('stock_goblin_1');               // a copy, never the built-in
+  expect(c.enemies[0].stats).toMatchObject({ hp: 10, evasion: 10, armor: 0, fortitude: 8, speed: 5 });
+
+  // New Enemy: saved here AND to the compendium, each its own copy.
+  await makeOgre(page);
+  await expect(page.locator('.toast')).toContainText('Ogre Brute saved here and to the compendium.');
+  const [mine] = await storedMonsters(page);
+  expect(mine.name).toBe('Ogre Brute');
+  expect(mine.id).not.toBe((await stored(page))[0].enemies[2].id);
+
+  // Editing or deleting the campaign's copy never touches the compendium.
+  await page.locator('[data-enemy-menu]').nth(2).click();
+  await page.locator('.modal--enemy-menu').getByRole('button', { name: 'Delete' }).click();
+  await page.locator('.modal--enemy-del').getByRole('button', { name: 'Delete' }).click();
+  expect((await stored(page))[0].enemies).toHaveLength(2);
+  expect((await storedMonsters(page)).map((m) => m.name)).toEqual(['Ogre Brute']);
+
+  // Another campaign draws from the same compendium.
+  await newCampaign(page, 'Second');
+  await page.getByRole('button', { name: 'Add Enemy' }).click();
+  expect(await compendiumNames(page)).toEqual(['Goblin 1', 'Goblin 2', 'Goblin 3', 'Ogre Brute']);
+
+  // The GM's own can be removed — with Undo — and survive a reload.
+  await page.getByRole('button', { name: 'Remove Ogre Brute from the compendium' }).click();
+  expect(await compendiumNames(page)).toEqual(['Goblin 1', 'Goblin 2', 'Goblin 3']);
+  await page.locator('[data-toast-action]').click();
+  expect(await compendiumNames(page)).toEqual(['Goblin 1', 'Goblin 2', 'Goblin 3', 'Ogre Brute']);
+  await page.reload();
+  await page.waitForFunction(() => document.querySelector('.app')?.getAttribute('data-view') === 'home');
+  expect((await storedMonsters(page)).map((m) => m.name)).toEqual(['Ogre Brute']);
 });
 
 /* Elara has Lethality 1, so a natural 19 crits for HER. Every die is forced
@@ -138,20 +214,26 @@ test('a monster file: exported, imported as copies, and refused when it is not o
   expect(json.enemies[0]).toMatchObject({ name: 'Ogre Brute', stats: { hp: 40, armor: 3 } });
   expect('rev' in json.enemies[0]).toBe(false);
 
-  // Into another campaign, twice: two copies, each its own card.
+  // Into the COMPENDIUM, not the campaign: the sheet lists it after the
+  // stock three and the Ogre New Enemy already put there; the campaign
+  // gains nothing until the GM taps one.
   await newCampaign(page, 'Second');
   const file = { name: 'ogre.meeple.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(json)) };
-  for (let i = 0; i < 2; i++) {
-    const [chooser] = await Promise.all([page.waitForEvent('filechooser'), page.locator('[data-enemies-import]').click()]);
-    await chooser.setFiles(file);
-  }
+  await importMonsterFile(page, file);
+  await expect(page.locator('.toast')).toContainText('Ogre Brute added to the compendium.');
+  expect(await compendiumNames(page)).toEqual(['Goblin 1', 'Goblin 2', 'Goblin 3', 'Ogre Brute', 'Ogre Brute']);
+  expect((await stored(page)).find((c) => c.name === 'Second').enemies).toEqual([]);
+  // Tapped twice: two copies, each its own card with its own id.
+  const row = page.locator('.modal--monsters [data-monster-add]').nth(4);
+  await row.click();
+  await row.click();
+  await page.keyboard.press('Escape');
   await expect(page.locator('[data-enemy] .collapse__title')).toHaveText(['Ogre Brute', 'Ogre Brute']);
   const second = (await stored(page)).find((c) => c.name === 'Second');
   expect(new Set(second.enemies.map((e) => e.id)).size).toBe(2);
 
   // A character file is not a monster file.
-  const [chooser] = await Promise.all([page.waitForEvent('filechooser'), page.locator('[data-enemies-import]').click()]);
-  await chooser.setFiles(require('path').join(__dirname, '..', 'fixtures', 'files', 'elara.meeple.json'));
+  await importMonsterFile(page, require('path').join(__dirname, '..', 'fixtures', 'files', 'elara.meeple.json'));
   const r = await readResult(page);
   expect(r).toMatchObject({ state: 'error', title: 'Not a monster file' });
 });
@@ -163,13 +245,15 @@ test('a hostile monster file is text, and its bad dice are dropped', async ({ pa
     id: '"><img src=x onerror="window.__pwned=1">', name: '<img src=x onerror="window.__pwned=1">Imp',
     attacks: [{ name: '<b>Bite</b>', damage: '1d6);alert(1' }],
   }] };
-  const [chooser] = await Promise.all([page.waitForEvent('filechooser'), page.locator('[data-enemies-import]').click()]);
-  await chooser.setFiles({ name: 'evil.meeple.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(evil)) });
+  await importMonsterFile(page, { name: 'evil.meeple.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(evil)) });
+  await expect(page.locator('.modal--monsters .action-sheet__label').nth(3)).toHaveText('<img src=x onerror="window.__pwned=1">Imp');
+  await page.locator('.modal--monsters [data-monster-add]').nth(3).click();
+  await page.keyboard.press('Escape');
   const card = page.locator('[data-enemy]');
   await expect(card.locator('.collapse__title')).toHaveText('<img src=x onerror="window.__pwned=1">Imp');
   await card.locator('.collapse__toggle').click();
   await expect(card.locator('[data-roll="damage"]')).toHaveCount(0);
-  expect(await page.locator('[data-list="enemies"] img').count()).toBe(0);
+  expect(await page.locator('[data-list="enemies"] img, [data-list="monsters"] img').count()).toBe(0);
   expect(await page.evaluate(() => window.__pwned)).toBeUndefined();
 });
 
@@ -180,12 +264,14 @@ test('Settings → Backup carries campaigns; restore in place, or as a copy', as
   const [original] = await stored(page);
 
   await press(page, '[data-nav="settings"]');
-  await expect(page.locator('[data-bind="backupNote"]')).toHaveText('1 character · 1 campaign');
+  // New Enemy put the Ogre in the compendium too, so the backup has one.
+  await expect(page.locator('[data-bind="backupNote"]')).toHaveText('1 character · 1 campaign · 1 monster');
   const { json } = await download(page, '[data-backup-export]');
   expect(json.meepleCharacter.schemaVersion).toBe(1);          // an optional array: no bump
   expect(json.characters).toHaveLength(1);
   expect(json.campaigns[0]).toMatchObject({ id: original.id, name: 'The Ashen Road' });
   expect(json.campaigns[0].enemies[0].name).toBe('Ogre Brute');
+  expect(json.bestiary.map((m) => m.name)).toEqual(['Ogre Brute']);   // the GM's own; never the stock three
 
   // Lose the campaign, then restore the backup in place.
   await press(page, '[data-nav="campaigns"]');
@@ -243,4 +329,33 @@ test('a backup of campaigns and no characters restores, and the Characters impor
   const [c] = await stored(page);
   expect(c).toMatchObject({ id: 'gm1', name: 'Goblin Market' });
   expect(c.enemies[0].stats.hp).toBe(6);
+});
+
+test('a backup carries the GM\'s own monsters; restoring matches them by id', async ({ page }) => {
+  await openApp(page);
+  const file = {
+    meepleCharacter: { schemaVersion: 1, exported: '2026-11-14', library: { title: 'x', version: '0' } },
+    characters: [],
+    bestiary: [{ id: 'enemy_wraith', name: 'Wraith', stats: { hp: 30, evasion: 12 } }, { id: 'stock_goblin_1', name: 'Not a goblin' }],
+  };
+  const upload = { name: 'gm.meeple.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(file)) };
+  const restore = async (button) => {
+    await press(page, '[data-nav="settings"]');
+    const [chooser] = await Promise.all([page.waitForEvent('filechooser'), press(page, '[data-file-open="characters"]')]);
+    await chooser.setFiles(upload);
+    await expect(page.locator('#file-ask-title')).toHaveText('Import these monsters?');
+    await page.locator('.modal--file-ask').getByRole('button', { name: button }).click();
+    return readResult(page);
+  };
+  expect(await restore('Restore in Place')).toMatchObject({ state: 'ok', title: 'Monsters imported' });
+  const once = await storedMonsters(page);
+  // Kept under its own id; a stock id is never shadowed — it gets a fresh one.
+  expect(once.map((m) => m.name)).toEqual(['Wraith', 'Not a goblin']);
+  expect(once[0].id).toBe('enemy_wraith');
+  expect(once[1].id).not.toBe('stock_goblin_1');
+  await page.keyboard.press('Escape');
+  // The same file again: the Wraith is already here, so it is not doubled.
+  const again = await restore('Add All as New');
+  expect(again.text).toContain('1 monster was added');
+  expect((await storedMonsters(page)).filter((m) => m.name === 'Wraith')).toHaveLength(1);
 });

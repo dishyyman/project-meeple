@@ -169,10 +169,13 @@ test('axe: Party tab with a hero, and the hero popups', async ({ page }) => {
 });
 
 // Game Master Tools, Enemies: a stat card open, its editor and its options.
-test('axe: Enemies tab with an open stat card, the editor and the options', async ({ page }) => {
+test('axe: Enemies tab with an open stat card, the Monster Compendium, the editor and the options', async ({ page }) => {
   await openApp(page);
   await newCampaign(page, 'The Ashen Road');
   await press(page, '.tabbar__btn[data-campaign-tab="enemies"]');
+  await press(page, '[data-enemy-add]');
+  await expect.poll(() => appAttr(page, 'data-modal')).toBe('monsters');
+  await expectClean(page);
   await press(page, '[data-enemy-new]');
   await expect.poll(() => appAttr(page, 'data-modal')).toBe('enemy-form');
   await expectClean(page);
