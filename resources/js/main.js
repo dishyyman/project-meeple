@@ -657,6 +657,7 @@
     enemyMenu: null,             // enemy id whose options sheet is open
     enemyDeleting: null,         // enemy id awaiting the delete confirmation
     combatDraft: null,           // { [enemyId]: { count, share } } while Start Combat is open
+    rulesFrom: null,             // { view } Rules was opened from — where its back returns
     memberMenu: null,            // fight-member id whose ✎ sheet is open
     // Character creation. `null` when the wizard is not running — the draft is
     // deliberately NOT a half-built entry in the roster, so abandoning creation
@@ -4033,6 +4034,197 @@
       <span class="effect-pick__name">${esc(def.name)}</span>
       <span class="effect-pick__effect">${esc(def.effect)}</span>
     </button>`;
+  }
+
+
+  /* ================================================================== */
+  /* BACK — one meaning, three ways in                                  */
+  /* ------------------------------------------------------------------ */
+  /* Every screen but Home has a back button, marked data-back. "Back" is  */
+  /* whatever that button does, and the three other ways of saying it all  */
+  /* press it — so they can never disagree about where back goes:          */
+  /*   · a SWIPE in from the left edge, drawn by the app — only on an      */
+  /*     iPhone home-screen install, the one place the phone has no back   */
+  /*     gesture of its own (navigator.standalone);                        */
+  /*   · the PHONE'S OWN back — Android's gesture and button, iPhone       */
+  /*     Safari's edge swipe — and the browser's Back button, through      */
+  /*     history: one "guard" entry is kept while off Home, and spending   */
+  /*     it (popstate) presses the back button and lays another.           */
+  /* A popup or the drawer is closed first, as a phone's back does.        */
+  /* ================================================================== */
+  const SWIPE_EDGE = 24;          // px from the left edge a swipe must start in
+  const SWIPE_ENGAGE = 10;        // px of travel before it is a swipe at all
+  const SWIPE_COMMIT = 0.35;      // share of the width that commits on release
+  const SWIPE_FLICK = 0.5;        // px/ms: a flick commits from anywhere past…
+  const SWIPE_FLICK_MIN = 30;     // …this many px
+  const SWIPE_SETTLE_MS = 260;    // a touch longer than the CSS transition
+
+  // The view's back button, or null on Home. Several on the sheet (one per
+  // tab's header); they all go Home, so the first will do.
+  const backButton = () => {
+    const v = app.getAttribute('data-view');
+    return v && v !== 'home' ? $(`.screen--${v} [data-back]`) : null;
+  };
+
+  // Where back will land — the screen to show underneath a swipe. null when
+  // it stays on this screen (a creation step back) or cannot be known.
+  function backTarget() {
+    const v = app.getAttribute('data-view');
+    if (v === 'create') return state.create && stepIndex(state.create.step) === 0 ? 'characters' : null;
+    const b = backButton();
+    return b && b.dataset.nav ? b.dataset.nav : null;
+  }
+
+  // A phone's back closes what is on top before it leaves the screen.
+  function closeOverlay() {
+    const modal = app.getAttribute('data-modal');
+    if (modal && modal !== 'closed') { closeModal(); return true; }
+    if (app.getAttribute('data-menu') === 'open') { app.setAttribute('data-menu', 'closed'); return true; }
+    return false;
+  }
+
+  function goBack() {
+    if (closeOverlay()) return;
+    const b = backButton();
+    if (b) b.click();
+  }
+
+  /* ---- Rules remembers where it was opened from --------------------- */
+  const BACK_LABEL = { sheet: 'Back to sheet', edit: 'Back to Edit Character', settings: 'Back to Settings' };
+  function rememberRulesFrom(from) {
+    const view = BACK_LABEL[from] ? from : 'sheet';
+    state.rulesFrom = { view };
+    const b = $('.screen--rules [data-back]');
+    if (b) { b.dataset.nav = view; b.setAttribute('aria-label', BACK_LABEL[view]); }
+  }
+
+  /* ---- history: the phone's own back -------------------------------- */
+  const hist = { guarded: false, skip: 0 };
+  function syncHistory() {
+    const away = app.getAttribute('data-view') !== 'home';
+    if (away && !hist.guarded) {
+      history.pushState({ meeple: 'back' }, '');
+      hist.guarded = true;
+    } else if (!away && hist.guarded) {
+      // Home by its own button: spend the guard ourselves, so the next
+      // back from Home leaves the app rather than doing nothing once.
+      hist.guarded = false;
+      hist.skip++;
+      history.back();
+    }
+  }
+
+  function wireHistory() {
+    window.addEventListener('popstate', () => {
+      if (hist.skip) { hist.skip--; return; }   // our own history.back()
+      hist.guarded = false;                     // the guard was just spent
+      goBack();
+      syncHistory();                            // still away? lay another
+    });
+    // Every way a view changes — a button, an import, a delete — passes
+    // through data-view, so the history follows it from one place.
+    new MutationObserver(syncHistory).observe(app, { attributes: true, attributeFilter: ['data-view'] });
+    // A reload keeps the browser's entries: landing on Home while sitting on
+    // an old guard spends it, as above.
+    if (history.state && history.state.meeple === 'back') hist.guarded = true;
+    syncHistory();
+  }
+
+  /* ---- the swipe ----------------------------------------------------- */
+  const swipe = { tracking: false, engaged: false, busy: false, x0: 0, y0: 0, dx: 0, w: 0, lastX: 0, lastT: 0, v: 0, top: null, under: null };
+  const swipeAllowed = () => navigator.standalone === true;
+  const reducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  // Not over a popup or the drawer, not mid list-drag, and not from Home.
+  function swipeBlocked() {
+    const modal = app.getAttribute('data-modal');
+    return app.getAttribute('data-view') === 'home'
+      || (modal && modal !== 'closed')
+      || app.getAttribute('data-menu') === 'open'
+      || !!state.drag;
+  }
+
+  function paintSwipe(px) {
+    app.style.setProperty('--swipe-x', `${px}px`);
+    app.style.setProperty('--swipe-p', String(Math.min(1, px / swipe.w)));
+  }
+
+  function clearSwipe() {
+    app.removeAttribute('data-swipe');
+    for (const el of $$('.screen[data-swiping]')) el.removeAttribute('data-swiping');
+    for (const k of ['--swipe-x', '--swipe-w', '--swipe-p']) app.style.removeProperty(k);
+    Object.assign(swipe, { tracking: false, engaged: false, busy: false, top: null, under: null });
+  }
+
+  function engageSwipe() {
+    const v = app.getAttribute('data-view');
+    swipe.engaged = true;
+    swipe.top = $(`.screen--${v}`);
+    const target = backTarget();
+    swipe.under = target && target !== v ? $(`.screen--${target}`) : null;
+    swipe.top?.setAttribute('data-swiping', 'top');
+    swipe.under?.setAttribute('data-swiping', 'under');
+    app.style.setProperty('--swipe-w', `${swipe.w}px`);
+    app.setAttribute('data-swipe', 'drag');
+  }
+
+  function releaseSwipe(cancelled) {
+    if (!swipe.engaged) { swipe.tracking = false; return; }
+    swipe.tracking = false;
+    const commit = !cancelled && (swipe.dx > swipe.w * SWIPE_COMMIT
+      || (swipe.v > SWIPE_FLICK && swipe.dx > SWIPE_FLICK_MIN));
+    // With nothing to slide (Reduce Motion, or a creation step back that
+    // stays on this screen) there is nothing to watch: act now.
+    if (reducedMotion() || !swipe.under) {
+      clearSwipe();
+      if (commit) goBack();
+      return;
+    }
+    swipe.busy = true;
+    app.setAttribute('data-swipe', commit ? 'out' : 'back');
+    paintSwipe(commit ? swipe.w : 0);
+    setTimeout(() => {
+      // Back FIRST, then let go of the screens: the one underneath is
+      // already where it belongs, so it becomes the view without a jump.
+      if (commit) goBack();
+      clearSwipe();
+    }, SWIPE_SETTLE_MS);
+  }
+
+  function wireSwipe() {
+    app.addEventListener('touchstart', (e) => {
+      if (!swipeAllowed() || swipe.busy || e.touches.length !== 1 || swipeBlocked()) return;
+      const t = e.touches[0];
+      const r = app.getBoundingClientRect();
+      if (t.clientX - r.left > SWIPE_EDGE) return;
+      Object.assign(swipe, { tracking: true, engaged: false, x0: t.clientX, y0: t.clientY, dx: 0,
+        w: r.width, lastX: t.clientX, lastT: e.timeStamp, v: 0 });
+    }, { passive: true });
+
+    // Not passive: once it IS a swipe, the page must not scroll under it.
+    app.addEventListener('touchmove', (e) => {
+      if (!swipe.tracking) return;
+      const t = e.touches[0];
+      const dx = t.clientX - swipe.x0, dy = t.clientY - swipe.y0;
+      if (!swipe.engaged) {
+        // Mostly vertical: a scroll that began near the edge. Let it be.
+        if (Math.abs(dy) > SWIPE_ENGAGE && Math.abs(dy) >= Math.abs(dx)) { swipe.tracking = false; return; }
+        if (dx < SWIPE_ENGAGE) return;
+        engageSwipe();
+      }
+      e.preventDefault();
+      const dt = e.timeStamp - swipe.lastT;
+      if (dt > 0) swipe.v = (t.clientX - swipe.lastX) / dt;
+      swipe.lastX = t.clientX;
+      swipe.lastT = e.timeStamp;
+      swipe.dx = Math.max(0, dx);
+      // A step back inside creation has no screen to uncover: the page only
+      // leans, so the gesture still answers the finger.
+      paintSwipe(swipe.under ? swipe.dx : swipe.dx * 0.3);
+    }, { passive: false });
+
+    app.addEventListener('touchend', () => { if (swipe.tracking) releaseSwipe(false); });
+    app.addEventListener('touchcancel', () => { if (swipe.tracking) releaseSwipe(true); });
   }
 
   /* ------------------------------------------------------------------ */
@@ -10034,18 +10226,27 @@
 
       // --- navigation between screens ---
       if (t.dataset.nav) {
+        const from = app.getAttribute('data-view');
+        /* COMING BACK is not opening. Rules and Edit Character are side trips
+           from the drawer, and back from either returns the player to the
+           screen — and the sheet tab, and the half-typed edit — they left
+           (prd.md Feature 2: "returns the player to the screen (and tab) they
+           were on"). Only a fresh visit resets. */
+        const returning = (from === 'rules' && state.rulesFrom && t.dataset.nav === state.rulesFrom.view)
+          || (from === 'edit' && t.dataset.nav === 'sheet');
         // Opening a character always lands on the Character tab. Which tab you
         // last read is state that belongs to a visit, not to the app: leaving
         // on Gear and coming back through the roster should read as opening
         // the sheet fresh, not as resuming mid-thought.
-        if (t.dataset.nav === 'sheet') app.setAttribute('data-tab', 'action');
+        if (t.dataset.nav === 'sheet' && !returning) app.setAttribute('data-tab', 'action');
         // Refilled on every entry, so an abandoned edit is discarded rather
-        // than being inherited by the next visit.
-        if (t.dataset.nav === 'edit') renderEditForm();
+        // than being inherited by the next visit — but not on the way back
+        // from a rule looked up halfway through it.
+        if (t.dataset.nav === 'edit' && !returning) renderEditForm();
         // Painted on entry rather than at load: the guide is the largest
         // thing the app renders, and a player who never opens it should
         // never pay for it.
-        if (t.dataset.nav === 'rules') renderRules();
+        if (t.dataset.nav === 'rules') { if (from !== 'rules') rememberRulesFrom(from); renderRules(); }
         // Painted on entry for the same reason Rules is, and for one more: the
         // backup line has to weigh a file built out of every character, which
         // is work nobody should pay for until they are looking at it.
@@ -10741,6 +10942,9 @@
     loadAccount();
     renderAll();
     wire();
+    // Back by swipe and by the phone's own gesture — see BACK.
+    wireSwipe();
+    wireHistory();
     // Start on Home. It used to be the sheet, from the prototype where the sheet
     // was the only screen worth showing — but Home is the screen every other one
     // is reached from, and it is the only one that reads nothing from the roster,

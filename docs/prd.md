@@ -151,13 +151,13 @@ Two kinds of content, kept separate:
 
 **Acceptance Criteria**
 - Rules can be quickly referenced and searched within the app without leaving the character.
-- Exiting the rules reference returns the player to the screen (and tab) they were on — it does not fall back to a default screen. *(Not yet met — see Known Gaps below.)*
+- Exiting the rules reference returns the player to the screen (and tab) they were on — it does not fall back to a default screen. *(Met 2026-11-14: Rules remembers whether it opened over the sheet — and which tab — Edit Character, with its draft kept, or Settings.)*
 - The compendium's installed title and version are visible in Settings.
 - An import refuses a file with a newer `schemaVersion` than the app understands, and refuses a character file with a message naming it as one.
 - Before a Replace, the player is warned if characters reference ids the new compendium lacks.
 
 **Known Gaps**
-- **Rules → back always lands on the sheet's Action tab.** The back button on the Rules screen is hard-wired to `data-nav="sheet"` ([`pages/rules.html`](../pages/rules.html)), and navigating to the sheet always resets to the Action tab (`main.js`, the `data-nav` handler). So opening the rules from the Gear tab, Edit Character, or Settings returns the player somewhere they weren't. Fix: remember the view and tab at the moment Rules opens, and restore both on back.
+- None open. *(Rules → back landing on the Action tab was fixed 2026-11-14: `rememberRulesFrom()` in `main.js` rewrites the Rules back button's target on the way in, and coming back from Rules or Edit Character keeps the sheet's tab.)*
 
 ---
 
@@ -280,7 +280,8 @@ The following are intentionally **not** part of this version. Most were tested a
 - Level up a character — Feature 3, including spell/ability acquisition and trait tiers. *(not started; the largest remaining piece of work)*
 - Dice roller — Feature 4. *(shipped)*
 - Boons and Conditions — Feature 5. *(shipped)*
-- Rules browser and search, plus compendium import/export — Feature 2. *(shipped, one known gap)*
+- Rules browser and search, plus compendium import/export — Feature 2. *(shipped)*
+- **Going back** everywhere (2026-11-14): every screen's back button is marked `data-back`, and a swipe in from the left edge (iPhone home-screen install), the phone's own back (Android's gesture and button, iPhone Safari's edge swipe) and the browser's Back all press it. A popup or the drawer closes first.
 - Character file export/import and roster backup — Feature 6. *(shipped)*
 - Characters stored on the device, surviving reloads. *(shipped)*
 

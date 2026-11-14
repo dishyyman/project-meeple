@@ -226,6 +226,8 @@
      than as lift. Used by the character tab cards. */
   --shadow-hair:  1px 1px 0 rgba(0,0,0,0.30);
   --shadow-modal: 0 18px 44px rgba(0,0,0,0.62);
+  /* The edge of a screen being swiped away, cast over the one beneath. */
+  --shadow-edge:  -10px 0 28px rgba(0,0,0,0.55);
 
   /* Hero & the elastic pull.
      --hero-h is the hero's resting height; --pull is how far past it the

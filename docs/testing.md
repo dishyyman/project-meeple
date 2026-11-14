@@ -115,7 +115,8 @@ project-meeple/
     │   ├── keyboard.spec.js   # 6 — Enter/Space on custom buttons, Shift+Enter holds
     │   ├── dialogs.spec.js    # 7 — dialog markup, focus in/kept/back, Escape (Cancel on sheets and alerts), the shell made inert
     │   ├── a11y.spec.js       # 34 — axe on every screen and main modal, incl. the Rest sheet, Downed notice, portrait sheet, the Undo toast, the campaign screens, the Party tab with a hero and its popups, a fight in progress with Start Combat, the ✎ sheet and End Fight (Chrome); collapsible tap targets, note state, reduced motion (both)
-    │   ├── rules.spec.js      # 1 — Flow 10 (marked known bug, §10)
+    │   ├── rules.spec.js      # 3 — Flow 10: back to the tab Rules was opened from; back to Edit Character with the draft kept; back to Settings
+    │   ├── back.spec.js       # 10 — Flow 20: the phone's own back through history (out of a screen, Rules to its tab, a popup or the drawer first, a creation step), and the swipe (follows the finger over the screen beneath, springs back, edge only, blocked over popups and Home, only on a home-screen install, Reduce Motion). Swipes are real touch events via Chrome DevTools, so Chrome only
     │   ├── frame.spec.js      # 5 — desktop frame: default, toggle remembered, full mode fits, narrow window locks; manifest + icons resolve; opaque iOS status bar
     │   ├── phone.spec.js      # 6 — iphone project ONLY: fills the screen, no toggle, page never scrolls (campaign screens too), both tab bars on screen, fields ≥16px, Add a Portrait takes a tap
     │   ├── combat.spec.js     # 7 — Flow 18: Start Combat (whole party, counts, sharing a turn, no surprise round), the line (pick, End Turn, a boss's three turns, the round count, kept over a reload), Armor per goblin, down greyed and skipped but pickable, the ✎ (manual heal even when down, effects, a Wound cleared, Back to Full), End Fight, a deleted stat card leaving the fight
@@ -196,7 +197,11 @@ Each flow lists the steps and the result that must hold. These are the E2E suite
 
 ### Flow 10 — Look up a rule
 **Steps:** from the sheet's Gear tab, open Rules from the menu → search → go back.
-**Expected:** results filter as you type; back returns to the Gear tab. **Known bug:** back currently lands on the Action tab (`prd.md` Feature 2, Known Gaps). `rules.spec.js` tests the full flow and is marked as an expected failure until that's fixed (§10).
+**Expected:** results filter as you type; back returns to the Gear tab. Opened from Edit Character, back returns there with the draft kept; from Settings, to Settings. *(Was a known bug until 2026-11-14.)*
+
+### Flow 20 — Going back (swipe, and the phone's own back)
+**Steps:** Characters → the browser's/phone's Back. Gear tab → drawer → Rules → Back, Back. Open a popup → Back; open the drawer → Back. On an iPhone home-screen install: swipe in from the left edge on Characters, slowly, then let go; a short swipe; a swipe from mid-screen; a swipe over a popup; with Reduce Motion on.
+**Expected:** Back does exactly what the screen's back button does (Rules returns to the Gear tab); a popup or the drawer closes first; Back to Home leaves nothing to spend there. The swipe follows the finger with the screen beneath showing and dimmed, commits past a third of the width or on a flick, springs back otherwise; it starts only within 24px of the edge, never over a popup, the drawer or Home, and only on a home-screen install (elsewhere the phone's own gesture does it). Under Reduce Motion nothing slides.
 
 ### Flow 11 — Delete a character
 **Steps:** Characters → edit → delete → confirm → reload.
@@ -260,7 +265,8 @@ Each flow lists the steps and the result that must hold. These are the E2E suite
 | Hostile ids in a character file (attributes and selectors, not just text) | `e2e/security.spec.js` |
 | Screen-reader state of journal notes; reduced motion | `e2e/a11y.spec.js` |
 | Flow 12 (hostile files), CSP, import size limit | `e2e/security.spec.js` |
-| Flow 10 (rules lookup) — written, marked known bug | `e2e/rules.spec.js`, §10 |
+| Flow 10 (rules lookup, back to where it opened) | `e2e/rules.spec.js` |
+| Flow 20 (going back: history and the swipe) | `e2e/back.spec.js` |
 | Popup shapes: sheet, alert, notice — layout, a visible way out, Escape is Cancel, general wording | `e2e/popups.spec.js` |
 | Flow 13 (portrait add / adjust / remove → Undo), by real clicks so a covered control fails | `e2e/portrait.spec.js`; the tap on a phone in `e2e/phone.spec.js` |
 | Flow 14 (campaigns: create, rename, tabs, reorder, delete, tampered save, storage refusing writes) | `e2e/campaigns.spec.js` |
@@ -335,7 +341,7 @@ A change is done when:
 8. ~~**Flow 9**~~ — done 2026-11-13: Add, Replace and Restore with real reloads, plus malformed compendiums and the launch safety net (`compendium.spec.js`).
 9. **Open — readable play tests:** Flows 3, 4, 5 as plain assertions ("health reads 4 / 9"), so a failure names the rule rather than a snapshot diff.
 10. **Open — extract save/load validation** (`applySave()`, file parsers) from `main.js` and unit-test the clamping in `database.md` A6.
-11. ~~**Flow 10**~~ — test written 2026-11-04, marked as a known bug until the Rules back button is fixed (§10).
+11. ~~**Flow 10**~~ — test written 2026-11-04, marked as a known bug; fixed and unmarked 2026-11-14.
 12. ~~**Automated accessibility**~~ — done 2026-11-13: axe-core, strict, zero violations (`a11y.spec.js`); keyboard (`keyboard.spec.js`) and modal focus (`dialogs.spec.js`).
 13. ~~**Fail on any page error, Safari, failure reports**~~ — done 2026-11-04: `helpers/test.js`, the `safari` project, HTML report + failure screenshots.
 14. ~~**Modals as dialogs**~~ — done 2026-11-13: dialog role and name, focus moved in on open, kept inside, returned on close (`dialogs.spec.js`).
@@ -359,4 +365,4 @@ test('…', async ({ page }) => {
 
 | Bug | Recorded in | Test |
 |---|---|---|
-| Rules → back lands on the Action tab, not the tab the player came from | `prd.md` Feature 2, Known Gaps | `e2e/rules.spec.js` (Flow 10) |
+| *(none open — Rules → back was fixed 2026-11-14)* | | |

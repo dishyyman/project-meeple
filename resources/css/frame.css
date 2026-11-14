@@ -79,6 +79,43 @@
 .app[data-view="rules"]      .screen--rules       { display: flex; flex-direction: column; }
 .app[data-view="settings"]   .screen--settings    { display: flex; flex-direction: column; }
 
+/* ---- swiping back (main.js, BACK) ----
+   While a swipe is under way, the screen being left and the one it returns
+   to are both on show, stacked: main.js marks them data-swiping="top" and
+   "under" and feeds the finger in as --swipe-x (px), --swipe-w (the app's
+   width) and --swipe-p (0–1). The top screen follows the finger and casts
+   its edge over the one beneath, which slides in from a third of the way
+   left and brightens as it is uncovered — the platform's own back gesture,
+   so it reads as "back" without being taught. data-swipe on .app says which
+   phase: "drag" follows the finger exactly; "out" and "back" animate the
+   rest of the way (gone, or snapped home). Filed here because this section
+   is the router: which screens are showing is decided in one place. */
+.screen[data-swiping] { position: absolute; inset: 0; width: 100%; }
+.screen[data-swiping="top"] {
+  z-index: 2;
+  transform: translateX(var(--swipe-x, 0px));
+  box-shadow: var(--shadow-edge);
+}
+.screen[data-swiping="under"] {
+  z-index: 1; display: flex; flex-direction: column;
+  transform: translateX(calc((var(--swipe-x, 0px) - var(--swipe-w, 0px)) * 0.3));
+  filter: brightness(calc(0.55 + 0.45 * var(--swipe-p, 0)));
+  pointer-events: none;
+}
+/* The three block-laid screens keep their own display underneath too. */
+.screen--home[data-swiping="under"],
+.screen--characters[data-swiping="under"],
+.screen--campaigns[data-swiping="under"] { display: block; }
+.app[data-swipe="out"] .screen[data-swiping],
+.app[data-swipe="back"] .screen[data-swiping] {
+  transition: transform 0.24s cubic-bezier(0.2, 0.8, 0.2, 1), filter 0.24s ease;
+}
+/* Reduce Motion: nothing slides. A swipe far enough simply goes back. */
+@media (prefers-reduced-motion: reduce) {
+  .screen[data-swiping] { transform: none; filter: none; transition: none; box-shadow: none; }
+  .screen[data-swiping="under"] { display: none; }
+}
+
 .tabpage { display: none; }
 .app[data-tab="action"]    .tabpage--action    { display: block; }
 .app[data-tab="character"] .tabpage--character { display: block; }

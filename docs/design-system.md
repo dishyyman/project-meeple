@@ -317,6 +317,7 @@ Hard offset shadows are the theme's woodcut signature. Floating layers use soft 
 | `--shadow-soft` | `2px 2px 0 rgba(0,0,0,.38)` | Buttons |
 | `--shadow-card` | `3px 3px 0 rgba(0,0,0,.45)` | Raised cards |
 | `--shadow-modal` | `0 18px 44px rgba(0,0,0,.62)` | Modals |
+| `--shadow-edge` | `-10px 0 28px rgba(0,0,0,.55)` | The edge of a screen being swiped back |
 
 **Rules:** a row inside a bordered container takes no shadow (it reads as a seam). Pressed buttons drop their shadow and shift `1px, 1px`.
 
@@ -380,6 +381,7 @@ A **fighter** (Combat tab) is drawn from the same parts (`vitalParts()` in `main
 | **Mobile navigation** | The character sheet has a bottom tab bar: Action · Character · Gear. Labels are Marcellus `--fs-caption` uppercase. Inactive is `--ink-faint`; active is `--accent-bright`. Top edge is a `--rule-strong` line. |
 | **Sidebar** | None — the app is a single phone-width column. |
 | **Modals** | Centered card over a scrim; one open at a time (`data-modal` on `.app`). Each card is a named `role="dialog"`: focus moves onto the dialog when it opens (or stays on the field its opener focused), Tab stays inside it, the page behind is `inert` (and so is the shell outside `.app`, such as the frame toggle), and focus returns to the opener on close. Escape closes every sheet, alert and notice (§12.1) and any modal whose scrim is its only exit (roll result, calculator); forms keep Escape inert so a half-filled form isn't lost. |
+| **Back** | Every screen but Home has a back button marked `data-back`; "back" is whatever it does. A **swipe in from the left edge** (within 24px) presses it on an iPhone home-screen install — the screen follows the finger, casting `--shadow-edge` over the one it returns to, which slides in from a third of the way left and brightens; past a third of the width or on a flick it goes back, otherwise it springs home. Elsewhere the phone's own back (Android, iPhone Safari) and the browser's Back press it through history. A popup or the drawer closes first. Reduce Motion: nothing slides. Rules' back returns to where Rules opened (the sheet and its tab, Edit Character, Settings). |
 | **Mechanism** | Screens, tabs, modals and the drawer switch via `data-view`, `data-tab`, `data-modal`, `data-menu` on `.app`; CSS decides what shows. A campaign's tabs use `data-campaign-tab`, never `data-tab`, so the two screens can't set each other's tab. |
 | **Lists** | Characters and Campaigns (Game Master Tools) are built from the same parts: `.topbar` with an Edit / Done `.text-btn`, `.persona-card` rows, a `.roster-lead` line while empty, and a trailing `.btn-dashed--lead`. Edit mode is `[data-editing]` on the **list** and the empty-list accent is `[data-empty]` on the **screen**, never on `.app`, so one list's state can't show on the other. A new list screen reuses these and adds only what it lacks (a campaign's crest: `.persona-card__portrait--crest`). |
 

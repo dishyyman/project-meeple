@@ -39,6 +39,7 @@ The app deliberately keeps behavior, structure, and appearance apart. Preserve t
 
 - **JS emits class names and toggles `data-*`; CSS decides all visuals.** Never reintroduce inline styles.
 - Views/tabs/modals switch via `data-view` / `data-tab` / `data-modal` on `.app`.
+- **A screen's back button carries `data-back`.** Swipe-back, the phone's own back and the browser's Back all press it (`docs/architecture.md` Decision 13) — a new screen marks its back button and gets all three.
 - **One dice engine.** All rolls (calculator, quick to-hit/damage) go through `evaluateDice()`. Don't write a second implementation.
 - **Never use `eval()`.** Dice expressions are parsed by the hand-written recursive-descent parser. Keep the limits (1–100 dice, 2–1000 sides, `floor()` the total).
 - **One mechanics engine.** Game arithmetic goes in `mechanics.js` (with a unit test), never in `main.js` or a render function. `rules.js` is the Player's Guide *text*; `mechanics.js` is the *math*.

@@ -307,6 +307,12 @@ project-meeple/              # repo root = site root (GitHub Pages serves it as-
 - **No initiative order is computed.** The GM picks who acts next from whoever has turns left; a round resets everyone (bosses can have several turns).
 **Still open, for the online version:** backend and auth (Decision 9); campaign codes (short, no look-alike characters, revocable, join attempts rate-limited); what players see (assumed: each other's vitals, not enemy stats); offline play with replay on reconnect; throttling bursts of taps into one operation; who owns a hero's vitals while it is joined (assumed: the server copy, with the device caching); the CSP's `connect-src`, which today forbids any network call (`security.md`); portraits not synced at first.
 
+### Decision 13 — Back is one button, pressed four ways (2026-11-14)
+**Context:** the designer asked for swipe-back on mobile. The app had no history entries, so Android's back and iPhone Safari's edge swipe left the app altogether.
+**Decision:** each screen's back button carries `data-back`, and "back" means pressing it. The browser's Back, Android's gesture and button, and iPhone Safari's edge swipe arrive as `popstate`: the app keeps exactly one "guard" history entry while off Home (`syncHistory()`, watching `data-view`), and spending it closes a popup or the drawer, or presses the button. On an iPhone home-screen install (`navigator.standalone`) the phone has no back gesture, so the app draws its own edge swipe (`wireSwipe()`); everywhere else it does not, so two gestures never fight over one swipe.
+**Alternatives:** a full history stack of screens (rejected: back buttons with fixed targets — Settings → Home even when opened from the sheet — would disagree with the browser's idea of "previous", and the two "backs" would land in different places); the app's swipe everywhere (rejected: it fights Safari's and Android's own).
+**Consequences:** every view change, however caused, goes through `data-view`, so the history follows from one observer. A new screen gets back for free by marking its back button `data-back`. Live values for the swipe go in as CSS custom properties (`--swipe-x`), the pattern list drags and the portrait crop already use.
+
 ### Decision 11 — Game mechanics extracted into `mechanics.js` (2026-10-05)
 **Context:** the rules lived inside `main.js`'s closure, reading a shared `character` — impossible to unit-test without a browser page.
 **Alternatives:** test only through the browser; split all of `main.js` into ES modules.
