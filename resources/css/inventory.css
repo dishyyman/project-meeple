@@ -215,33 +215,6 @@
      (error for a missing name, warn for an untrained weapon), which sets it. */
 }
 
-/* A stack of choices, for a modal that offers destinations rather than a
-   decision. Distinct from .form-actions on purpose: a row of equal buttons
-   reads as "pick one and commit", a stack reads as "here is what you can do". */
-.menu-stack { display: flex; flex-direction: column; gap: var(--space-2); margin-bottom: var(--space-3-5); }
-.menu-stack__btn {
-  width: 100%; text-align: left;
-  border: 1.5px solid var(--line-warm); border-radius: var(--r-sm);
-  background: var(--bg-card); padding: var(--space-3) var(--space-3-5);
-  font-family: var(--font-label); font-size: var(--fs-note);
-  letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-soft);
-}
-/* Nothing below the stack, so its bottom margin would be dead space against
-   the card's own padding. */
-.menu-stack--last { margin-bottom: 0; }
-/* A row that explains itself: the label in the stack's own label face, the
-   effect beneath it in body text, since it is a sentence rather than a
-   control. Only rows that pass a note become two lines. */
-.menu-stack__label { display: block; }
-.menu-stack__note {
-  display: block; margin-top: var(--space-1);
-  font-family: var(--font-body); font-size: var(--fs-note);
-  letter-spacing: 0; text-transform: none; color: var(--ink-muted);
-}
-.menu-stack__btn:active { transform: translateY(1px); background: var(--bg-parchment2); }
-/* Destructive choice takes the oxblood, the same signal .btn-save--danger uses. */
-.menu-stack__btn--danger { color: var(--danger-bright); border-color: var(--danger-bright); }
-
 /* button pair, laid out like the calculator's Heal / Damage row */
 .form-actions { display: flex; gap: var(--space-2-5); }
 .btn-ghost,
@@ -334,6 +307,11 @@
 /* 15. BOONS & CONDITIONS — stack tracker + picker                    */
 /* ----------------------------------------------------------------- */
 .effects { display: flex; flex-direction: column; gap: var(--space-2); }
+
+/* The tick alert carries both icons; data-tick on its card (written by
+   openTick()) says which one shows — a heart for a heal, a flame for damage. */
+.modal--tick [data-tick="heal"] .tick__icon--damage,
+.modal--tick [data-tick="damage"] .tick__icon--heal { display: none; }
 
 /* Hairline outline, matching the rest of the character tab and the Gear tab
    rows. This one gains the most from it: the coloured spine on ::before is

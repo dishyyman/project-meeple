@@ -31,16 +31,17 @@
 
     <!-- ================= DELETE NOTE CONFIRM ================= -->
     <!-- A note is prose the player typed by hand and nothing else can rebuild
-         it, so this is the one delete in the app that stops to ask. -->
+         it, so this is the one delete in the app that stops to ask. An ALERT
+         (dice.css §11a): the question, then Cancel | Delete. -->
     <div class="modal modal--note-del">
       <div class="modal__scrim" data-modal="close"></div>
-      <div class="modal__card" role="dialog" aria-modal="true" aria-labelledby="note-del-title" tabindex="-1">
-        <div class="modal__head">
-          <div class="modal__title" id="note-del-title">Delete note?</div>
-          <button class="modal__close" data-modal="close" aria-label="Close"></button>
-        </div>
-        <p class="confirm__text">&ldquo;<span data-bind="noteDelTitle"></span>&rdquo; will be removed for good.</p>
-        <div class="form-actions">
+      <div class="modal__card alert" role="dialog" aria-modal="true" aria-labelledby="note-del-title" aria-describedby="note-del-text" tabindex="-1">
+        <span class="alert__icon alert__icon--danger" aria-hidden="true">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
+        </span>
+        <div class="alert__title" id="note-del-title">Delete note?</div>
+        <p class="alert__text" id="note-del-text">&ldquo;<span data-bind="noteDelTitle"></span>&rdquo; will be removed for good.</p>
+        <div class="alert__actions">
           <button class="btn-ghost" data-modal="close">Cancel</button>
           <button class="btn-save btn-save--danger" data-note-del-confirm>Delete</button>
         </div>
@@ -51,21 +52,24 @@
     <!-- The most destructive act in the app. A character is a sheet, a
          portrait and a journal, none of which the app can rebuild, so the
          wording names all three and says plainly that it is permanent — and
-         points at the export beside it, which is the only way back. -->
+         points at the export beside it, which is the only way back. The
+         button says just "Delete": the question above it and the warning
+         beneath already say "permanently", and a one-word verb keeps the
+         Cancel | Delete pair on one line. -->
     <div class="modal modal--char-del">
       <div class="modal__scrim" data-modal="close"></div>
-      <div class="modal__card" role="dialog" aria-modal="true" aria-labelledby="char-del-title" tabindex="-1">
-        <div class="modal__head">
-          <div class="modal__title" id="char-del-title">Delete character?</div>
-          <button class="modal__close" data-modal="close" aria-label="Close"></button>
-        </div>
-        <p class="confirm__text"><strong data-bind="charDelName"></strong> will be deleted from this device
+      <div class="modal__card alert" role="dialog" aria-modal="true" aria-labelledby="char-del-title" aria-describedby="char-del-text" tabindex="-1">
+        <span class="alert__icon alert__icon--danger" aria-hidden="true">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
+        </span>
+        <div class="alert__title" id="char-del-title">Delete character?</div>
+        <p class="alert__text" id="char-del-text"><strong data-bind="charDelName"></strong> will be deleted from this device
           &mdash; the sheet, the portrait and every journal note.</p>
-        <p class="confirm__text status status--warn">This is permanent and cannot be undone. If you may want
-          this character back, cancel and export them first.</p>
-        <div class="form-actions">
+        <p class="alert__text status status--warn">This is permanent. If you may want this character back,
+          cancel and export them first.</p>
+        <div class="alert__actions">
           <button class="btn-ghost" data-modal="close">Cancel</button>
-          <button class="btn-save btn-save--danger" data-char-del-confirm>Delete Permanently</button>
+          <button class="btn-save btn-save--danger" data-char-del-confirm>Delete</button>
         </div>
       </div>
     </div>
@@ -74,26 +78,33 @@
     <!-- Opened by the damage cascade, never by a button. Taking the last Wound
          is the one state change the player does not choose and cannot miss the
          consequences of, so the app says it out loud rather than leaving them
-         to notice a full pip row and an empty bar. Acknowledge-only: there is
-         nothing to confirm or undo, the damage is already applied. -->
+         to notice a full pip row and an empty bar. A NOTICE: nothing to
+         confirm or undo, the damage is already applied — so one plain OK, not
+         a red button (red means "this destroys something", and pressing it
+         destroys nothing).
+
+         General wording, no numbers: what being down DOES, as a short list,
+         the same every time. -->
     <div class="modal modal--downed">
       <div class="modal__scrim" data-modal="close"></div>
-      <div class="modal__card" role="dialog" aria-modal="true" aria-labelledby="downed-title" tabindex="-1">
-        <div class="modal__head">
-          <div class="modal__title" id="downed-title">You are downed!</div>
-          <button class="modal__close" data-modal="close" aria-label="Close"></button>
-        </div>
-        <p class="confirm__text status status--warn">Your <strong data-bind="downedWounds"></strong> Wound is
-          taken and there is no Health left to come back on.</p>
-        <p class="confirm__text">While you are down, your Evasion and Fortitude fall back to their base and
-          your Armor and Speed are zero. Further damage cannot take you lower &mdash; clearing a Wound is
-          what gets you back up.</p>
-        <!-- Only when the Wound actually took some. Empty otherwise, and the
-             rule collapses it, so a character carrying no Boons sees no line
-             about Boons. -->
-        <p class="confirm__text status status--warn" data-bind="downedBoons"></p>
-        <div class="form-actions">
-          <button class="btn-save btn-save--danger" data-modal="close">Understood</button>
+      <div class="modal__card alert" role="dialog" aria-modal="true" aria-labelledby="downed-title" aria-describedby="downed-text" tabindex="-1">
+        <span class="alert__icon alert__icon--danger" aria-hidden="true">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="m12.5 17-.5-1-.5 1h1z"/><path d="M15 22a1 1 0 0 0 1-1v-1a2 2 0 0 0 1.56-3.25 8 8 0 1 0-11.12 0A2 2 0 0 0 8 20v1a1 1 0 0 0 1 1z"/><circle cx="15" cy="12" r="1"/><circle cx="9" cy="12" r="1"/></svg>
+        </span>
+        <div class="alert__title" id="downed-title">You&rsquo;re downed</div>
+        <p class="alert__text" id="downed-text">Your last Wound is taken and there&rsquo;s no Health left.</p>
+        <ul class="alert__list">
+          <li>Evasion and Fortitude fall to their base</li>
+          <li>Armor and Speed are zero</li>
+          <li>Further damage can&rsquo;t take you lower</li>
+        </ul>
+        <!-- Only when the Wound actually took some. Empty otherwise, and
+             .status:empty collapses it, so a character carrying no Boons sees
+             no line about Boons. -->
+        <p class="alert__text status status--warn" data-bind="downedBoons"></p>
+        <p class="alert__meta">Clearing a Wound gets you back up.</p>
+        <div class="alert__actions">
+          <button class="btn-save" data-modal="close">OK</button>
         </div>
       </div>
     </div>
@@ -102,7 +113,7 @@
     <!-- Shown after a file is read, whether it worked or not. An import that
          silently half-succeeded would be worse than one that failed loudly,
          so this states what arrived AND what had to be restored from the file
-         rather than resolved against the local library. -->
+         rather than resolved against the local library. A NOTICE. -->
     <div class="modal modal--import">
       <div class="modal__scrim" data-modal="close"></div>
       <!-- `data-import-state` is "ok" or "error", written by showImportResult().
@@ -111,19 +122,14 @@
            stylesheet from this one attribute, the same way data-resource tells
            the heal/damage card which vital it is looking at.
 
-           No close X and no second button. This window reports a result and
-           offers one way out of it, and a dialog whose entire content is "here
-           is what happened" does not need two further controls that both mean
-           "I have read it" — the scrim closes it too, which is the gesture a
-           phone user reaches for anyway. The same reasoning the Rest popup is
-           built on. Retrying a bad file is the Import button on the Characters
-           page, where the player already is. -->
-      <div class="modal__card" role="dialog" aria-modal="true" aria-labelledby="import-title" tabindex="-1" data-import-state="ok">
+           One way out. Retrying a bad file is the Import button on the
+           Characters page, where the player already is. -->
+      <div class="modal__card alert" role="dialog" aria-modal="true" aria-labelledby="import-title" aria-describedby="import-text" tabindex="-1" data-import-state="ok">
         <div class="import__mark" aria-hidden="true"></div>
-        <div class="import__title" id="import-title" data-bind="importTitle"></div>
-        <p class="confirm__text" data-bind="importText"></p>
+        <div class="alert__title" id="import-title" data-bind="importTitle"></div>
+        <p class="alert__text" id="import-text" data-bind="importText"></p>
         <div class="import__notes" data-list="importNotes"></div>
-        <div class="form-actions">
+        <div class="alert__actions">
           <button class="btn-save" data-modal="close" data-bind="importDismiss"></button>
         </div>
       </div>
@@ -138,31 +144,29 @@
          something sight unseen is the same decision with the useful half
          removed.
 
-         No Cancel button. The scrim and the close cross both decline, which is
-         what every other window in the app already does and what a phone user
-         reaches for anyway — see the Rest popup. The buttons here are
-         therefore the ways of saying yes, and none of them is a default: the
-         destructive one carries the danger fill, the same as Delete
-         Permanently.
+         A SHEET (dice.css §11a): the rows are the ways of saying yes, none of
+         them a default; the destructive one is red, and Cancel sits apart at
+         the foot.
 
-         Everything in it — the title, the prose, the notes and the buttons
+         Everything in it — the title, the prose, the notes and the rows
          themselves — is written by askFile() from one descriptor, which is
          what lets the same window put the two-way import question and the
          one-way "restore the built-in compendium" question without either
          needing a dialog of its own. -->
-    <div class="modal modal--file-ask">
+    <div class="modal modal--file-ask modal--action-sheet">
       <div class="modal__scrim" data-modal="close"></div>
-      <div class="modal__card" role="dialog" aria-modal="true" aria-labelledby="file-ask-title" tabindex="-1">
-        <div class="modal__head">
-          <div class="modal__title" id="file-ask-title" data-bind="fileAskTitle"></div>
-          <button class="modal__close" data-modal="close" aria-label="Close"></button>
+      <div class="action-sheet" role="dialog" aria-modal="true" aria-labelledby="file-ask-title" tabindex="-1">
+        <div class="action-sheet__grab" aria-hidden="true"></div>
+        <div class="action-sheet__head">
+          <div class="action-sheet__title" id="file-ask-title" data-bind="fileAskTitle"></div>
+          <p class="action-sheet__sub" data-bind="fileAskText"></p>
         </div>
-        <p class="confirm__text" data-bind="fileAskText"></p>
         <!-- Shares .import__notes with the result window: the same list of
              statements about the same file, so it scrolls and reads the same
              way in both places. -->
         <div class="import__notes" data-list="fileAskNotes"></div>
-        <div class="form-actions form-actions--stack" data-list="fileAskActions"></div>
+        <div class="action-sheet__list" data-list="fileAskActions"></div>
+        <button class="action-sheet__cancel" data-modal="close">Cancel</button>
       </div>
     </div>
 
@@ -216,64 +220,77 @@
 
 
     <!-- ================= REST =================
-         Two choices and nothing else. No close button and no Cancel: every
-         other modal in the app already closes on its scrim, and a window whose
-         entire content is "pick one of these two" does not need two further
-         controls whose only job is to not pick either. Tapping outside is the
-         decline, which is the gesture a phone user reaches for anyway.
+         A SHEET (dice.css §11a): pick one of two, and the pick is the commit.
+         Cancel at the foot, Escape and the scrim all decline.
 
-         Each choice states its own effect. A player should not have to hold
-         the rest rules in their head to tell the two buttons apart, and the
-         note is also the only place the half-Mana rule is written where the
-         person spending it will see it. -->
-    <div class="modal modal--rest">
+         Each row says what it does in words, not numbers — "Half Mana back",
+         not "+7 Mana". General wording reads the same for every character and
+         at every level, so a player learns it once; the arithmetic lives in
+         mechanics.js (rest()) and the bars show the result the moment it
+         lands. The line under the title carries the one rule both rests share,
+         so neither row has to repeat it. The two notes are built the same
+         way — HP, then Mana, then Wounds/Patches — so the rows compare at a
+         glance. -->
+    <div class="modal modal--rest modal--action-sheet">
       <div class="modal__scrim" data-modal="close"></div>
-      <div class="modal__card" role="dialog" aria-modal="true" aria-labelledby="rest-title" tabindex="-1">
-        <div class="modal__head">
-          <div class="modal__title" id="rest-title">Rest</div>
+      <div class="action-sheet" role="dialog" aria-modal="true" aria-labelledby="rest-title" tabindex="-1">
+        <div class="action-sheet__grab" aria-hidden="true"></div>
+        <div class="action-sheet__head">
+          <div class="action-sheet__title" id="rest-title">Rest</div>
+          <p class="action-sheet__sub">Clears Boons and Conditions.</p>
         </div>
-        <div class="menu-stack menu-stack--last">
-          <button class="menu-stack__btn" data-rest="short">
-            <span class="menu-stack__label">Short Rest</span>
-            <span class="menu-stack__note" data-bind="restShortNote"></span>
+        <div class="action-sheet__list">
+          <button class="action-sheet__row" data-rest="short">
+            <span class="action-sheet__icon" aria-hidden="true">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 22h14"/><path d="M5 2h14"/><path d="M17 22v-4.172a2 2 0 0 0-.586-1.414L12 12l-4.414 4.414A2 2 0 0 0 7 17.828V22"/><path d="M7 2v4.172a2 2 0 0 0 .586 1.414L12 12l4.414-4.414A2 2 0 0 0 17 6.172V2"/></svg>
+            </span>
+            <span class="action-sheet__text">
+              <span class="action-sheet__label">Short Rest</span>
+              <span class="action-sheet__note">Full HP · Half Mana back · Wounds stay</span>
+            </span>
+            <svg class="action-sheet__chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
           </button>
-          <button class="menu-stack__btn" data-rest="long">
-            <span class="menu-stack__label">Long Rest</span>
-            <span class="menu-stack__note">Health and Mana full, Wounds cleared, Patches restored</span>
+          <!-- The drawer's bed: the Rest entry and the longest rest share a face. -->
+          <button class="action-sheet__row" data-rest="long">
+            <span class="action-sheet__icon" aria-hidden="true">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 20v-8a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v8"/><path d="M5 10V6a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v4"/><path d="M3 18h18"/></svg>
+            </span>
+            <span class="action-sheet__text">
+              <span class="action-sheet__label">Long Rest</span>
+              <span class="action-sheet__note">Full HP and Mana · Wounds cleared · Patches refilled</span>
+            </span>
+            <svg class="action-sheet__chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
           </button>
         </div>
+        <button class="action-sheet__cancel" data-modal="close">Cancel</button>
       </div>
     </div>
 
     <!-- ================= SPEND A PATCH =================
          Reached by HOLDING a Patch box, never by tapping one — a tap is the
-         plain tally. Built like the Rest menu because it is the same kind of
-         decision: one irreversible thing, stated before you commit to it.
+         plain tally. An ALERT (dice.css §11a): a yes-or-no, so Cancel and the
+         verb sit side by side.
 
-         The note is assembled in openPatch() from what a Patch would ACTUALLY
-         do right now — there is no point offering "Reset HP to full" to
-         someone already at full — so the dialog never promises an effect it
-         will not deliver. -->
+         General wording, the same every time: a player reads it once and
+         knows what a Patch is. openPatch() still refuses to open when a Patch
+         would do nothing (canSpendPatch), so the promise is never empty.
+
+         The AP line is a RULE the player applies, not a charge the app makes:
+         the price is conditional on being in combat and the app has no notion
+         of that. See spendPatch() in main.js for the ruling in full. -->
     <div class="modal modal--patch">
       <div class="modal__scrim" data-modal="close"></div>
-      <div class="modal__card" role="dialog" aria-modal="true" aria-labelledby="patch-title" tabindex="-1">
-        <div class="modal__head">
-          <div class="modal__title" id="patch-title">Spend a Patch</div>
-          <button class="modal__close" data-modal="close" aria-label="Close"></button>
+      <div class="modal__card alert" role="dialog" aria-modal="true" aria-labelledby="patch-title" aria-describedby="patch-text" tabindex="-1">
+        <span class="alert__icon" aria-hidden="true">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M13.5 19.5 12 21l-7-7c-1.5-1.45-3-3.2-3-5.5A5.5 5.5 0 0 1 7.5 3c1.76 0 3 .5 4.5 2 1.5-1.5 2.74-2 4.5-2a5.5 5.5 0 0 1 5.402 6.5"/><path d="M15 15h6"/><path d="M18 12v6"/></svg>
+        </span>
+        <div class="alert__title" id="patch-title">Spend a Patch?</div>
+        <p class="alert__text" id="patch-text">Restores your Health to full and patches one Wound.</p>
+        <p class="alert__meta">Costs 2 AP in combat — take it from your Action row.</p>
+        <div class="alert__actions">
+          <button class="btn-ghost" data-modal="close">Cancel</button>
+          <button class="btn-save" data-patch-confirm>Spend</button>
         </div>
-        <div class="menu-stack menu-stack--last">
-          <button class="menu-stack__btn" data-patch-confirm>
-            <span class="menu-stack__label">Spend Patch</span>
-            <span class="menu-stack__note" data-bind="patchGainNote"></span>
-          </button>
-        </div>
-        <!-- What it costs, then what you have left. The AP line is a RULE
-             the player applies, not a charge the app makes: the price is
-             conditional on being in combat and the app has no notion of that,
-             so it says so plainly and leaves the charge to the table.
-             See spendPatch() in main.js for the ruling in full. -->
-        <p class="patch-dialog__left" data-bind="patchCost"></p>
-        <p class="patch-dialog__left patch-dialog__left--tight" data-bind="patchRemaining"></p>
       </div>
     </div>
 
@@ -282,43 +299,49 @@
          bar refills is the sheet changing under the player. Shown only when
          the Wound actually took some, and only when it did not also down
          them — the Downed notice carries the same sentence, and two windows
-         for one event is one too many. -->
+         for one event is one too many. A NOTICE: one OK. -->
     <div class="modal modal--boonloss">
       <div class="modal__scrim" data-modal="close"></div>
-      <div class="modal__card" role="dialog" aria-modal="true" aria-labelledby="boonloss-title" tabindex="-1">
-        <div class="modal__head">
-          <div class="modal__title" id="boonloss-title">Boons lost</div>
-          <button class="modal__close" data-modal="close" aria-label="Close"></button>
-        </div>
-        <p class="confirm__text status status--warn" data-bind="boonLossText"></p>
-        <p class="confirm__text">Taking a Wound clears every Boon on you. Conditions are unaffected.</p>
-        <div class="form-actions">
-          <button class="btn-save" data-modal="close">Understood</button>
+      <div class="modal__card alert" role="dialog" aria-modal="true" aria-labelledby="boonloss-title" aria-describedby="boonloss-text" tabindex="-1">
+        <span class="alert__icon alert__icon--warn" aria-hidden="true">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+        </span>
+        <div class="alert__title" id="boonloss-title">Boons lost</div>
+        <p class="alert__text" id="boonloss-text">Taking a Wound cleared your Boons.</p>
+        <p class="alert__meta">Conditions are unaffected.</p>
+        <div class="alert__actions">
+          <button class="btn-save" data-modal="close">OK</button>
         </div>
       </div>
     </div>
 
     <!-- ================= EFFECT TICK =================
          Reached from the button on an effect row — Regeneration's Heal, or
-         the damage a Bleed / Burn / Poison / Confusion stack deals. Built like
-         the Patch dialog because it is the same kind of decision: one thing
-         that moves a bar, stated before you commit to it.
+         the damage a Bleed / Burn / Poison / Confusion stack deals. An ALERT:
+         one thing that moves a bar, stated before you commit to it.
+
+         The one dialog that keeps its numbers. The app does the multiplying
+         (stacks × per-stack) so the player doesn't have to, and the total IS
+         the decision. openTick() writes the title, the verb with its total
+         and the working, and sets data-tick on the card so the stylesheet
+         shows a heart for healing and a flame for damage.
 
          The app does NOT decide when this happens. The rules text on the row
-         says "at the end of your turn"; the player knows when that is. All
-         the button does is the multiplication. -->
+         says "at the end of your turn"; the player knows when that is. -->
     <div class="modal modal--tick">
       <div class="modal__scrim" data-modal="close"></div>
-      <div class="modal__card" role="dialog" aria-modal="true" aria-labelledby="tick-title" tabindex="-1">
-        <div class="modal__head">
-          <div class="modal__title" id="tick-title" data-bind="tickTitle"></div>
-          <button class="modal__close" data-modal="close" aria-label="Close"></button>
-        </div>
-        <div class="menu-stack menu-stack--last">
-          <button class="menu-stack__btn" data-tick-confirm>
-            <span class="menu-stack__label" data-bind="tickAction"></span>
-            <span class="menu-stack__note" data-bind="tickNote"></span>
-          </button>
+      <div class="modal__card alert" role="dialog" aria-modal="true" aria-labelledby="tick-title" aria-describedby="tick-note" tabindex="-1" data-tick="damage">
+        <span class="alert__icon tick__icon tick__icon--heal" aria-hidden="true">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M13.5 19.5 12 21l-7-7c-1.5-1.45-3-3.2-3-5.5A5.5 5.5 0 0 1 7.5 3c1.76 0 3 .5 4.5 2 1.5-1.5 2.74-2 4.5-2a5.5 5.5 0 0 1 5.402 6.5"/><path d="M15 15h6"/><path d="M18 12v6"/></svg>
+        </span>
+        <span class="alert__icon alert__icon--danger tick__icon tick__icon--damage" aria-hidden="true">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>
+        </span>
+        <div class="alert__title" id="tick-title" data-bind="tickTitle"></div>
+        <p class="alert__text" id="tick-note" data-bind="tickNote"></p>
+        <div class="alert__actions">
+          <button class="btn-ghost" data-modal="close">Cancel</button>
+          <button class="btn-save" data-tick-confirm data-bind="tickAction"></button>
         </div>
       </div>
     </div>
@@ -328,22 +351,44 @@
          buttons beside the frame any more, so the three things you can do to
          a photo live here instead of crowding the form. Only reachable with a
          photo already set: with none, the frame opens the file picker direct,
-         because two of these three choices would be dead. -->
-    <div class="modal modal--portrait">
+         because two of these three choices would be dead.
+
+         A SHEET (dice.css §11a) — the one every phone's profile-photo editor
+         shows: a leading icon per row, the destructive one last and in red,
+         Cancel apart at the foot. The icons are the ones those apps use for
+         the same three jobs (Lucide image-plus, crop, and the app's own
+         trash). Remove is undoable from a toast rather than confirmed here —
+         see removePortrait(). -->
+    <div class="modal modal--portrait modal--action-sheet">
       <div class="modal__scrim" data-modal="close"></div>
-      <div class="modal__card" role="dialog" aria-modal="true" aria-labelledby="portrait-title" tabindex="-1">
-        <div class="modal__head">
-          <div class="modal__title" id="portrait-title">Portrait</div>
-          <button class="modal__close" data-modal="close" aria-label="Close"></button>
+      <div class="action-sheet" role="dialog" aria-modal="true" aria-labelledby="portrait-title" tabindex="-1">
+        <div class="action-sheet__grab" aria-hidden="true"></div>
+        <div class="action-sheet__head">
+          <div class="action-sheet__title" id="portrait-title">Portrait</div>
         </div>
-        <div class="menu-stack">
-          <button class="menu-stack__btn" data-portrait-pick>Change Photo</button>
-          <button class="menu-stack__btn" data-portrait-crop>Reposition</button>
-          <button class="menu-stack__btn menu-stack__btn--danger" data-portrait-remove>Remove Photo</button>
+        <div class="action-sheet__list">
+          <button class="action-sheet__row" data-portrait-pick>
+            <span class="action-sheet__icon" aria-hidden="true">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 5h6"/><path d="M19 2v6"/><path d="M21 11.5V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7.5"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/><circle cx="9" cy="9" r="2"/></svg>
+            </span>
+            <span class="action-sheet__text"><span class="action-sheet__label">Choose New Photo</span></span>
+            <svg class="action-sheet__chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+          </button>
+          <button class="action-sheet__row" data-portrait-crop>
+            <span class="action-sheet__icon" aria-hidden="true">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2v14a2 2 0 0 0 2 2h14"/><path d="M18 22V8a2 2 0 0 0-2-2H2"/></svg>
+            </span>
+            <span class="action-sheet__text"><span class="action-sheet__label">Adjust</span></span>
+            <svg class="action-sheet__chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+          </button>
+          <button class="action-sheet__row action-sheet__row--danger" data-portrait-remove>
+            <span class="action-sheet__icon" aria-hidden="true">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
+            </span>
+            <span class="action-sheet__text"><span class="action-sheet__label">Remove Photo</span></span>
+          </button>
         </div>
-        <div class="form-actions">
-          <button class="btn-ghost" data-modal="close">Cancel</button>
-        </div>
+        <button class="action-sheet__cancel" data-modal="close">Cancel</button>
       </div>
     </div>
 
@@ -356,7 +401,7 @@
       <div class="modal__scrim" data-modal="close"></div>
       <div class="modal__card" role="dialog" aria-modal="true" aria-labelledby="crop-title" tabindex="-1">
         <div class="modal__head">
-          <div class="modal__title" id="crop-title">Reposition</div>
+          <div class="modal__title" id="crop-title">Adjust Photo</div>
           <button class="modal__close" data-modal="close" aria-label="Close"></button>
         </div>
         <p class="modal__note">Drag the picture to move it. Pinch, or use the slider, to zoom. Arrow keys nudge.</p>

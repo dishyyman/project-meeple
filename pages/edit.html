@@ -52,15 +52,31 @@
                  there is never a half-saved bio. -->
             <div class="rule"><span class="rule__label">&#10022; Bio &#10022;</span></div>
             <div class="bio__head">
-              <!-- The picture IS the control: there are no buttons beside it.
-                   Tapping it opens the portrait menu (change / reposition /
-                   remove); with no photo yet there is nothing to reposition or
-                   remove, so the same tap goes straight to the file picker —
-                   see openPortraitMenu() for that fork. -->
+              <!-- The picture IS the control, drawn the way every profile-photo
+                   editor draws it (Contacts, WhatsApp, Slack) so it needs no
+                   explaining:
+                     · no photo — a camera and "Add photo" in the frame; the tap
+                       goes straight to the file picker, since there is nothing
+                       to adjust or remove yet;
+                     · a photo — a round pencil badge in the corner; the tap
+                       opens the portrait menu (new photo / adjust / remove).
+                   See openPortraitMenu() for that fork. The badge and the
+                   empty state are aria-hidden: the button's own label, which
+                   renderPortrait() switches between "Add photo" and "Edit
+                   photo" (matching the words shown, for voice control), is what
+                   a screen reader hears. -->
               <button class="portrait-edit__frame" data-portrait-menu
-                      aria-label="Change portrait">
+                      aria-label="Add photo">
                 <img data-portrait-img alt="">
-                <span class="portrait-edit__hint">Change</span>
+                <!-- The sheet's empty-state camera, so one action has one face. -->
+                <span class="portrait-edit__empty" aria-hidden="true">
+                  <svg width="30" height="30" viewBox="0 0 30 30" fill="none"><rect x="3" y="6.5" width="24" height="18" rx="2.5" stroke="currentColor" stroke-width="1.8"/><circle cx="15" cy="15.5" r="4.6" stroke="currentColor" stroke-width="1.8"/><path d="M10.5 6.5 12 3.6h6l1.5 2.9" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
+                  <span class="portrait-edit__empty-label">Add photo</span>
+                </span>
+                <!-- The drawer's Edit Character pencil, at badge size. -->
+                <span class="portrait-edit__badge" aria-hidden="true">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/><path d="m15 5 4 4"/></svg>
+                </span>
               </button>
               <label class="field bio__name">
                 <span class="field__label">Name</span>

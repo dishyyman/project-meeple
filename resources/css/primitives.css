@@ -263,7 +263,7 @@
           mask: var(--status-icon) center / contain no-repeat;
 }
 /* Doubled class on purpose: a status line is always ALSO some component
-   (.confirm__text, .field__error) whose own file loads later and sets a text
+   (.alert__text, .field__error) whose own file loads later and sets a text
    colour. The extra class lets the status colour win without !important and
    without each component having to opt out. */
 .status.status--warn  { color: var(--warning-bright); --status-icon: var(--icon-warn); }

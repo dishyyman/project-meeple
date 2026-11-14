@@ -71,16 +71,20 @@ test('a destructive confirmation: focus moves in, stays in, and comes back', asy
     expect((await focusInfo(page)).inModal, `Shift+Tab #${i + 1}`).toBe('char-del');
   }
 
-  // Escape is NOT a way out of this one: it has its own close control, and
-  // the Escape rule is for modals whose only exit is the scrim.
+  // Escape is Cancel on an alert (dice.css §11a) — never the verb. The
+  // character is still there, and focus goes back to the Delete control.
   await page.keyboard.press('Escape');
-  expect(await modal(page)).toBe('char-del');
-
-  // Close it from the keyboard; focus goes back to the Delete control.
-  await page.locator('.modal--char-del .modal__close').focus();
-  await page.keyboard.press('Enter');
   await expect.poll(() => modal(page)).toBe('closed');
   expect(await del.evaluate((el) => !el.closest('[inert]'))).toBe(true);
+  await expect(del).toBeFocused();
+  expect(await page.locator('[data-char-del]').count()).toBeGreaterThan(0);
+
+  // Cancel from the keyboard does the same.
+  await page.keyboard.press('Enter');
+  await expect.poll(() => modal(page)).toBe('char-del');
+  await page.locator('.modal--char-del').getByRole('button', { name: 'Cancel' }).focus();
+  await page.keyboard.press('Enter');
+  await expect.poll(() => modal(page)).toBe('closed');
   await expect(del).toBeFocused();
 });
 
@@ -94,7 +98,7 @@ test('an opener that focuses a field keeps it: the calculator starts in its inpu
   await expect(page.locator('[data-calc-input]')).toBeFocused();
 });
 
-test('Escape closes every modal whose only exit is its scrim, and focus returns', async ({ page }) => {
+test('Escape closes scrim-only modals and every sheet, and focus returns', async ({ page }) => {
   await openApp(page);
   await openFirstCharacter(page);
 
@@ -125,7 +129,8 @@ test('Escape closes every modal whose only exit is its scrim, and focus returns'
   await expect.poll(() => modal(page)).toBe('closed');
   await expect(toHit).toBeFocused();
 
-  // The Rest menu: no close control at all, before this.
+  // The Rest sheet. It has a Cancel now, but it is a sheet, and Escape is
+  // Cancel on every sheet and alert (see the Escape rule in main.js).
   await press(page, '[data-menu="open"]');
   await press(page, '[data-action="rest"]');
   await expect.poll(() => modal(page)).toBe('rest');
@@ -144,7 +149,7 @@ test('focus finds its way back even when the opener was re-rendered', async ({ p
   await page.keyboard.press('Enter');
   await expect.poll(() => modal(page)).toBe('downed');
 
-  await page.locator('.modal--downed .modal__close').focus();
+  await page.locator('.modal--downed').getByRole('button', { name: 'OK' }).focus();
   await page.keyboard.press('Enter');
   await expect.poll(() => modal(page)).toBe('closed');
   await expect(page.locator(`[data-wound="${last - 1}"]`)).toBeFocused();

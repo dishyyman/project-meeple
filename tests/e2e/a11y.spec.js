@@ -77,6 +77,7 @@ const MODALS = [
   ['Dice roller', '.hero__btn-dice', 'dice'],
   ['Boons & Conditions', '[data-effect-open]', 'effects'],
   ['Spend a Patch', null, 'patch'],
+  ['Rest (sheet)', '[data-action="rest"]', 'rest'],
 ];
 
 test.describe('axe scans', () => {
@@ -118,6 +119,43 @@ test('axe: modal — Delete character', async ({ page }) => {
   await press(page, '[data-roster-edit]');
   await press(page, '[data-char-del]');
   await expect.poll(() => appAttr(page, 'data-modal')).toBe('char-del');
+  await expectClean(page);
+});
+
+// A notice, reached by downing the character rather than by a button.
+test('axe: modal — Downed (notice)', async ({ page }) => {
+  await openApp(page);
+  await toSheet(page);
+  const last = await page.locator('[data-wound]').count();
+  await press(page, `[data-wound="${last - 1}"]`);
+  await expect.poll(() => appAttr(page, 'data-modal')).toBe('downed');
+  await expectClean(page);
+});
+
+// Both need a photo first, so they are set up here rather than in MODALS.
+// The menu's rows are icon + words; the toast's Undo is the one action a
+// toast can carry, and the only toast with two buttons in it.
+const PHOTO = require('path').join(__dirname, '..', '..', 'resources', 'images', 'icons', 'icon-192.png');
+async function editWithPhoto(page) {
+  await openApp(page);
+  await toSheet(page);
+  await press(page, '[data-nav="edit"]');
+  await page.setInputFiles('[data-portrait-input]', PHOTO);
+  await expect.poll(() => appAttr(page, 'data-portrait')).toBe('set');
+}
+
+test('axe: modal — Portrait menu', async ({ page }) => {
+  await editWithPhoto(page);
+  await press(page, '[data-portrait-menu]');
+  await expect.poll(() => appAttr(page, 'data-modal')).toBe('portrait');
+  await expectClean(page);
+});
+
+test('axe: toast with Undo (portrait removed)', async ({ page }) => {
+  await editWithPhoto(page);
+  await press(page, '[data-portrait-menu]');
+  await press(page, '[data-portrait-remove]');
+  await expect(page.locator('[data-toast-action]')).toBeVisible();
   await expectClean(page);
 });
 

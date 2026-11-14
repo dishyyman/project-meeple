@@ -96,20 +96,6 @@
    a screen with space to spare, not a footnote under a detail card. */
 .screen--settings .tag-pick { font-size: var(--fs-note); padding: var(--space-2) var(--space-3-5); }
 
-/* ---- the add / overwrite question --------------------------------
-   Two full-width buttons stacked rather than a row of two: their labels
-   name what each will do ("Add 3 Characters", "Overwrite Matching"),
-   which will not fit side by side on a 402px phone, and stacking also
-   stops the destructive one from sitting where a Cancel usually does.
-
-   Bounded and scrolling for the same reason the result window is: a
-   backup can hold a dozen characters, and the buttons must never be the
-   thing pushed off the bottom of the card. */
-.form-actions--stack { flex-direction: column; }
-.modal--file-ask .modal__card { display: flex; flex-direction: column; max-height: 100%; }
-.modal--file-ask .import__notes { margin-bottom: var(--space-1); }
-.modal--file-ask .form-actions { margin-top: var(--space-3-5); flex-shrink: 0; }
-
 /* ---- account block ----
    Which of the two blocks paints is decided by data-account on .app, the
    same attribute the Home card reads (see home.css). Signed out is the

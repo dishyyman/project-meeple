@@ -100,3 +100,17 @@ test('no text field is under 16px, so iOS never zooms the page on focus', async 
       .filter((f) => f.px < 16));
   expect(small).toEqual([]);
 });
+
+// A TAP, not a click: the empty hero's uploader once sat under the hero's
+// gradient scrim, so a finger landed on the scrim and nothing happened.
+// locator.tap() refuses a covered target, so this fails if anything is
+// stacked over the button again (see also portrait.spec.js).
+test('"Add a Portrait" on the sheet takes a tap and opens the photo picker', async ({ page }) => {
+  await openApp(page);
+  await openFirstCharacter(page);
+  const [chooser] = await Promise.all([
+    page.waitForEvent('filechooser'),
+    page.getByRole('button', { name: /Add a Portrait/ }).tap(),
+  ]);
+  expect(chooser.isMultiple()).toBe(false);
+});

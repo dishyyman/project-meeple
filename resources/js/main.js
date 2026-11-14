@@ -1424,6 +1424,10 @@
      rebound, which is what lets every render and rule in this file go on
      reading a plain variable and stay ignorant of the roster. */
   function openCharacter(id) {
+    // A toast's Undo belongs to the character it was offered for. Opening a
+    // DIFFERENT one takes it down, so "Undo" can never sit under someone
+    // else's sheet (re-opening the same character, as a reload does, keeps it).
+    if (toastAction && (!character || character.id !== id)) hideToast();
     // The seed character starts from the seed, everyone else from a blank.
     // This is what a save written before the roster existed depends on: it
     // holds health, wounds and notes but no BUILD, because back then the build
@@ -1670,10 +1674,8 @@
   function setWounds(n) { return noteBoonLoss(M.setWounds(character, n)).downed; }
   function damage(resource, amt) { return noteBoonLoss(M.damage(character, resource, amt)).downed; }
 
-  const shortRestMana = () => M.shortRestMana(character);
   function rest(kind) { noteBoonLoss(M.rest(character, kind)); }
 
-  const patchGain = () => M.patchGain(character);
   function canSpendPatch() { return M.canSpendPatch(character); }
   function spendPatch() { noteBoonLoss(M.spendPatch(character)); }
   function setPatches(n) { M.setPatches(character, n); }
@@ -3062,11 +3064,11 @@
   /* REST — the window, and what picking one does                       */
   /* ------------------------------------------------------------------ */
 
+  /* The sheet's wording is fixed text in pages/modals/character.html —
+     "Half Mana back", not "+7 Mana". General words read the same for every
+     character at every level; the exact amount is mechanics.js's business
+     (rest()), and the bars show it the moment it lands. */
   function openRest() {
-    // The number, not the fraction: "+5 Mana" is what the player is deciding
-    // about, and it is read from the same helper the rest itself uses, so the
-    // promise on the button and what the button does cannot disagree.
-    setText('restShortNote', `Health full, +${shortRestMana()} Mana, Wounds unchanged`);
     /* The drawer stays OPEN behind this, unlike navigating to Edit Character.
        A rest is not a departure — you are not taken anywhere, you are asked a
        question and answered it — so dismissing the question should put you
@@ -3118,14 +3120,14 @@
     if (patchHold.timer) { clearTimeout(patchHold.timer); patchHold.timer = null; }
   }
 
-  /* The dialog states the two halves of a Patch SEPARATELY, and only the ones
-     that apply. At full health with one Wound it offers to patch the Wound and
-     says nothing about healing, because promising "Reset HP to full" to
-     somebody already at full is a promise with no content — and a player who
-     reads it once and finds it meaningless stops reading the line at all.
+  /* The alert's wording is fixed text (pages/modals/character.html): what a
+     Patch does in general, the same every time, rather than a line rebuilt
+     from this character's numbers. The guard below is what keeps that
+     promise honest — the alert never opens when a Patch would do nothing.
 
-     Both halves come from patchGain(), which the counter also asks. So the
-     button cannot offer something the counter thought was unavailable. */
+     The 2 AP is STATED there and deducted nowhere — see spendPatch() for why.
+     "In combat" is the whole of the condition, and it is the table's to
+     judge. */
   function openPatch() {
     /* Silently does nothing when a Patch would achieve nothing — out of
        Patches, already whole, or Downed (see canSpendPatch). A hold that opens
@@ -3133,21 +3135,6 @@
        not open: the tap gesture on the same box still works, so the player is
        not stuck, and the row has not gone dead under them. */
     if (!canSpendPatch()) return;
-    const gain = patchGain();
-    const parts = [];
-    if (gain.heals) parts.push('Reset HP to full');
-    if (gain.wound) parts.push('Patch Wound');
-    setText('patchGainNote', parts.join(' · '));
-
-    const left = character.patches;
-    /* The 2 AP is STATED here and deducted nowhere — see spendPatch() for why.
-       "In combat" is the whole of the condition, and it is the table's to
-       judge, so the line reads as a rule the player applies rather than a
-       cost the app has quietly taken: the Action row above is where they take
-       it off. Written as one sentence with the Patch count because both are
-       the same kind of fact — what this costs, and what you have left. */
-    setText('patchCost', `Costs 2 AP in combat — spend it on your Action row`);
-    setText('patchRemaining', `${left} Patch${left === 1 ? '' : 'es'} remaining · restored on a Long Rest`);
     app.setAttribute('data-modal', 'patch');
   }
 
@@ -3156,7 +3143,6 @@
      for one event is one window too many. */
   function announceBoonLoss() {
     if (!state.boonsLost) return;
-    setText('boonLossText', boonLossNote());
     app.setAttribute('data-modal', 'boonloss');
   }
 
@@ -3198,6 +3184,12 @@
         img.removeAttribute('src');
         img.alt = '';
       }
+    });
+    // The edit page's frame is one button with two jobs, and its label says
+    // which: with no photo it opens the picker, with one it opens the menu.
+    // (The visible half of the same switch is CSS, on [data-portrait].)
+    $$('[data-portrait-menu]').forEach((btn) => {
+      btn.setAttribute('aria-label', url ? 'Edit photo' : 'Add photo');
     });
     applyPortraitView();
   }
@@ -3287,7 +3279,18 @@
     }
   }
 
+  /* Remove acts at once and offers Undo, rather than asking "are you sure?"
+     first. A photo is the one part of a character the app cannot rebuild, so
+     a slip has to be recoverable — but a confirmation on every removal is a
+     second tap for the player who meant it, and the one who did not tends to
+     tap through it anyway. Undo costs the deliberate player nothing and still
+     catches the slip, which is the pattern Photos, Gmail and Slack settled on.
+
+     The photo is held in this closure, not in storage: storage has already
+     been told it is gone (so a reload mid-toast honours the removal), and the
+     toast is the only route back to it. */
   function removePortrait() {
+    const stash = { id: character.id, portrait: character.portrait, view: { ...character.portraitView } };
     character.portrait = null;
     savePortrait();
     setPortraitError('');
@@ -3295,6 +3298,25 @@
     // Reached from the portrait menu, whose remaining choices all now apply to
     // a photo that is gone. Closing is the only sensible end to the gesture.
     if (app.getAttribute('data-modal') === 'portrait') closeModal();
+    if (stash.portrait) {
+      showToast('Portrait removed.', 'ok', { label: 'Undo', run: () => restorePortrait(stash) });
+    }
+  }
+
+  /* Undo for removePortrait(). Refuses quietly if the world moved on in the
+     meantime: a different character is open (openCharacter() also drops the
+     toast, so this is the guard behind the guard), or a NEW photo has been
+     chosen since — putting the old one back over it would undo the wrong
+     thing. Writes in the same order acceptPortraitFile() does. */
+  function restorePortrait(stash) {
+    if (character.id !== stash.id || character.portrait) return;
+    character.portrait = stash.portrait;
+    character.portraitView = clampView(stash.view);
+    save();
+    renderPortrait();
+    if (!savePortrait()) {
+      setPortraitError('Shown for this session only — browser storage is full.');
+    }
   }
 
   function openPortraitPicker() {
@@ -3376,7 +3398,7 @@
     paintCrop();
   }
 
-  // Only reached from the portrait menu, which does not offer Reposition
+  // Only reached from the portrait menu, which does not offer Adjust
   // without a photo — the guard stays as a guard, not as a route anyone takes.
   function openPortraitCrop() {
     if (!character.portrait) { openPortraitPicker(); return; }
@@ -4427,27 +4449,14 @@
      Announced by the damage cascade when the last Wound lands. Nothing here
      changes the character — damage() has already applied it — so this is a
      notice, not a confirmation. */
-  // Wound counts are small and subclass-capped, so the two irregular endings
-  // that can actually show up (1st, 2nd, 3rd) are worth spelling out rather
-  // than reading "your 3 Wound is taken".
-  function ordinal(n) {
-    const tens = n % 100;
-    if (tens >= 11 && tens <= 13) return `${n}th`;
-    return n + ({ 1: 'st', 2: 'nd', 3: 'rd' }[n % 10] || 'th');
-  }
-
   function openDowned() {
-    setText('downedWounds', ordinal(character.wounds));
-    setText('downedBoons', boonLossNote());
+    /* The one line here that depends on what happened: whether the Wound took
+       any Boons. Said in general words, no count — and empty when it took
+       none, so .status:empty collapses it and a character carrying no Boons
+       sees no line about them at all. */
+    setText('downedBoons', state.boonsLost ? 'Taking the Wound cleared your Boons.' : '');
     app.setAttribute('data-modal', 'downed');
   }
-
-  /* What the last Wound took, as a sentence, or an empty string when it took
-     nothing. Empty rather than "0 Boons lost" because a character carrying
-     none should see no line about Boons at all — :empty collapses it. */
-  const boonLossNote = () => (state.boonsLost
-    ? `Taking the Wound cleared ${state.boonsLost} Boon${state.boonsLost === 1 ? '' : 's'}.`
-    : '');
 
   /* ---- effect ticks --------------------------------------------------
      Built like the Patch dialog, because it is the same kind of decision: one
@@ -4464,6 +4473,9 @@
     const verb = def.tick.heal ? 'Heal' : 'Take';
     setText('tickTitle', def.name);
     setText('tickAction', `${verb} ${total}`);
+    // Which icon the alert shows — a heart or a flame. The stylesheet decides
+    // (inventory.css §15); this only names the kind.
+    $('.modal--tick .alert')?.setAttribute('data-tick', def.tick.heal ? 'heal' : 'damage');
     /* Spells out the arithmetic rather than just the answer — "2 × 1 per
        stack" — so a player can see the number is right without recounting
        the row above. At one stack there is nothing to show working for. */
@@ -4584,7 +4596,7 @@
 
   /* A selector that finds this control again after a re-render: its first
      data-* hook. Renders here replace markup wholesale (innerHTML), so a
-     Wound pip pressed to open "You are downed!" no longer exists by the time
+     Wound pip pressed to open "You’re downed" no longer exists by the time
      the dialog closes — but [data-wound="3"] does. */
   function hookSelector(el) {
     const a = [...el.attributes].find((x) => x.name.startsWith('data-') && x.name !== 'data-bind');
@@ -5444,31 +5456,10 @@
     // the sheet's To-Hit boxes opened it.
     state.advFor = { label: box.dataset.rollLabel, expr: box.dataset.rollExpr };
 
-    /* Opened FIRST, then measured. The menu has no size while it is display:
-       none, and its height is what decides whether it can open downward — so
-       the modal is shown, the real height is read, and only then is it placed.
-       One reflow, and no hardcoded guess at how tall four rows are. */
+    // A sheet now, not a popover hung off the box — so it says in words which
+    // roll it is about, where the old menu said it by where it sat.
+    setText('advFor', box.dataset.rollLabel ? `To-Hit for ${box.dataset.rollLabel}` : 'To-Hit roll');
     app.setAttribute('data-modal', 'adv');
-
-    /* Anchored to the box, in coordinates relative to the PHONE FRAME rather
-       than the viewport: the menu is absolutely positioned inside .app, which
-       is the positioned ancestor, so this is the coordinate space CSS will
-       resolve against. Deliberately not position: fixed — that would be
-       relative to the viewport and would break the moment any ancestor of
-       .app grew a transform.
-
-       Two custom properties and one data attribute, which is the whole of
-       what JS says about where this goes: --pull and --pv-* set the same
-       precedent, and the stylesheet still owns every actual dimension. */
-    const r = box.getBoundingClientRect();
-    const frame = app.getBoundingClientRect();
-    const below = frame.bottom - r.bottom;
-    // Open upward when there is not room beneath the box — a menu that runs
-    // off the bottom of the phone is a menu with rows nobody can reach.
-    const up = below < el.offsetHeight + 16;
-    el.setAttribute('data-adv-dir', up ? 'up' : 'down');
-    el.style.setProperty('--adv-x', `${Math.round(r.left + r.width / 2 - frame.left)}px`);
-    el.style.setProperty('--adv-y', `${Math.round((up ? r.top : r.bottom) - frame.top)}px`);
     if (focus) el.querySelector('[data-adv]')?.focus();
   }
 
@@ -6690,9 +6681,12 @@
     setText('fileAskText', ask.text);
     fillList('fileAskNotes', (ask.notes || [])
       .map((n) => `<p class="import__note${n.warn ? ' status status--warn' : ''}">${esc(n.text)}</p>`).join(''));
+    // Rows of the sheet (dice.css §11a). A destructive one is red, words and
+    // all; Cancel is fixed markup at the foot, never one of these.
     fillList('fileAskActions', ask.actions
-      .map((a) => `<button class="btn-save${a.danger ? ' btn-save--danger' : ''}"`
-        + ` data-file-apply="${esc(a.mode)}">${esc(a.label)}</button>`).join(''));
+      .map((a) => `<button class="action-sheet__row${a.danger ? ' action-sheet__row--danger' : ''}"`
+        + ` data-file-apply="${esc(a.mode)}"><span class="action-sheet__text">`
+        + `<span class="action-sheet__label">${esc(a.label)}</span></span></button>`).join(''));
     app.setAttribute('data-modal', 'file-ask');
   }
 
@@ -7939,22 +7933,75 @@
   // Long enough to read a short sentence twice; short enough not to sit over
   // the next thing the player does. A tap dismisses it sooner.
   const TOAST_MS = 3000;
+  // A toast carrying an Undo stays up twice as long: it is not only read but
+  // ACTED on, and a player has to notice it, decide, and reach for it.
+  const TOAST_ACTION_MS = 6000;
   let toastTimer = 0;
+  let toastMs = TOAST_MS;
 
-  function showToast(text, variant = 'ok') {
+  /* The one action a toast may carry — { label, run } — or null. A toast may
+     offer a way BACK (Undo), never a decision; see pages/toast.html. Held
+     here rather than on the button so the delegated click handler has
+     something to call, and dropped the moment the toast goes, so a stale
+     Undo can never fire against a later state. */
+  let toastAction = null;
+
+  /* While the pointer rests on the card or focus is inside it, the timer is
+     stopped (WCAG 2.2.1: a time limit on something you can act on must be
+     adjustable). It restarts in full when both have left. */
+  let toastHover = false;
+  let toastFocus = false;
+  // Where focus was before it entered the card, so pressing Undo from the
+  // keyboard does not strand focus on <body> when the toast disappears.
+  let toastReturnFocus = null;
+
+  function armToast() {
+    clearTimeout(toastTimer);
+    if (toastHover || toastFocus) return;
+    toastTimer = setTimeout(hideToast, toastMs);
+  }
+
+  function showToast(text, variant = 'ok', action = null) {
     const el = $('[data-toast-text]');
     if (!el) return;
     el.textContent = text;
     // The variant picks the glyph; the words stay in ink (see toast.css).
     el.className = `toast__text status status--${variant}`;
+    toastAction = action;
+    const btn = $('[data-toast-action]');
+    if (btn) {
+      btn.textContent = action ? action.label : '';
+      btn.hidden = !action;
+    }
+    toastMs = action ? TOAST_ACTION_MS : TOAST_MS;
     app.setAttribute('data-toast', 'on');
-    clearTimeout(toastTimer);
-    toastTimer = setTimeout(hideToast, TOAST_MS);
+    armToast();
   }
 
   function hideToast() {
     clearTimeout(toastTimer);
+    toastAction = null;
+    // Off FIRST, so the focusout that moving focus away fires below finds the
+    // toast already down and does not re-arm a timer for it.
     app.setAttribute('data-toast', 'off');
+    // The action button itself is left as it is: the card is fading out, and
+    // hiding the button mid-fade would visibly shrink it. The next
+    // showToast() sets it for whatever that toast carries.
+    const card = $('.toast__card');
+    if (card && card.contains(document.activeElement)) {
+      const back = toastReturnFocus;
+      if (back && back.isConnected) back.focus(); else document.activeElement.blur();
+    }
+    toastReturnFocus = null;
+    toastHover = false;
+    toastFocus = false;
+  }
+
+  // The toast's action, pressed. Read BEFORE hiding, since hiding drops it.
+  function runToastAction() {
+    const action = toastAction;
+    hideToast();
+    if (action) action.run();
   }
 
   /* ------------------------------------------------------------------ */
@@ -7968,7 +8015,7 @@
       // processed below never has its own element pulled out from under it.
       if (state.openStat && !e.target.closest('.stat-card')) showStatPop(null);
 
-      const t = e.target.closest('[data-nav],[data-tab],[data-edit-tab],[data-edit-attr],[data-skill-rank],[data-toggle],[data-step],[data-calc],[data-menu],[data-wound],[data-wound-reset],[data-calc-step],[data-calc-apply],[data-action],[data-key],[data-dice-back],[data-dice-roll],[data-roll],[data-roll-again],[data-inv-add],[data-inv-open],[data-item-save],[data-bp-step],[data-bp-edit],[data-bp-delete],[data-mod-add],[data-mod-remove],[data-stat-toggle],[data-effect-open],[data-effect-add],[data-effect-step],[data-effect-tick],[data-effects-clear],[data-tick-confirm],[data-skill-edit],[data-skill-draft],[data-skill-filter],[data-skill-save],[data-detail],[data-gear-add],[data-armor-add],[data-detail-remove],[data-pick],[data-tag],[data-note-add],[data-note-save],[data-note-cancel],[data-note-edit],[data-note-delete],[data-note-del-confirm],[data-portrait-pick],[data-portrait-remove],[data-portrait-menu],[data-rest],[data-patch],[data-patch-confirm],[data-poison-toggle],[data-adv],[data-rules-toggle],[data-id-save],[data-portrait-crop],[data-crop-save],[data-crop-reset],[data-open-character],[data-wiz],[data-wiz-step],[data-wiz-expand],[data-wiz-pick],[data-wiz-attr],[data-wiz-skill],[data-wiz-sec],[data-wiz-slot],[data-wiz-clear],[data-wiz-pick-group],[data-equip-drop],[data-roster-edit],[data-char-del],[data-char-del-confirm],[data-char-export],[data-import-open],[data-share-format],[data-share-send],[data-backup-export],[data-compendium-export],[data-compendium-reset],[data-file-open],[data-file-apply],[data-ap-mode],[data-ap-theme],[data-toast-dismiss]');
+      const t = e.target.closest('[data-nav],[data-tab],[data-edit-tab],[data-edit-attr],[data-skill-rank],[data-toggle],[data-step],[data-calc],[data-menu],[data-wound],[data-wound-reset],[data-calc-step],[data-calc-apply],[data-action],[data-key],[data-dice-back],[data-dice-roll],[data-roll],[data-roll-again],[data-inv-add],[data-inv-open],[data-item-save],[data-bp-step],[data-bp-edit],[data-bp-delete],[data-mod-add],[data-mod-remove],[data-stat-toggle],[data-effect-open],[data-effect-add],[data-effect-step],[data-effect-tick],[data-effects-clear],[data-tick-confirm],[data-skill-edit],[data-skill-draft],[data-skill-filter],[data-skill-save],[data-detail],[data-gear-add],[data-armor-add],[data-detail-remove],[data-pick],[data-tag],[data-note-add],[data-note-save],[data-note-cancel],[data-note-edit],[data-note-delete],[data-note-del-confirm],[data-portrait-pick],[data-portrait-remove],[data-portrait-menu],[data-rest],[data-patch],[data-patch-confirm],[data-poison-toggle],[data-adv],[data-rules-toggle],[data-id-save],[data-portrait-crop],[data-crop-save],[data-crop-reset],[data-open-character],[data-wiz],[data-wiz-step],[data-wiz-expand],[data-wiz-pick],[data-wiz-attr],[data-wiz-skill],[data-wiz-sec],[data-wiz-slot],[data-wiz-clear],[data-wiz-pick-group],[data-equip-drop],[data-roster-edit],[data-char-del],[data-char-del-confirm],[data-char-export],[data-import-open],[data-share-format],[data-share-send],[data-backup-export],[data-compendium-export],[data-compendium-reset],[data-file-open],[data-file-apply],[data-ap-mode],[data-ap-theme],[data-toast-dismiss],[data-toast-action]');
       if (!t) return;
       /* The app root is STATE, never a control. It carries data-view, data-tab,
          data-edit-tab, data-menu and data-modal so the stylesheet can switch on
@@ -8116,6 +8163,7 @@
       if (t.dataset.shareFormat !== undefined) { setShareFormat(t.dataset.shareFormat === '1'); return; }
       if (t.hasAttribute('data-share-send'))   { shareCharacter(); return; }
       if (t.hasAttribute('data-toast-dismiss')) { hideToast(); return; }
+      if (t.hasAttribute('data-toast-action'))  { runToastAction(); return; }
 
       // --- settings ---
       // Both imports open the same picker; which one asked is state, and the
@@ -8541,24 +8589,26 @@
       if (e.key === 'Escape' && state.openStat) showStatPop(null);
     });
 
-    /* Escape dismisses a modal whose ONLY way out is its scrim — the roll
-       card, the Rest menu, the health/Mana calculator and the Advantage
-       chooser. The scrim is a <div>, so for those a mouse gesture was the
-       only exit, and with focus now held inside an open dialog (see
-       watchModals()) a keyboard user would be stuck in them.
+    /* Escape closes two kinds of modal:
+         · one whose ONLY way out is its scrim — the roll card and the
+           health/Mana calculator. The scrim is a <div>, so without this a
+           keyboard user would be stuck in them;
+         · every SHEET and ALERT (dice.css §11a). Escape is the universal
+           "cancel" for a dialog, and these hold nothing typed that it could
+           throw away: on a sheet it is Cancel, on an alert it is Cancel (never
+           the verb), on a notice it is OK.
 
-       Deliberately NOT every modal. The rest carry a visible close control
-       (a .modal__close X, the dice sheet's own, a Cancel), so they are
-       already operable from the keyboard — and a blanket Escape-closes-
-       everything would silently change how a half-filled item form or an
-       open wizard step behaves, which is a bigger decision than this one.
-       This was the roll card alone until 2026-11-13; the rule is the same,
-       now applied to every modal it describes. Decided by the markup rather
-       than a list, so a new scrim-only modal gets it without being named. */
+       Deliberately NOT the forms. A blanket Escape-closes-everything would
+       silently change how a half-filled item form or an open wizard step
+       behaves, which is a bigger decision than this one. Decided by the
+       markup rather than a list, so a new modal of either kind gets it
+       without being named. */
     document.addEventListener('keydown', (e) => {
       if (e.key !== 'Escape') return;
       const modal = openModalEl();
-      if (modal && !modal.querySelector('button[data-modal="close"]')) closeModal();
+      if (!modal) return;
+      const scrimOnly = !modal.querySelector('button[data-modal="close"]');
+      if (scrimOnly || modal.querySelector('.action-sheet, .alert')) closeModal();
     });
 
     // backpack: left/right arrows page through carried items
@@ -8750,6 +8800,28 @@
       portraitInput.value = '';
       acceptPortraitFile(file);
     });
+
+    // The toast holds still while it is being reached for — see armToast().
+    // pointerenter/leave rather than mouseenter so a pen or a finger resting
+    // on it counts too; focusin/out because they bubble from the buttons.
+    const toastCard = $('.toast__card');
+    if (toastCard) {
+      toastCard.addEventListener('pointerenter', () => { toastHover = true; clearTimeout(toastTimer); });
+      toastCard.addEventListener('pointerleave', () => {
+        toastHover = false;
+        if (app.getAttribute('data-toast') === 'on') armToast();
+      });
+      toastCard.addEventListener('focusin', (e) => {
+        if (!toastFocus) toastReturnFocus = e.relatedTarget;
+        toastFocus = true;
+        clearTimeout(toastTimer);
+      });
+      toastCard.addEventListener('focusout', (e) => {
+        if (toastCard.contains(e.relatedTarget)) return;   // moving between its own buttons
+        toastFocus = false;
+        if (app.getAttribute('data-toast') === 'on') armToast();
+      });
+    }
 
     // Drag-and-drop onto the hero. Desktop-only in practice — a phone has no
     // drag — so it is an addition to the button, never a replacement for it.

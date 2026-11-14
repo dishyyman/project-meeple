@@ -332,6 +332,7 @@ Hard offset shadows are the theme's woodcut signature. Floating layers use soft 
 | **Add** | `.btn-dashed` | Full width, 1.5px dashed `--line-warm`, gold uppercase text, plus icon. Trails a list. |
 | **Icon** | `.icon-btn` | 42px circle, 1.5px `--line` border, `--bg-card`. Header controls. |
 | **Glass** | `.glass-btn` | 42px circle, translucent and blurred. Only over the hero portrait. |
+| **Photo frame** | `.portrait-edit__frame` | Follows the profile-photo convention players know (Jakob's Law). Empty: camera glyph + "Add photo" on a dashed edge; tapping goes straight to the picker. Set: a 28px round pencil badge, bottom-right inside the frame (`--bg-card`, `--line-gold` rim, `--gold` icon); tapping opens the portrait sheet (§12.1). Its `aria-label` says which ("Add photo" / "Edit photo") — matching the visible words, which axe checks (WCAG 2.5.3). |
 | **Disabled** | `:disabled` | Primary drains to the ghost look with `--ink-faint` text and no shadow — kept visible, reads as "nothing to do". Others use `opacity: var(--disabled-opacity)` (0.45). A hint below explains why, where it isn't obvious. |
 | **Loading** | — | _TBD_ — no loading button state exists. |
 
@@ -372,8 +373,24 @@ Cards sit on `--bg-card`. A selected card gets the accent border and `--bg-parch
 | **Menu** | A drawer from the right (82% width) over a `--scrim`, reached from every main screen. Holds Edit Character, Rules, Settings. |
 | **Mobile navigation** | The character sheet has a bottom tab bar: Action · Character · Gear. Labels are Marcellus `--fs-caption` uppercase. Inactive is `--ink-faint`; active is `--accent-bright`. Top edge is a `--rule-strong` line. |
 | **Sidebar** | None — the app is a single phone-width column. |
-| **Modals** | Centered card over a scrim; one open at a time (`data-modal` on `.app`). Each card is a named `role="dialog"`: focus moves onto the dialog when it opens (or stays on the field its opener focused), Tab stays inside it, the page behind is `inert` (and so is the shell outside `.app`, such as the frame toggle), and focus returns to the opener on close. Escape closes a modal only when its scrim is its only exit (roll result, Rest, calculator, Advantage); modals with a close control keep Escape inert so a half-filled form isn't lost. |
+| **Modals** | Centered card over a scrim; one open at a time (`data-modal` on `.app`). Each card is a named `role="dialog"`: focus moves onto the dialog when it opens (or stays on the field its opener focused), Tab stays inside it, the page behind is `inert` (and so is the shell outside `.app`, such as the frame toggle), and focus returns to the opener on close. Escape closes every sheet, alert and notice (§12.1) and any modal whose scrim is its only exit (roll result, calculator); forms keep Escape inert so a half-filled form isn't lost. |
 | **Mechanism** | Screens, tabs, modals and the drawer switch via `data-view`, `data-tab`, `data-modal`, `data-menu` on `.app`; CSS decides what shows. |
+
+### 12.1 Popup shapes — sheet, alert, notice
+
+Every short popup is one of three shapes, picked by what it **asks**. The split is the one phones already teach (iOS action sheet vs alert; Material bottom sheet vs dialog), so players don't have to learn ours (Jakob's Law). Styles are `dice.css` §11a, next to the modal base.
+
+| Shape | When | Anatomy | Used by |
+|---|---|---|---|
+| **Sheet** — `.modal--action-sheet` + `.action-sheet` | Pick one of several | Rises from the bottom edge. Grab handle, centred `__title` with an optional italic `__sub`, an inset `__list` of `__row`s (40px gold icon well, `__label`, optional `__note` or trailing `__aside`, optional chevron), then a full-width `__cancel` apart from the rows. A row commits on tap. `__row--danger` is red text and icon, last in the list. | Rest, Portrait, Advantage, Import (add / overwrite) |
+| **Alert** — `.modal__card.alert` | Yes or no | Centred card. 52px round `alert__icon` (`--danger` / `--warn` / `--ok` tints), `__title` as a question, `__text`, optional italic `__meta`, then **Cancel \| verb** side by side in `__actions` (`.btn-ghost` + `.btn-save`, `--danger` for deletes). | Spend a Patch, effect ticks, Delete note, Delete character |
+| **Notice** — `.modal__card.alert` | Something happened | An alert with one full-width **OK** (`.btn-save`, never the danger fill — acknowledging destroys nothing). `alert__list` for a short list of consequences. | Downed, Boons lost, Import result |
+
+**Rules**
+- **Always a visible way out**: Cancel on sheets and alerts, OK on notices. `popups.spec.js` fails a sheet or alert without a `button[data-modal="close"]`.
+- **Escape is Cancel, never the verb.**
+- **General wording, not numbers.** "Half Mana back", not "+7 Mana"; "Restores your Health to full", not "Health 4 → 9". The same words for every character, learned once; the bars show the result. The one exception is an effect tick's button ("Take 6"), because the app doing that multiplication is the point of the button.
+- Forms and tools (item editor, skills, Adjust Photo, Share, pickers, the calculator, roll results, the dice roller) are not yet on these shapes.
 
 ---
 
@@ -424,12 +441,13 @@ Amber sits between the gold and the ember, so it is close to both. **A warning i
 **Toast — `pages/toast.html`, `toast.css`, `showToast(text, variant)` in `main.js`**
 - A short confirmation after an action with no other visible result. Ink text with a status glyph.
 - Sits at the bottom: above the tab bar on the sheet, lower elsewhere. One at a time — a new one replaces the old and restarts the timer.
-- Disappears after 3 seconds (`TOAST_MS`); a tap dismisses it sooner.
+- Disappears after 3 seconds (`TOAST_MS`); a tap on the message dismisses it sooner. A toast with an action stays 6 seconds (`TOAST_ACTION_MS`), and the timer stops while the pointer rests on it or focus is inside it (WCAG 2.2.1).
 - The live region (`role="status"`) is always in the page and only its text changes, so screen readers announce it reliably and focus never moves.
 - Under reduced motion it fades without sliding.
-- Never carries an action — anything that needs a decision is a modal. Never used for errors.
+- At most **one action, and only a way back** — `showToast(text, variant, { label: 'Undo', run })`. Undo is a reversal, not a question; anything that needs a decision is still a modal. The action is the only accent-coloured text on the card (`--accent-bright`), sits beside the message rather than inside it (a button can't hold a button), and is keyboard-reachable while the toast is up. Pressing it returns focus to wherever it came from. Never used for errors.
+- **Undo instead of a confirmation** for a removal the player can't rebuild but will mostly mean: act at once, offer Undo. The action is dropped the moment the toast goes, and opening a different character takes it down, so a stale Undo can never fire.
 
-**Current triggers:** character saved (Edit → Dossier), character exported, backup saved, compendium exported. Imports already show a result window with notes, so they don't also toast. When storage refuses the Edit → Dossier save, the same toast says *"Updated for this session only — not saved."* with the `--warn` glyph instead.
+**Current triggers:** character saved (Edit → Dossier), character exported, backup saved, compendium exported, portrait removed (with **Undo**). Imports already show a result window with notes, so they don't also toast. When storage refuses the Edit → Dossier save, the same toast says *"Updated for this session only — not saved."* with the `--warn` glyph instead.
 
 **Storage alert — `pages/toast.html`, `toast.css`, `settleStorage()` in `main.js`**
 - The one notice that doesn't time out. Up while any character's changes are held in memory because storage refused them (full quota or blocked), or the roster index write failed; down only once every held change has been written. A write that lands for one thing (say, the roster index) doesn't clear it while another character's changes are still held.

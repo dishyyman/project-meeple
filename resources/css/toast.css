@@ -23,6 +23,7 @@
 .toast { display: flex; justify-content: center; }
 .toast__card {
   max-width: 100%;
+  display: flex; align-items: center; gap: var(--space-1);
   background: var(--bg-card);
   border: 1px solid var(--line-hair); border-radius: var(--r-sm);
   box-shadow: var(--shadow-modal);
@@ -44,6 +45,24 @@
   display: block;
   font-family: var(--font-body); font-size: var(--fs-body); line-height: 1.45;
 }
+/* The message half: the whole sentence is the tap-to-dismiss target, as the
+   card used to be when it was one button. min-width: 0 lets a long message
+   wrap rather than push the action off the card. */
+.toast__dismiss { flex: 1; min-width: 0; text-align: left; }
+/* The one action a toast may carry (Undo). Spoken in the accent, as a text
+   link in a snackbar is on every platform — it is the single thing on the
+   card that DOES something. Padded out to a comfortable tap target and
+   pulled back by the same amount so the card's edge does not grow. */
+.toast__action {
+  flex-shrink: 0;
+  margin: calc(-1 * var(--space-2)) calc(-1 * var(--space-2)) calc(-1 * var(--space-2)) 0;
+  padding: var(--space-2) var(--space-2-5);
+  font-family: var(--font-label); font-size: var(--fs-small); letter-spacing: 0.1em;
+  text-transform: uppercase; color: var(--accent-bright);
+  border-radius: var(--r-xs);
+}
+.toast__action:active { background: var(--wash-lift2); }
+.toast__action[hidden] { display: none; }
 /* Matches the doubled-class weight of the .status variants, so ink wins here. */
 .toast__text.status { color: var(--ink); }
 .toast__text.status--ok::before   { background: var(--success-bright); }

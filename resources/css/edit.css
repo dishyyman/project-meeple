@@ -175,15 +175,43 @@
 }
 .portrait-edit__frame img { width: 100%; height: 100%; display: none; }
 .portrait-edit__frame:active { transform: translateY(1px); }
-/* A hint that the thumbnail does something, shown only once there is a photo
-   to reposition — with none, the same button opens the picker instead. */
-.portrait-edit__hint {
-  position: absolute; left: 0; right: 0; bottom: 0; display: none;
-  font-family: var(--font-label); font-size: var(--fs-caption); letter-spacing: 0.12em;
-  text-transform: uppercase; text-align: center; padding: var(--space-1) 0;
-  color: var(--on-dark); background: var(--scrim);
+
+/* The two states follow the profile-photo convention players already know
+   from their phones (Jakob's Law): an empty frame SAYS what tapping it does,
+   and a filled one wears a small edit badge in the corner. Only one of the
+   pair is ever shown, switched by [data-portrait] on .app. */
+
+/* Empty: the sheet's camera glyph over the hatch, with the words beneath it.
+   Dashed edge for the same reason the sheet's uploader has one — it reads as
+   "a slot to put something in", not as a picture that failed to load. */
+.portrait-edit__empty {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: var(--space-1-5);
+  color: var(--accent-bright);
+  border: 1.5px dashed var(--line-warm); border-radius: var(--r-xs);
 }
-.app[data-portrait="set"] .portrait-edit__hint { display: block; }
+.portrait-edit__empty-label {
+  font-family: var(--font-label); font-size: var(--fs-caption); letter-spacing: 0.12em;
+  text-transform: uppercase; color: var(--ink-soft);
+}
+
+/* Set: a round pencil badge, bottom-right, as on an avatar. It sits INSIDE the
+   frame (which clips) rather than hanging off its edge, so it never collides
+   with the name field beside it. Card-coloured with a gold rim so it reads on
+   any photo, light or dark; gold rather than ember so the screen's one ember
+   standout stays the active tab. */
+.portrait-edit__badge {
+  position: absolute; right: var(--space-1-5); bottom: var(--space-1-5);
+  width: 28px; height: 28px; border-radius: 50%;
+  display: none; align-items: center; justify-content: center;
+  background: var(--bg-card); color: var(--gold);
+  border: 1.5px solid var(--line-gold);
+  box-shadow: 0 1px 4px var(--scrim);
+}
+
+.app[data-portrait="set"] .portrait-edit__empty { display: none; }
+.app[data-portrait="set"] .portrait-edit__badge { display: flex; }
 .app[data-portrait="set"] .portrait-edit__frame img { display: block; }
 .app[data-portrait="set"] .portrait-edit__frame { background-image: none; }
 

@@ -197,7 +197,7 @@
    rule. `currentColor` throughout, which is why only the colour below has to
    change between the two states. */
 .import__mark {
-  width: 46px; height: 46px; margin: var(--space-1) auto var(--space-3-5);
+  flex-shrink: 0; width: 46px; height: 46px;
   border: 2px solid currentColor; border-radius: 50%; position: relative;
 }
 .modal__card[data-import-state="ok"] .import__mark { color: var(--success-bright); }
@@ -217,16 +217,6 @@
   width: 4px; height: 4px; background: currentColor; border-radius: 50%;
 }
 
-/* Carries .modal__title's face but not its head row: there is no close button
-   to sit beside, so it centres under the mark instead. */
-.import__title {
-  font-family: var(--font-display); font-size: var(--fs-title); color: var(--heading);
-  text-align: center; margin-bottom: var(--space-2);
-}
-/* Scoped, so the confirmations that share .confirm__text stay left-aligned. */
-.modal--import .confirm__text { text-align: center; }
-/* One button, so it spans rather than sharing the row with a partner. */
-.modal--import .form-actions { margin-top: var(--space-4); }
 
 /* The notes stay LEFT-aligned inside the centred card: they are a list of
    several statements, and centred bullets give the eye no edge to return to.
@@ -236,9 +226,14 @@
    restore — so the card is bounded by the frame and the notes are what
    scrolls. `0 1 auto` rather than `1 1`: the list may shrink to fit, but it
    must never stretch to fill a card that had room to spare. Dismiss is the one
-   control here and it must never be the thing pushed off the bottom. */
-.modal--import .modal__card { display: flex; flex-direction: column; max-height: 100%; }
+   control here and it must never be the thing pushed off the bottom — the
+   card is an .alert (dice.css §11a), bounded at the frame's height, and its
+   actions do not shrink.
+
+   align-self: stretch because the alert centres its children; the notes want
+   the card's full width and a left edge. Shared with the import-choice sheet. */
 .import__notes {
+  align-self: stretch; text-align: left;
   flex: 0 1 auto; min-height: 0; overflow-y: auto;
   scroll-padding-block: var(--space-2);   /* focus-ring room, see .scroll */
   margin: var(--space-0-5) -2px 0; padding: 0 var(--space-0-5);

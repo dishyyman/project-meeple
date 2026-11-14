@@ -144,9 +144,17 @@
    go back to the sheet, it just says which one is open. */
 .persona-card[data-current] { border-color: var(--accent); }
 .persona-card + .persona-card { margin-top: var(--space-2-5); }
+/* The scrim and the caption are painted AFTER .hero__img, so they stack over
+   it — and the scrim covers the whole hero. Both are pure decoration (a
+   gradient, and text with nothing to press), so they let taps fall through.
+   Without this the empty state's "Add a Portrait" sat under the scrim and a
+   real tap never reached it; tests/e2e/portrait.spec.js clicks it the way a
+   finger does to keep it that way. The caption is included because a
+   two-line name reaches up into the button on a short hero. */
 .hero__scrim {
   position: absolute; inset: 0;
   background: linear-gradient(to top, rgba(0,0,0,0.88) 0%, rgba(0,0,0,0.42) 34%, rgba(0,0,0,0) 62%);
+  pointer-events: none;
 }
 /* Hung from the status bar's clearance, not a fixed 52px: on a real phone
    that clearance is the device's own safe area (tokens.css), and a fixed
@@ -155,7 +163,7 @@
 .hero__btn-home { position: absolute; top: calc(var(--statusbar-clear) - 2px); left: 16px; z-index: 5; }
 .hero__btn-menu { position: absolute; top: calc(var(--statusbar-clear) - 2px); right: 16px; z-index: 5; }
 .hero__btn-dice { position: absolute; bottom: 22px; right: 16px; z-index: 5; }
-.hero__caption { position: absolute; left: 22px; right: 22px; bottom: 22px; }
+.hero__caption { position: absolute; left: 22px; right: 22px; bottom: 22px; pointer-events: none; }
 .hero__name {
   font-family: var(--font-display); font-size: var(--fs-hero); line-height: 1.08; color: var(--on-dark);
   text-shadow: 0 1px 8px var(--scrim);
@@ -535,11 +543,6 @@
   color: inherit; border-radius: 2px; padding: 0 1px;
 }
 
-/* ---- delete confirmation ---- */
-.confirm__text {
-  font-family: var(--font-body); font-size: var(--fs-body); line-height: 1.6;
-  color: var(--ink-soft); margin-bottom: var(--space-4);
-}
 /* ----------------------------------------------------------------- */
 /* 9. BOTTOM TAB BAR                                                  */
 /* ----------------------------------------------------------------- */

@@ -13,16 +13,26 @@
       <!-- TOAST — a short confirmation after an action that has no other
            visible result — a save that leaves you on the same screen, a file
            sent to downloads. Never carries a decision: anything that needs
-           one is a modal.
+           one is a modal. It may carry ONE way back — an Undo after a
+           removal — which is a reversal, not a question.
 
            role="status" is polite: it is read when the reader is free, and it
-           never takes focus away from what the player was doing. The card is
-           a button so a tap dismisses it early; it times out on its own
-           regardless (see showToast() in main.js). -->
+           never takes focus away from what the player was doing. The message
+           is a button so a tap dismisses it early; it times out on its own
+           regardless (see showToast() in main.js).
+
+           The card is a plain box holding two SIBLING buttons, message and
+           action, because a button may not contain another button. The
+           action is hidden unless showToast() is given one; unlike the
+           message it stays in the tab order while showing, so a keyboard
+           can reach Undo. -->
       <div class="toast" role="status" aria-live="polite">
-        <button class="toast__card" type="button" data-toast-dismiss tabindex="-1">
-          <span class="toast__text" data-toast-text></span>
-        </button>
+        <div class="toast__card">
+          <button class="toast__dismiss" type="button" data-toast-dismiss tabindex="-1">
+            <span class="toast__text" data-toast-text></span>
+          </button>
+          <button class="toast__action" type="button" data-toast-action hidden></button>
+        </div>
       </div>
 
       <!-- STORAGE ALERT — standing, not transient. Shown while browser

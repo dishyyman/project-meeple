@@ -1,5 +1,6 @@
 /* MEEPLE · dice.css
-   Heal/damage (§11), dice roller (§12), quick roll (§13), motion (§16).
+   Heal/damage (§11), popup shapes — sheet, alert, notice (§11a), dice roller
+   (§12), quick roll (§13), motion (§16).
    Part of the stylesheet loaded by style.css. Appearance only — no layout
    decisions that belong to structure, and no values that belong in tokens.css. */
 
@@ -69,6 +70,157 @@
 }
 .modal__close::before { transform: rotate(45deg); }
 .modal__close::after  { transform: rotate(-45deg); }
+
+/* ----------------------------------------------------------------- */
+/* 11a. DIALOG SHAPES — sheet, alert, notice                          */
+/* ----------------------------------------------------------------- */
+/* Three shapes, chosen by what the popup ASKS, and borrowed from the split
+   every phone already teaches (Jakob's Law — players spend their time in
+   other apps, so ours should work the way those do):
+
+     SHEET   pick one of several (Rest, Portrait, Advantage, Import).
+             Rises from the bottom edge, under the thumb. A grab handle, a
+             centred title, a list of rows that each say what they do, and a
+             full-width Cancel at the foot. A row commits on tap — the iOS
+             action sheet / Material bottom sheet.
+     ALERT   yes or no (Patch, an effect tick, a delete). A small centred
+             card: icon, question, what happens, then Cancel | the verb side
+             by side and centred. The iOS / Material alert.
+     NOTICE  something happened to you (Downed, Boons lost, an import
+             result). An alert with ONE full-width OK.
+
+   Both shapes hold no typed input, so Escape closes them too (see the
+   keydown rule in main.js) — the universal "get me out" key.
+
+   Markup recipes are in docs/design-system.md §12.1. */
+
+/* ---- sheet ---- */
+/* Doubled class to beat .modal's own align/padding without depending on which
+   rule comes later. The dice roller (.modal--dice, §12) was the first sheet
+   and does the same thing by hand. */
+.modal.modal--action-sheet { align-items: flex-end; padding: 0; }
+.action-sheet {
+  position: relative; width: 100%;
+  max-height: calc(100% - var(--statusbar-clear) - var(--space-6));
+  display: flex; flex-direction: column; gap: var(--space-4);
+  overflow-y: auto;
+  background: var(--bg-card);
+  border-top: 1.5px solid var(--line-gold);
+  border-radius: var(--r-modal) var(--r-modal) 0 0;
+  box-shadow: 0 -12px 40px rgba(0,0,0,0.6);
+  padding: var(--space-2-5) var(--space-4) calc(var(--space-4) + var(--home-clear));
+  animation: sheet-rise 0.22s ease-out;
+}
+/* The handle that says "this came up, and can go back down". */
+.action-sheet__grab {
+  flex-shrink: 0; align-self: center;
+  width: 38px; height: 5px; border-radius: 3px; background: var(--line);
+}
+.action-sheet__head { text-align: center; }
+.action-sheet__title { font-family: var(--font-display); font-size: var(--fs-title); color: var(--heading); }
+.action-sheet__sub {
+  margin: var(--space-1) 0 0;
+  font-family: var(--font-body); font-style: italic; font-size: var(--fs-body);
+  line-height: 1.5; color: var(--ink-muted);
+}
+/* The choices, as one inset group — the grouped list of iOS Settings. A
+   recess rather than a raised card, so the rows read as part of one control
+   and the hairlines between them do the separating. */
+.action-sheet__list {
+  flex-shrink: 0; display: flex; flex-direction: column;
+  border: 1px solid var(--line-soft); border-radius: var(--r-lg);
+  background: var(--bg-inset); overflow: hidden;
+}
+.action-sheet__row {
+  display: flex; align-items: center; gap: var(--space-3-5);
+  width: 100%; min-height: 64px; padding: var(--space-3) var(--space-3-5);
+  text-align: left;
+}
+.action-sheet__row + .action-sheet__row { border-top: 1px solid var(--line-hair); }
+.action-sheet__row:active { background: var(--wash-lift); }
+/* The list clips its corners (overflow: hidden), which would cut the usual
+   outset focus ring down to a stray line under the row — so it is drawn
+   inside the row instead, the way .pick-card__head does it. */
+.action-sheet__row:focus-visible { outline-offset: -3px; border-radius: var(--r-lg); }
+/* Icons in a round gold-on-parchment well, so a row reads at a glance before
+   its words do — and the wells line the labels up down the list. */
+.action-sheet__icon {
+  flex-shrink: 0; width: 40px; height: 40px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--bg-parchment2); color: var(--gold);
+}
+.action-sheet__text { flex: 1; min-width: 0; }
+.action-sheet__label { display: block; font-family: var(--font-display); font-size: var(--fs-row); color: var(--ink); }
+.action-sheet__note {
+  display: block; margin-top: var(--space-0-5);
+  font-family: var(--font-body); font-size: var(--fs-body); line-height: 1.45; color: var(--ink-muted);
+}
+/* A trailing value instead of a note — Advantage's dice pool. */
+.action-sheet__aside {
+  flex-shrink: 0;
+  font-family: var(--font-body); font-style: italic; font-size: var(--fs-note); color: var(--ink-faint);
+}
+.action-sheet__chev { flex-shrink: 0; color: var(--ink-faint); }
+/* Destructive row: red words AND a red icon, so the warning is in the
+   picture as well as the text. Last in its list, by convention. */
+.action-sheet__row--danger .action-sheet__label { color: var(--danger-bright); }
+.action-sheet__row--danger .action-sheet__icon { background: var(--danger-wash); color: var(--danger-bright); }
+/* Cancel is its own button, apart from the choices — never a row among
+   them, so "do nothing" can't be mistaken for one of the things to do. */
+.action-sheet__cancel {
+  flex-shrink: 0; min-height: 50px; padding: var(--space-3);
+  border: 1.5px solid var(--line-warm); border-radius: var(--r-md);
+  background: var(--bg-page);
+  font-family: var(--font-label); font-size: var(--fs-input);
+  letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-soft);
+}
+.action-sheet__cancel:active { background: var(--wash-lift); }
+
+/* ---- alert / notice ---- */
+/* Sits on .modal__card, so it keeps the card's frame and double gold rule;
+   this only re-lays the inside as a centred column. Same specificity as
+   .modal__card and later in the file, so these padding values win. */
+.alert {
+  display: flex; flex-direction: column; align-items: center; gap: var(--space-3);
+  text-align: center;
+  max-height: 100%;
+  padding: var(--space-6) var(--space-5) var(--space-5);
+}
+.alert__icon {
+  flex-shrink: 0; width: 52px; height: 52px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--bg-parchment2); border: 1px solid var(--line-warm); color: var(--accent-bright);
+}
+.alert__icon--danger { background: var(--danger-wash); border-color: var(--danger-bright); color: var(--danger-bright); }
+.alert__icon--warn   { background: var(--warning-wash); border-color: var(--warning-bright); color: var(--warning-bright); }
+.alert__icon--ok     { background: var(--success-wash); border-color: var(--success-bright); color: var(--success-bright); }
+.alert__title { font-family: var(--font-display); font-size: var(--fs-title); color: var(--heading); }
+.alert__text {
+  margin: 0;
+  font-family: var(--font-body); font-size: var(--fs-body); line-height: 1.6; color: var(--ink-soft);
+}
+/* A status line in a centred card keeps its glyph beside its words: the line
+   shrinks to its text (flex child) and reads left-to-right from the glyph. */
+.alert__text.status { text-align: left; }
+.alert__meta {
+  margin: 0;
+  font-family: var(--font-body); font-style: italic; font-size: var(--fs-note);
+  line-height: 1.5; color: var(--ink-faint);
+}
+/* What a state does to you, as a short list — in an inset box so it reads
+   as one block of consequences rather than more prose. */
+.alert__list {
+  align-self: stretch; list-style: none; text-align: left; margin: 0; padding: 0;
+  border: 1px solid var(--line-soft); border-radius: var(--r-md); background: var(--bg-inset);
+}
+.alert__list li {
+  padding: var(--space-2) var(--space-3-5);
+  font-family: var(--font-body); font-size: var(--fs-body); line-height: 1.45; color: var(--ink-soft);
+}
+.alert__list li + li { border-top: 1px solid var(--line-hair); }
+/* Cancel | verb, side by side and centred; a notice's single OK spans. The
+   buttons are .btn-ghost / .btn-save, which already share the row equally. */
+.alert__actions { flex-shrink: 0; display: flex; gap: var(--space-2-5); align-self: stretch; margin-top: var(--space-2); }
 .calc-row { display: flex; align-items: center; gap: var(--space-2-5); margin-bottom: var(--space-4); }
 .calc-step {
   flex-shrink: 0; width: 38px; height: 44px; border-radius: 9px;
@@ -398,51 +550,6 @@
 .rule__action[hidden] { display: none; }
 
 
-/* ---- the advantage chooser ----
-   Rooted on the To-Hit box that was held, not centred like the other modals:
-   there can be several To-Hit boxes on one screen, and a centred sheet would
-   lose track of which one you pressed.
-
-   Position comes from --adv-x / --adv-y and data-adv-dir, all written by
-   openAdv() — the same arrangement --pull and --pv-* use. Absolute, inside
-   .app, so it is placed against the phone frame and cannot be clipped by a
-   collapsible row's overflow the way a nested absolute child would be. */
-.adv-menu {
-  --adv-w: 216px;
-  position: absolute;
-  width: var(--adv-w);
-  /* Centred on the box, then clamped so neither edge can leave the frame.
-     The clamp is why the width is a token: both ends of it need the number. */
-  left: clamp(calc(var(--adv-w) / 2 + 12px), var(--adv-x, 50%),
-              calc(100% - var(--adv-w) / 2 - 12px));
-  top: var(--adv-y, 50%);
-  z-index: 51;
-  border: 1px solid var(--line-hair); border-radius: var(--r-sm);
-  background: var(--bg-card); box-shadow: var(--shadow-card);
-  overflow: hidden;
-}
-/* Below the box by default, above it when openAdv finds no room beneath —
-   the translate does the flip, so the anchor point stays the box's edge. */
-.adv-menu[data-adv-dir="down"] { transform: translate(-50%, 8px); }
-.adv-menu[data-adv-dir="up"]   { transform: translate(-50%, calc(-100% - 8px)); }
-
-.adv-menu__row {
-  display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-2-5);
-  width: 100%; padding: var(--space-3) var(--space-3-5);
-  background: none; text-align: left;
-}
-.adv-menu__row + .adv-menu__row { border-top: 1px solid var(--line-soft); }
-.adv-menu__label {
-  font-family: var(--font-label); font-size: var(--fs-body); color: var(--ink);
-}
-/* The pool, and nothing else. What "Advantage" DOES is not written here —
-   the option's own name says which way it goes, and the result card shows the
-   discarded die struck through. */
-.adv-menu__dice {
-  font-family: var(--font-body); font-style: italic; font-size: var(--fs-small);
-  color: var(--ink-faint);
-}
-
 /* The mode's name on the result card, under the kind. Empty on a straight
    roll, and :empty collapses it so the card keeps its old spacing exactly. */
 .roll-card__adv {
@@ -555,7 +662,8 @@
      rise. Fade only, as the toast does (toast.css): a change of opacity is
      not movement, and an instant pop would lose the cue that something
      opened. */
-  .dice-sheet { animation-name: sheet-fade; }
+  .dice-sheet,
+  .action-sheet { animation-name: sheet-fade; }
 }
 @keyframes sheet-fade { from { opacity: 0; } to { opacity: 1; } }
 

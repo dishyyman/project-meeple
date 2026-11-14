@@ -121,34 +121,47 @@
 
     <!-- ================= ADVANTAGE CHOOSER =================
          Opened by HOLDING a To-Hit box; a plain tap still rolls a straight
-         d20. Rooted on the box that was held rather than centred, because
-         there can be several To-Hit boxes on screen and a centred sheet would
-         lose track of which one you meant — its position comes from --adv-x
-         and --adv-y, written by openAdv() the way --pull and --pv-* are.
+         d20. A SHEET (dice.css §11a). It used to hang off the held box as a
+         small popover so you could tell which of several To-Hit boxes you
+         meant; as a sheet it says so in words instead — the line under the
+         title names the weapon (openAdv() writes it).
 
          Four rows, and no fifth for "straight roll": that is what the tap is.
          Each row names the pool it picks up. "Take highest" is deliberately
          NOT written — the option's own name says which way it goes, and the
-         result card shows the discarded die struck through. -->
-    <div class="modal modal--adv">
+         result card shows the discarded die struck through. The chevrons say
+         the same thing as a picture: two up, one up, one down, two down. -->
+    <div class="modal modal--adv modal--action-sheet">
       <div class="modal__scrim" data-modal="close"></div>
-      <div class="adv-menu" role="dialog" aria-modal="true" aria-label="Roll with Advantage or Disadvantage" tabindex="-1" data-adv-menu>
-          <button class="adv-menu__row" data-adv="2">
-            <span class="adv-menu__label">2 Advantage</span>
-            <span class="adv-menu__dice">3d20</span>
+      <div class="action-sheet" role="dialog" aria-modal="true" aria-labelledby="adv-title" tabindex="-1" data-adv-menu>
+        <div class="action-sheet__grab" aria-hidden="true"></div>
+        <div class="action-sheet__head">
+          <div class="action-sheet__title" id="adv-title">Roll with Advantage?</div>
+          <p class="action-sheet__sub" data-bind="advFor"></p>
+        </div>
+        <div class="action-sheet__list">
+          <button class="action-sheet__row" data-adv="2">
+            <span class="action-sheet__icon" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m17 11-5-5-5 5"/><path d="m17 18-5-5-5 5"/></svg></span>
+            <span class="action-sheet__text"><span class="action-sheet__label">2 Advantage</span></span>
+            <span class="action-sheet__aside">3d20</span>
           </button>
-          <button class="adv-menu__row" data-adv="1">
-            <span class="adv-menu__label">Advantage</span>
-            <span class="adv-menu__dice">2d20</span>
+          <button class="action-sheet__row" data-adv="1">
+            <span class="action-sheet__icon" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m18 15-6-6-6 6"/></svg></span>
+            <span class="action-sheet__text"><span class="action-sheet__label">Advantage</span></span>
+            <span class="action-sheet__aside">2d20</span>
           </button>
-          <button class="adv-menu__row" data-adv="-1">
-            <span class="adv-menu__label">Disadvantage</span>
-            <span class="adv-menu__dice">2d20</span>
+          <button class="action-sheet__row" data-adv="-1">
+            <span class="action-sheet__icon" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></span>
+            <span class="action-sheet__text"><span class="action-sheet__label">Disadvantage</span></span>
+            <span class="action-sheet__aside">2d20</span>
           </button>
-          <button class="adv-menu__row" data-adv="-2">
-            <span class="adv-menu__label">2 Disadvantage</span>
-            <span class="adv-menu__dice">3d20</span>
+          <button class="action-sheet__row" data-adv="-2">
+            <span class="action-sheet__icon" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m7 6 5 5 5-5"/><path d="m7 13 5 5 5-5"/></svg></span>
+            <span class="action-sheet__text"><span class="action-sheet__label">2 Disadvantage</span></span>
+            <span class="action-sheet__aside">3d20</span>
           </button>
+        </div>
+        <button class="action-sheet__cancel" data-modal="close">Cancel</button>
       </div>
     </div>
 
