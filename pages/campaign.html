@@ -78,13 +78,10 @@
              that turn, and when the line has gone through everyone a new
              round gives every turn back. renderCombat() paints all of it.
 
-             The heading is the round count ("✦ Round 2 ✦") during a fight,
-             and carries End Fight where the Enemies heading carries Export
-             all — the one action on the whole fight. -->
+             The heading is the round count ("✦ Round 2 ✦") during a fight. -->
         <div class="camp-page camp-page--combat" role="tabpanel" aria-label="Combat">
           <div class="rule">
             <span class="rule__label" data-bind="combatRound">&#10022; Combat &#10022;</span>
-            <button class="rule__action" data-combat-end-open hidden>End Fight</button>
           </div>
 
           <!-- No fight: a line of prose and the one way in. -->
@@ -107,6 +104,18 @@
               <div class="rule"><span class="rule__label">&#10022; Gone This Round &#10022;</span></div>
               <div class="fighters" data-list="combatDone"></div>
             </div>
+
+            <!-- End Fight, at the foot of the fight (designer request,
+                 2026-11-18). It was a small link in the heading, where it was
+                 easy to miss; the bottom of the page is where people look for
+                 the action that finishes the whole page (Jakob's law). A
+                 full-width outlined button: plain to see, but not filled, so
+                 End Turn stays the one ember button on the screen. It lives
+                 inside combatLive, so it is only there while a fight is. -->
+            <button class="btn-ghost combat-end-btn" data-combat-end-open>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 22V4a1 1 0 0 1 .4-.8A6 6 0 0 1 8 2c3 0 5 2 7.333 2q2 0 3.067-.8A1 1 0 0 1 20 4v10a1 1 0 0 1-.4.8A6 6 0 0 1 16 16c-3 0-5-2-8-2a6 6 0 0 0-4 1.528"/></svg>
+              <span>End Fight</span>
+            </button>
           </div>
         </div>
       </div>

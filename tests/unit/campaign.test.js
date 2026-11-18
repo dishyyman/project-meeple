@@ -193,11 +193,13 @@ describe('normalizeCampaign — the one door in', () => {
 });
 
 describe('heroes and enemies run through the player\'s own rules', () => {
-  test('a hero card + vitals: the Wound cascade, Armor from Wounds', () => {
+  test('a hero card + vitals: the Wound cascade, Evasion and Speed from Wounds', () => {
     const h = C.newHero({ name: 'Elara', card: CARD }, NOW);
+    assert.equal(h.card.woundsLowerStats, true);    // CARD predates the field: a hero's
     V.damage(h.card, h.vitals, 'health', 12);       // 9 empties the bar → Wound, refill, 3 over
     assert.deepEqual([h.vitals.health, h.vitals.wounds], [6, 1]);
-    assert.equal(V.armor(h.card, h.vitals), 2 - 2);
+    assert.deepEqual([V.evasion(h.card, h.vitals), V.speed(h.card, h.vitals)], [14 - 1, 5 - 1]);
+    assert.equal(V.armor(h.card, h.vitals), 2);     // Wounds no longer touch Armor
   });
 
   test('an enemy with no Wounds: one bar, Armor off each hit, downed at 0', () => {
@@ -213,12 +215,21 @@ describe('heroes and enemies run through the player\'s own rules', () => {
     assert.equal(V.isDowned(card, v), true);
   });
 
-  test('an enemy with Wounds takes them like a hero', () => {
-    const c = campaignWith({ heroes: 0, enemies: [{ name: 'Knight', stats: { hp: 10, wounds: 2 } }] });
+  test('an enemy with Wounds takes them like a hero — the bar refills — but they cost it no stats', () => {
+    const c = campaignWith({ heroes: 0, enemies: [{ name: 'Knight', stats: { hp: 10, wounds: 2, evasion: 12, speed: 5 } }] });
     const card = C.enemyCard(c.enemies[0]);
+    assert.equal(card.woundsLowerStats, false);
     const v = C.freshVitals(card);
     V.damage(card, v, 'health', 14);
     assert.deepEqual([v.health, v.wounds], [6, 1]);
+    assert.deepEqual([V.evasion(card, v), V.speed(card, v)], [12, 5]);
+  });
+
+  test('the Wound-cost flag survives the door; only an explicit false waives it', () => {
+    assert.equal(C.normalizeCard({ ...CARD, woundsLowerStats: false }).woundsLowerStats, false);
+    for (const junk of [undefined, null, 0, 'no', true]) {
+      assert.equal(C.normalizeCard({ ...CARD, woundsLowerStats: junk }).woundsLowerStats, true);
+    }
   });
 });
 

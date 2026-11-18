@@ -62,8 +62,11 @@
     BASE_STATS: Object.freeze({ evasion: 8, armor: 0, fortitude: 8, speed: 5 }),
     // "2 hands worth total" (guide, ch.4).
     HAND_CAPACITY: 2,
-    // Every Wound: −2 Armor and −1 Speed, cumulative.
-    WOUND_ARMOR_STEP: -2,
+    // Every Wound: −1 Evasion and −1 Speed, cumulative. Playtest ruling
+    // 2026-11-18 — it was −2 Armor and −1 Speed (docs/rules-gaps.md §1.1).
+    // A HERO's cost only: an enemy's Wounds refill its bar and cost it
+    // nothing else (card.woundsLowerStats, campaign.js enemyCard()).
+    WOUND_EVASION_STEP: -1,
     WOUND_SPEED_STEP: -1,
     // What a downed character is left with — see the downed note below.
     DOWNED_ARMOR: 0,
@@ -129,14 +132,14 @@
      turns a 5 into a 3, and a 2 into nothing. Armor Piercing ignores Armor
      entirely ("the damage ignores Armor and applies all of the damage").
 
-     NEGATIVE Armor is real and it HURTS: Wounds take 2 each and Vulnerable
-     "can reduce Armor into negative values, taking extra damage", so Armor −2
-     turns a 5 into a 7. Nothing here clamps the Armor itself — only the
-     result.
+     NEGATIVE Armor is real and it HURTS: Vulnerable "can reduce Armor into
+     negative values, taking extra damage", so Armor −2 turns a 5 into a 7.
+     Nothing here clamps the Armor itself — only the result. (Wounds no longer
+     touch Armor — playtest ruling 2026-11-18, see WOUND_EVASION_STEP.)
 
      Takes plain numbers rather than a target, so the same rule serves a
      hero card, an enemy and (one day) a player's own calculator. The caller
-     reads Armor through V.armor / armor(), which already knows about Wounds,
+     reads Armor through V.armor / armor(), which already knows about
      effects and being downed (downed Armor is 0: the hit lands whole). */
   const damageAfterArmor = (amount, armorValue, piercing = false) => {
     const hit = clampInt(amount);
@@ -365,10 +368,11 @@
     const isTrained = (g, build) =>
       proficiencies(g.type === 'Shield' ? 'armorTypes' : 'weaponTypes', build).includes(g.prof);
 
-    // Every Wound costs the same: −2 Armor AND −1 Speed, both cumulative.
+    // Every Wound costs the same: −1 Evasion AND −1 Speed, both cumulative.
     // Multiplying by the Wound count fits any cap in the library for free.
+    // Any other key (Armor, Fortitude) costs nothing.
     const woundPenalty = (ch, key) => {
-      const steps = { armor: R.WOUND_ARMOR_STEP, speed: R.WOUND_SPEED_STEP }[key] || 0;
+      const steps = { evasion: R.WOUND_EVASION_STEP, speed: R.WOUND_SPEED_STEP }[key] || 0;
       return ch.wounds * steps;
     };
 
@@ -436,6 +440,9 @@
         manaMax: manaMax(ch),
         woundsMax: woundsMax(ch),
         patchesMax: patchesMax(ch),
+        // A hero pays for every Wound in Evasion and Speed. Said on the card,
+        // rather than assumed, because an enemy's card says the opposite.
+        woundsLowerStats: true,
         // The class's own block — what being downed drops Evasion and
         // Fortitude back to.
         base: {
@@ -494,24 +501,33 @@
 
        Standing, the card's build numbers move with what is on them: Dexterity
        and Fortune from effects, Chill, Slow, Protection, Vulnerable, and each
-       Wound (−2 Armor, −1 Speed — WOUND_*_STEP). */
-    V.evasion = (c, v) => (V.isDowned(c, v) ? c.base.evasion
-      : c.build.evasion + statFromEffects(v, 'Dexterity') - stacksOf(v, 'condition.chill'));
+       Wound (−1 Evasion, −1 Speed — WOUND_*_STEP).
 
-    // Wounds reduce Armor directly (WOUND_ARMOR_STEP), so Vulnerable is purely
-    // a condition — and it can take Armor below zero, which ADDS damage
+       WHO PAYS FOR A WOUND (playtest ruling, 2026-11-18): a hero does. An
+       enemy's Wounds only refill its bar — the cascade is the same, the
+       stats are not touched — so a GM never has to recompute a monster's
+       block mid-fight. The card says which (`woundsLowerStats`); a card
+       without the field is a hero's from before it existed, so only an
+       explicit `false` waives the cost. */
+    const woundCost = (c, v, key) => (c.woundsLowerStats === false ? 0 : woundPenalty(v, key));
+
+    V.evasion = (c, v) => (V.isDowned(c, v) ? c.base.evasion
+      : c.build.evasion + statFromEffects(v, 'Dexterity') - stacksOf(v, 'condition.chill')
+        + woundCost(c, v, 'evasion'));
+
+    // Wounds no longer touch Armor, so Protection and Vulnerable are all that
+    // move it — and Vulnerable can take it below zero, which ADDS damage
     // (guide: "Can reduce Armor into negative values, taking extra damage").
     V.armor = (c, v) => (V.isDowned(c, v) ? R.DOWNED_ARMOR
       : c.build.armor
         + stacksOf(v, 'boon.protection')
-        - stacksOf(v, 'condition.vulnerable')
-        + woundPenalty(v, 'armor'));
+        - stacksOf(v, 'condition.vulnerable'));
 
     V.fortitude = (c, v) => (V.isDowned(c, v) ? c.base.fortitude
       : c.build.fortitude + statFromEffects(v, 'Fortune'));
 
     V.speed = (c, v) => (V.isDowned(c, v) ? R.DOWNED_SPEED
-      : c.build.speed - stacksOf(v, 'condition.slow') + woundPenalty(v, 'speed'));
+      : c.build.speed - stacksOf(v, 'condition.slow') + woundCost(c, v, 'speed'));
 
     /* ---- play rules ---------------------------------------------------- */
 

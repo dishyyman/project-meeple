@@ -2043,11 +2043,21 @@
         <span class="eyebrow wounds__label">Wounds</span>
         <div class="wounds__pips">${pips}</div>
       </div>` : '';
+    /* Each defence as it stands now, flagged LOWERED when it reads below the
+       card's standing number — a Wound on a hero, Chill or Slow, Vulnerable,
+       being downed. The GM reads these numbers off the card on every attack,
+       so "Brom is slowed" should be seen, not worked out from the pips.
+       Compared against `build` (the unwounded, effect-free number) rather
+       than `base`, so gear a hero is wearing never counts as a loss. */
+    const defence = (label, key, show = String) => {
+      const now = V[key](c, v);
+      return { label, value: show(now), lowered: now < c.build[key] };
+    };
     const defences = [
-      { label: 'Evasion',   value: String(V.evasion(c, v)) },
-      { label: 'Armor',     value: modLabel(V.armor(c, v)) },
-      { label: 'Fortitude', value: String(V.fortitude(c, v)) },
-      { label: 'Speed',     value: String(V.speed(c, v)) },
+      defence('Evasion', 'evasion'),
+      defence('Armor', 'armor', modLabel),
+      defence('Fortitude', 'fortitude'),
+      defence('Speed', 'speed'),
     ];
     const rows = v.effects.map((e) => effectRow(e, { step: hooks.step, tick: false })).join('');
     return {
@@ -2056,7 +2066,12 @@
       // seeing even when it is not their turn; the + to add one is not.
       effectRows: rows ? `<div class="effects">${rows}</div>` : '',
       grid: `<div class="combat-grid">${defences.map(combatCell).join('')}</div>`,
-      effects: `<div class="effects">${rows}<button class="effect-add" ${hooks.add} aria-label="Add a boon or condition to ${esc(name)}"><svg class="plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="M12 5v14"/></svg></button></div>`,
+      // The add tile SAYS what it adds (designer request, 2026-11-18): a GM
+      // card has no "Boons & Conditions" heading over it the way the
+      // player's sheet does, so a bare + left the GM guessing. The
+      // accessible name keeps the visible words in it (WCAG 2.5.3, label in
+      // name) and adds who it is for.
+      effects: `<div class="effects">${rows}<button class="effect-add" ${hooks.add} aria-label="Add Boons &amp; Conditions to ${esc(name)}"><svg class="plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="M12 5v14"/></svg><span class="effect-add__label">Boons &amp; Conditions</span></button></div>`,
     };
   }
 
@@ -2954,11 +2969,21 @@
     return box ? subjectFor(activeCampaign(), box.dataset.member) : null;
   };
 
-  /* One fighter. Compact in the lists — the name, the turns left, the Go
-     button, and each body's Health bar, because a hit lands on someone
-     whose turn it is NOT far more often than on whoever is acting. `full`
-     for whoever is acting: every vital, the defences, Boons & Conditions,
-     and for an enemy its attacks with the sheet's own roll boxes. */
+  /* One fighter. Compact in the lists, `full` for whoever is acting.
+
+     HEROES carry no Health or Mana here (designer ruling, 2026-11-18): each
+     player tracks their own on their sheet, and the GM's copy would only
+     drift from it. What the GM needs from a hero in a fight is what an
+     enemy attacks AGAINST — the four defences, after Wounds — and the Wound
+     pips to keep them true. So a hero is defences, Wounds and Boons &
+     Conditions, compact or acting alike (acting adds the + to add one).
+
+     ENEMIES keep their Health bar in the lists, because a hit lands on
+     someone whose turn it is NOT far more often than on whoever is acting,
+     and show their defences there too, so the GM can read a goblin's
+     Evasion before a hero swings at it. Acting, an enemy is whole: every
+     vital, defences, Boons & Conditions, and its attacks with the sheet's
+     own roll boxes. */
   function fighterHtml(c, f, { full = false } = {}) {
     const combat = c.combat;
     const out = fighterOut(c, f);
@@ -2971,7 +2996,7 @@
       if (!h) return '';
       name = h.name;
       const p = vitalParts(h.name, h.card, h.vitals, HERO_HOOKS);
-      body = `<div data-hero="${esc(h.id)}">${full ? p.health + p.mana + p.wounds + p.grid + p.effects : p.health + p.wounds + p.effectRows}</div>`;
+      body = `<div data-hero="${esc(h.id)}">${p.wounds + p.grid + (full ? p.effects : p.effectRows)}</div>`;
       if (out) downTag = '<span class="hero-card__state">Downed</span>';
     } else {
       const e = enemyIn(c, f.enemyId);
@@ -2993,7 +3018,7 @@
             ${down ? '<span class="hero-card__state">Down</span>' : ''}
             ${editBtn(m, label)}
           </div>` : '';
-        return `<div class="fighter__member" data-member="${esc(m.id)}"${down ? ' data-downed' : ''}>${head}${full ? p.health + p.mana + p.wounds + p.grid + p.effects : p.health + p.wounds + p.effectRows}</div>`;
+        return `<div class="fighter__member" data-member="${esc(m.id)}"${down ? ' data-downed' : ''}>${head}${full ? p.health + p.mana + p.wounds + p.grid + p.effects : p.health + p.wounds + p.grid + p.effectRows}</div>`;
       }).join('');
       if (!group) {
         edit = editBtn(f.members[0], memberName(c, e, f.members[0]));
@@ -3028,8 +3053,6 @@
     const combat = c ? c.combat : null;
     showBlock('combatIdle', !combat);
     showBlock('combatLive', !!combat);
-    const end = $('[data-combat-end-open]');
-    if (end) end.hidden = !combat;
     setText('combatRound', combat ? `✦ Round ${combat.round} ✦` : '✦ Combat ✦');
     if (!combat) {
       fillList('combatNow', ''); fillList('combatNext', ''); fillList('combatDone', '');
@@ -3054,7 +3077,7 @@
     // Said, not inferred into an ending: the GM decides when a fight is over.
     const enemies = combat.fighters.filter((f) => f.kind === 'enemy');
     if (enemies.length && enemies.every(isOut)) {
-      now += '<p class="status status--ok combat-now__note">Every enemy is down. End the fight when you&rsquo;re ready.</p>';
+      now += '<p class="status status--ok combat-now__note">Every enemy is down. End the fight from the bottom of the page when you&rsquo;re ready.</p>';
     }
     fillList('combatNow', now);
 
@@ -3341,10 +3364,14 @@
   /* ------------------------------------------------------------------ */
   /* MARKUP BUILDERS — return class-only HTML strings                   */
   /* ------------------------------------------------------------------ */
+  /* `lowered` (optional): the number is below where it normally stands. A
+     down-arrow beside it and "lowered" said to a screen reader — never colour
+     alone. data-lowered is the hook; campaign.css draws it. */
+  const LOWERED_SVG = '<svg class="combat-cell__flag" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14"/><path d="m19 12-7 7-7-7"/></svg>';
   function combatCell(c) {
-    return `<div class="combat-cell">
-      <div class="combat-cell__value">${esc(c.value)}</div>
-      <div class="combat-cell__label">${esc(c.label)}</div>
+    return `<div class="combat-cell"${c.lowered ? ' data-lowered' : ''}>
+      <div class="combat-cell__value">${esc(c.value)}${c.lowered ? LOWERED_SVG : ''}</div>
+      <div class="combat-cell__label">${esc(c.label)}${c.lowered ? '<span class="visually-hidden">, lowered</span>' : ''}</div>
     </div>`;
   }
 
@@ -5004,7 +5031,7 @@
   function takePatch() {
     spendPatch();
     renderVitals();
-    // Wounds feed Armor and Speed through woundPenalty(), so clearing one has
+    // Wounds feed Evasion and Speed through woundPenalty(), so clearing one has
     // to repaint the combat block too — the same reason the Wound pips do.
     renderDerived();
     save();
@@ -10410,7 +10437,7 @@
       // renderVitals() as well as renderWounds(), because clearing the Wound
       // that downed a character is what lets them off the floor — and the bar
       // they get up with is the empty one being downed left them. renderDerived()
-      // because Wounds feed Armor and Speed through woundPenalty().
+      // because Wounds feed Evasion and Speed through woundPenalty().
       if (t.hasAttribute('data-wound-reset')) {
         if (t.getAttribute('aria-disabled') === 'true') return; // already at zero
         setWounds(0);
@@ -10434,7 +10461,7 @@
 
       /* The Patch tally, toggling exactly as the Wound pips above do.
          No renderDerived(): Patches feed no derived stat — they are a supply
-         count, where a Wound moves Armor and Speed through woundPenalty(). */
+         count, where a Wound moves Evasion and Speed through woundPenalty(). */
       if (t.dataset.patch !== undefined) {
         patchHoldCancel();
         // The hold already opened the dialog; this click is only the finger

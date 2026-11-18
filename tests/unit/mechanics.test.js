@@ -288,9 +288,20 @@ describe('the Wound cascade', () => {
     assert.equal(M.isDowned(ch), true);
   });
 
-  test('every Wound is −2 Armor and −1 Speed, cumulative', () => {
+  // Playtest ruling 2026-11-18: was −2 Armor and −1 Speed.
+  test('every Wound is −1 Evasion and −1 Speed, cumulative; Armor and Fortitude untouched', () => {
+    const fresh = char();
     const ch = char({ wounds: 3 });
-    assert.deepEqual([M.armor(ch), M.speed(ch)], [-6, 2]);
+    assert.deepEqual(
+      [M.evasion(ch), M.speed(ch), M.armor(ch), M.fortitude(ch)],
+      [M.evasion(fresh) - 3, M.speed(fresh) - 3, M.armor(fresh), M.fortitude(fresh)],
+    );
+  });
+
+  test('the Wound cost is one named rule per stat', () => {
+    assert.equal(RULES.WOUND_EVASION_STEP, -1);
+    assert.equal(RULES.WOUND_SPEED_STEP, -1);
+    assert.equal('WOUND_ARMOR_STEP' in RULES, false);
   });
 
   test('downed: Evasion and Fortitude drop to base, Armor and Speed to 0', () => {
@@ -672,10 +683,11 @@ describe('an enemy is a card plus vitals', () => {
   });
 
   test('with Wounds: the same cascade as a hero', () => {
-    const c = enemy(2), v = vitals({ health: 5 });
+    const c = { ...enemy(2), woundsLowerStats: false }, v = vitals({ health: 5 });
     V.damage(c, v, 'health', 9);          // 5 empties the bar → Wound 1, refill, 4 over
     assert.deepEqual([v.health, v.wounds, V.isDowned(c, v)], [16, 1, false]);
-    assert.equal(V.armor(c, v), 3 - 2);   // each Wound is −2 Armor for an enemy too
+    // …but an enemy's Wound costs it no stats (playtest ruling, 2026-11-18).
+    assert.deepEqual([V.evasion(c, v), V.armor(c, v), V.fortitude(c, v), V.speed(c, v)], [10, 3, 8, 4]);
     V.damage(c, v, 'health', 99);
     assert.deepEqual([v.health, v.wounds, V.isDowned(c, v)], [0, 2, true]);
   });

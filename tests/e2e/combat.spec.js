@@ -14,7 +14,12 @@
        over, and can still be picked (designer ruling, 2026-11-14);
      · the ✎ on an enemy: heal by hand (even when down), a Boon or
        Condition, a Wound cleared, Back to Full — this fight only;
-     · End Fight asks; heroes keep their vitals, stat cards are untouched;
+     · End Fight sits at the foot of the fight, asks, and heroes keep their
+       vitals while stat cards are untouched;
+     · a hero in the fight is defences + Wounds, no Health or Mana (players
+       track their own); a Wound costs a hero −1 Evasion and −1 Speed and
+       flags them lowered, and costs an enemy nothing but its bar
+       (designer rulings, 2026-11-18);
      · the fight survives a reload, and leaves with a deleted stat card.
    ===================================================================== */
 const { test, expect } = require('./helpers/test');
@@ -90,6 +95,9 @@ async function hitWith(page, opener, amount, { pierce = false, heal = false } = 
 }
 const member = (page, label) => page.locator('.fighter__member', { has: page.locator('.fighter__member-name', { hasText: label }) });
 const hp = (loc) => loc.locator('.vital[data-resource="health"] .vital__value').first();
+// One of the four defence boxes on a card, by its label.
+const cell = (loc, label) => loc.locator('.combat-cell').filter({ hasText: label }).first();
+const statOf = (loc, label) => cell(loc, label).locator('.combat-cell__value');
 
 test('Start Combat: the whole party joins, the GM picks each enemy — and there is no surprise round', async ({ page }) => {
   await openCampaign(page);
@@ -113,6 +121,10 @@ test('Start Combat: the whole party joins, the GM picks each enemy — and there
   await expect(page.locator('[data-list="combatNow"]')).toContainText('Pick who goes next');
   await expect(page.locator('[data-block="combatDone"]')).toBeHidden();
   await expect(page.locator('[data-combat-end-open]')).toBeVisible();
+  // End Fight is the foot of the fight — after Gone This Round — not a link
+  // in the heading (designer request, 2026-11-18).
+  await expect(page.locator('.camp-page--combat .rule [data-combat-end-open]')).toHaveCount(0);
+  await expect(page.locator('[data-block="combatLive"] > :last-child')).toHaveAttribute('data-combat-end-open', '');
 
   const saved = (await stored(page)).combat;
   expect(saved.round).toBe(1);
@@ -211,11 +223,63 @@ test('damage takes Armor off per goblin; down stays in the list, greyed, and no 
   for (const who of ['Elara', 'Brom']) { await go(page, who); await endTurn(page); }
   await expect(page.getByRole('button', { name: 'Start Round 2' })).toBeVisible();
 
-  // A hero hit in the fight is hit on the Party tab: their Armor 2 is taken off.
-  await hitWith(page, fighter(page, 'Elara').locator('[data-hero-calc="health"]'), 7);
-  await expect(hp(fighter(page, 'Elara'))).toHaveText('15 / 20');
+});
+
+test('a hero in the fight: defences and Wounds, no Health or Mana — a Wound lowers Evasion and Speed, flagged', async ({ page }) => {
+  await openCampaign(page);
+  await startFight(page, { Goblin: 1 });
+  const elara = fighter(page, 'Elara');
+
+  // Players track their own Health and Mana (designer ruling, 2026-11-18).
+  await expect(elara.locator('.vital')).toHaveCount(0);
+  await expect(elara.locator('[data-hero-calc]')).toHaveCount(0);
+  await expect(elara.locator('.combat-cell')).toHaveCount(4);
+  await expect(elara.locator('.combat-cell[data-lowered]')).toHaveCount(0);
+  // Acting, the same: still no bars.
+  await go(page, 'Elara');
+  const now = page.locator('[data-list="combatNow"] .fighter--current');
+  await expect(now.locator('.vital')).toHaveCount(0);
+  await expect(now.locator('.wounds__pips .pip')).toHaveCount(3);
+  // The add tile says what it adds, and its name keeps those words.
+  await expect(now.locator('[data-hero-effect-open]')).toHaveText('Boons & Conditions');
+  await expect(now.getByRole('button', { name: 'Add Boons & Conditions to Elara' })).toBeVisible();
+
+  // One Wound: Evasion 12 → 11 and Speed 5 → 4, both flagged lowered — in
+  // words for a screen reader, not only the arrow. Armor and Fortitude stay.
+  await now.locator('[data-hero-wound="0"]').click();
+  await expect(statOf(now, 'Evasion')).toHaveText('11');
+  await expect(statOf(now, 'Speed')).toHaveText('4');
+  await expect(statOf(now, 'Armor')).toHaveText('+2');
+  await expect(statOf(now, 'Fortitude')).toHaveText('9');
+  await expect(cell(now, 'Evasion')).toHaveAttribute('data-lowered', '');
+  await expect(cell(now, 'Speed')).toHaveAttribute('data-lowered', '');
+  await expect(cell(now, 'Armor')).not.toHaveAttribute('data-lowered', '');
+  await expect(cell(now, 'Speed').locator('.combat-cell__label')).toHaveText('Speed, lowered');
+
+  // The same hero on the Party tab: the Wound is theirs, not the fight's.
   await press(page, '.tabbar__btn[data-campaign-tab="party"]');
-  await expect(page.locator('.hero-card', { hasText: 'Elara' }).locator('.vital[data-resource="health"] .vital__value')).toHaveText('15 / 20');
+  const card = page.locator('.hero-card', { hasText: 'Elara' });
+  await expect(statOf(card, 'Evasion')).toHaveText('11');
+  await expect(cell(card, 'Speed')).toHaveAttribute('data-lowered', '');
+  expect((await stored(page)).heroes.find((h) => h.id === 'hero_elara').vitals.wounds).toBe(1);
+});
+
+test('an enemy waiting its turn shows Health and its defences; its Wounds refill the bar and cost no stats', async ({ page }) => {
+  await openCampaign(page);
+  await startFight(page, { 'Ogre Brute': 1 });
+  const ogre = fighter(page, 'Ogre Brute');
+  await expect(hp(ogre)).toHaveText('40 / 40');
+  await expect(ogre.locator('.combat-cell')).toHaveCount(4);
+
+  // 50 − Armor 3 = 47: one Wound, the bar refilled, 33 left — and the Ogre's
+  // block exactly as its stat card says (designer ruling, 2026-11-18).
+  await hitWith(page, ogre.locator('[data-member-calc="health"]'), 50);
+  await expect(hp(ogre)).toHaveText('33 / 40');
+  await expect(ogre.locator('.pip.is-on')).toHaveCount(1);
+  for (const [label, value] of [['Evasion', '10'], ['Armor', '+3'], ['Fortitude', '8'], ['Speed', '4']]) {
+    await expect(statOf(ogre, label)).toHaveText(value);
+  }
+  await expect(ogre.locator('.combat-cell[data-lowered]')).toHaveCount(0);
 });
 
 test('the ✎ on an enemy: heal by hand (even when down), effects, a Wound cleared, Back to Full', async ({ page }) => {
@@ -248,6 +312,9 @@ test('the ✎ on an enemy: heal by hand (even when down), effects, a Wound clear
   await expect.poll(() => appAttr(page, 'data-modal')).toBe('effects');
   await page.locator('[data-effect-add="condition.slow"]').click();
   await expect(gob2.locator('.effect-row')).toHaveCount(1);
+  // Slow is −1 Speed, and a lowered stat is flagged on an enemy too.
+  await expect(statOf(gob2, 'Speed')).toHaveText('5');
+  await expect(cell(gob2, 'Speed')).toHaveAttribute('data-lowered', '');
   await expect(member(page, 'Goblin 1').locator('.effect-row')).toHaveCount(0);
 
   // Back to Full: as it started the fight.
@@ -274,7 +341,7 @@ test('the ✎ on an enemy: heal by hand (even when down), effects, a Wound clear
 test('End Fight asks; heroes keep their vitals, the enemies\' fight is cleared', async ({ page }) => {
   await openCampaign(page);
   await startFight(page, { Goblin: 1 });
-  await hitWith(page, fighter(page, 'Brom').locator('[data-hero-calc="health"]'), 10);   // − Armor 4 = 6
+  await fighter(page, 'Brom').locator('[data-hero-wound="0"]').click();
   await hitWith(page, fighter(page, 'Goblin').locator('[data-member-calc="health"]'), 3);
 
   await page.locator('[data-combat-end-open]').click();
@@ -290,7 +357,7 @@ test('End Fight asks; heroes keep their vitals, the enemies\' fight is cleared',
   await expect(page.getByRole('button', { name: 'Start Combat' })).toBeFocused();
   const saved = await stored(page);
   expect(saved.combat).toBeNull();
-  expect(saved.heroes.find((h) => h.id === 'hero_brom').vitals.health).toBe(18);
+  expect(saved.heroes.find((h) => h.id === 'hero_brom').vitals.wounds).toBe(1);
   expect(saved.enemies.find((e) => e.id === 'enemy_goblin').stats.hp).toBe(6);
 });
 

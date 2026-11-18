@@ -62,7 +62,9 @@ test('a hero from a file shows the numbers the player\'s sheet shows', async ({ 
   await expect(elara).toHaveCount(1);
   await expect(elara.locator('.hero-card__label')).toHaveText('5 Hunter');
   await expect(health(elara)).toHaveText('7 / 9');
-  expect(await defences(elara)).toEqual(['14', '+2', '10', '5']);
+  // One Wound on the file: −1 Evasion and −1 Speed (playtest ruling,
+  // 2026-11-18); Armor is shield +2 and Protection 2, which Wounds no longer touch.
+  expect(await defences(elara)).toEqual(['13', '+4', '10', '5']);
   await expect(elara.locator('.pip.is-on')).toHaveCount(1);
   await expect(elara.locator('.effect-row__name')).toHaveText(['Protection', 'Bleed']);
   // The file's content snapshot was BORROWED, not kept.
@@ -100,7 +102,7 @@ test('damage takes the hero\'s Armor off; Armor Piercing does not', async ({ pag
   await fromFile(page, ELARA);
   const elara = card(page, 'Elara Starwhisper');
 
-  await hit(page, elara, 5);                         // Armor +2 → 3 lands
+  await hit(page, elara, 7);                         // Armor +4 → 3 lands
   await expect(health(elara)).toHaveText('4 / 9');
   await hit(page, elara, 3, { pierce: true });       // all 3 land
   await expect(health(elara)).toHaveText('1 / 9');
@@ -115,12 +117,13 @@ test('a hit through the bar takes a Wound, clears Boons, and moves the defences'
   await fromFile(page, ELARA);
   const elara = card(page, 'Elara Starwhisper');
 
-  await hit(page, elara, 9);                         // 7 Armor-adjusted: empties 7 → Wound 2, refill
+  await hit(page, elara, 11);                        // 11 − Armor 4 = 7: empties 7 → Wound 2, refill
   await expect(elara.locator('.pip.is-on')).toHaveCount(2);
   await expect(elara.locator('.effect-row__name')).toHaveText(['Bleed']);   // Protection was a Boon
   await expect(page.locator('[data-toast-text]')).toContainText('Boons were cleared');
-  // Armor: +2 with Protection 2 and one Wound → 0 + shield 2, two Wounds, no Protection.
-  expect((await defences(elara))[1]).toBe('-2');
+  // Two Wounds: Evasion 14 → 12 and Speed 6 → 4. Armor loses only the
+  // Protection the Wound cleared — shield +2 is all that is left.
+  expect(await defences(elara)).toEqual(['12', '+2', '10', '4']);
 });
 
 test('the last Wound downs the hero, and the card says so', async ({ page }) => {
@@ -157,7 +160,7 @@ test('a newer file updates the card and keeps the GM\'s vitals', async ({ page }
   await newCampaign(page);
   await fromFile(page, ELARA);
   const elara = card(page, 'Elara Starwhisper');
-  await hit(page, elara, 5);
+  await hit(page, elara, 7);                         // Armor +4 → 3 lands
   await expect(health(elara)).toHaveText('4 / 9');
 
   // The player levels up their Constitution and sends a new file.

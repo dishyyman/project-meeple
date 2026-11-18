@@ -33,7 +33,8 @@
      build the same — it has no gear — so the one vitals engine runs heroes
      and enemies alike: the Wound cascade if the block gives Wounds, a
      single bar that downs at 0 if it leaves them empty, Armor against a hit
-     either way. The record's shape is meant to be a MONSTER COMPENDIUM
+     either way. One difference, said on the card: an enemy's Wounds cost it
+     no Evasion or Speed (woundsLowerStats: false). The record's shape is meant to be a MONSTER COMPENDIUM
      entry one day, imported and exported like the game's other content; a
      campaign keeps its own COPY, so editing an enemy here never changes
      the compendium.
@@ -157,6 +158,11 @@
       manaMax: count(c.manaMax),
       woundsMax: int(c.woundsMax, 0, 20),
       patchesMax: int(c.patchesMax, 0, 20),
+      // Whether each Wound costs Evasion and Speed (mechanics.js woundCost).
+      // A hero's does; an enemy's does not (playtest ruling, 2026-11-18). A
+      // stored hero card from before the field existed has none, and is a
+      // hero's — so only an explicit false survives as false.
+      woundsLowerStats: c.woundsLowerStats !== false,
       base: block(c.base),
       build: block(c.build),
     };
@@ -177,13 +183,18 @@
 
   /* An enemy's stat block as a card. Base and build are the same: an enemy
      carries no gear, so "everything a standing body adds" is already in the
-     numbers the GM wrote. Empty Wounds → 0 → one bar that downs at 0. */
+     numbers the GM wrote. Empty Wounds → 0 → one bar that downs at 0.
+
+     An enemy's Wounds cost it nothing but the bar (playtest ruling,
+     2026-11-18): taking one refills its Health exactly as a hero's does, but
+     its Evasion and Speed stay as the stat block says. Simpler for the GM,
+     who reads those numbers off the card on every attack. */
   function enemyCard(enemy) {
     const s = obj(obj(enemy).stats);
     const block = { evasion: stat(s.evasion), armor: stat(s.armor), fortitude: stat(s.fortitude), speed: stat(s.speed) };
     return normalizeCard({
       healthBase: count(s.hp), manaMax: count(s.mana),
-      woundsMax: s.wounds, patchesMax: 0,
+      woundsMax: s.wounds, patchesMax: 0, woundsLowerStats: false,
       base: block, build: block,
     });
   }

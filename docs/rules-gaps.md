@@ -384,13 +384,25 @@ Armor totals diverged everywhere past the first Wound.
 copies of one rule with five chances to fall out of step, and it would need
 re-pitching for every Wound cap in the library (most subclasses cap at 4, The
 Beast at 5). Multiplying by the Wound count fits any cap for free. The reasoning
-is also in the comment above `WOUND_ARMOR_STEP`.
+is also in the comment above `WOUND_EVASION_STEP` (formerly `WOUND_ARMOR_STEP`).
 
 **Reconciled (2026-09-14): the guide now says what the app does.** Ch.1, *Taking a
 Wound & Death* reads **"Each Wound: -2 Armor and -1 Speed"**. The +2 Vulnerable
 step was dropped rather than reworded — Wounds reduce Armor directly now, so
 Vulnerable is purely a condition again, which is what the comment at `armor()`
 already said.
+
+**Changed (2026-11-18, after a playtest): each Wound is now −1 Evasion and −1
+Speed**, still flat and cumulative; Armor is no longer touched by Wounds, which
+leaves Protection and Vulnerable as the only things that move it. The rule is
+`WOUND_EVASION_STEP` / `WOUND_SPEED_STEP` in `mechanics.js` (`WOUND_ARMOR_STEP`
+is gone). It is a **hero's** cost: an enemy's Wounds still run the cascade —
+the bar refills — but cost it no stats, so a GM never recomputes a stat block
+mid-fight (the card's `woundsLowerStats: false`, `campaign.js` `enemyCard()`).
+The guide line now reads **"Each Wound: -1 Evasion and -1 Speed"**, edited in
+the RTF and regenerated as below. **The RTF's upstream source (if it is an
+export) needs the same edit.** The enemy half is a GM-tools rule and is not in
+the Player's Guide.
 
 **How it was done, since §1.2 is the same job:** the five paragraphs were spliced
 into one in `docs/Meeple Player's Guide.rtf`, then `node tools/rtf-to-rules.mjs`

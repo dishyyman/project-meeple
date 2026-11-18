@@ -210,6 +210,38 @@
 /* End Turn / Start Round N: the screen's one ember button. */
 .combat-turn-btn { width: 100%; }
 
+/* End Fight: the foot of the fight, full width (designer request,
+   2026-11-18 — it used to be a small heading link, easy to miss). Outlined
+   in the danger red, which is how this app marks "this ends something"
+   (the Downed edge, the Boss tag), and NOT filled: a second solid button
+   would out-shout End Turn, which is the ember on this screen. The words
+   say what it does, so the red is never the only signal. */
+.btn-ghost.combat-end-btn {
+  display: flex; align-items: center; justify-content: center; gap: var(--space-2);
+  width: 100%; margin-top: var(--space-8);
+  border-color: var(--danger-bright); color: var(--danger-bright);
+}
+
+/* The words on a GM card's add tile ("+ Boons & Conditions") — the same
+   label type as every dashed "add" button (.btn-dashed). Spaced off the +
+   by margin rather than a gap on .effect-add, which belongs to
+   inventory.css and also draws the player's own (unlabelled) tile. */
+.effect-add__label {
+  margin-left: var(--space-2);
+  font-family: var(--font-label);
+  font-size: var(--fs-small); letter-spacing: 0.08em; text-transform: uppercase;
+}
+
+/* A defence below where it normally stands (combatCell's `lowered`): a
+   Wound, Chill or Slow, Vulnerable, being downed. Its number takes the
+   danger-as-text red and a small down-arrow — the arrow, and "lowered" for
+   a screen reader, carry it; the red only makes it quicker to spot. Party
+   cards and fighters alike: the GM reads both for the same reason. */
+.combat-cell[data-lowered] .combat-cell__value { color: var(--danger-bright); }
+/* inline-block: base.css makes every svg a block, which would drop the
+   arrow onto a line of its own under the number. */
+.combat-cell__flag { display: inline-block; margin-left: var(--space-0-5); vertical-align: middle; }
+
 .fighters { display: flex; flex-direction: column; gap: var(--space-2-5); }
 .fighter {
   display: flex; flex-direction: column; gap: var(--space-3);

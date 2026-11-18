@@ -4,7 +4,7 @@
    GENERATED FILE — DO NOT EDIT BY HAND.
 
    Source:    docs/Meeple Player's Guide.rtf
-   Generated: 2026-10-05
+   Generated: 2026-11-18
    Regenerate: node tools/rtf-to-rules.mjs
 
    Every edit belongs in the RTF, which is the rulebook. Editing this file
@@ -644,7 +644,7 @@ window.MEEPLE_RULES = {
             },
             {
               "t": "p",
-              "text": "Each Wound: -2 Armor and -1 Speed"
+              "text": "Each Wound: -1 Evasion and -1 Speed"
             },
             {
               "t": "p",
@@ -2338,5 +2338,5 @@ window.MEEPLE_RULES = {
       ]
     }
   ],
-  "generated": "2026-10-05"
+  "generated": "2026-11-18"
 };
