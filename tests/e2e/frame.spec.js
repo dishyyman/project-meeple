@@ -1,11 +1,14 @@
 /* =====================================================================
-   MEEPLE — frame mode on a desktop (frame.js, frame.css §3b)
+   MEEPLE — the device preview on a desktop (frame.js, frame.css §3)
    ---------------------------------------------------------------------
-   The phone frame is a desktop preview. These run in the desktop projects
-   (chrome, safari): the frame is the default there, the toggle works and
-   is remembered, full mode fills the window without the page itself
-   scrolling, and a window too narrow to hold the frame is treated like a
-   phone. What an actual phone sees is phone.spec.js.
+   The drawn device is a desktop preview, and the preview bar picks which
+   one. These run in the desktop projects (chrome, safari): the iPhone is
+   the default, a preset draws at its own size and is remembered, rotating
+   swaps the sides, a device too big for the window is scaled to fit,
+   "Fit window" fills the window without the page itself scrolling, and a
+   window too narrow to hold a phone is treated like one. What an actual
+   phone or tablet sees is phone.spec.js; what each size's LAYOUT does is
+   layout.spec.js.
 
    Also here: the home-screen manifest and icons resolve, because a broken
    icon path fails silently — the phone just shows a screenshot instead.
@@ -13,27 +16,95 @@
 const { test, expect } = require('./helpers/test');
 const { openApp } = require('./helpers/app');
 
-const frameOf = (page) => page.evaluate(() => ({
-  mode: document.documentElement.getAttribute('data-frame'),
-  locked: document.documentElement.hasAttribute('data-frame-locked'),
-}));
+const shell = (page) => page.evaluate(() => {
+  const r = document.documentElement;
+  const d = document.querySelector('.device');
+  return {
+    mode: r.getAttribute('data-frame'),
+    device: r.getAttribute('data-device'),
+    locked: r.hasAttribute('data-frame-locked'),
+    orient: r.getAttribute('data-orient'),
+    // The size the layout inside sees — not the bounding box, which a
+    // scaled-down device shrinks.
+    w: d.offsetWidth, h: d.offsetHeight,
+  };
+});
+const pick = (page, id) => page.locator('[data-preview-device]').selectOption(id);
 
-test('the phone frame is the default, and the toggle switches it and is remembered', async ({ page }) => {
+test('the iPhone is the default preview, at the size the layout is tuned for', async ({ page }) => {
   await openApp(page);
-  const toggle = page.locator('[data-frame-toggle]');
-  expect(await frameOf(page)).toEqual({ mode: 'phone', locked: false });
-  await expect(toggle).toBeVisible();
-
-  await toggle.click();
-  expect((await frameOf(page)).mode).toBe('full');
-  await page.reload();
-  expect((await frameOf(page)).mode).toBe('full');
-  await expect(toggle).toHaveText(/phone/i);
+  expect(await shell(page)).toEqual({ mode: 'device', device: 'iphone', locked: false, orient: 'portrait', w: 402, h: 874 });
+  await expect(page.locator('[data-preview]')).toBeVisible();
+  await expect(page.locator('[data-preview-device]')).toHaveValue('iphone');
 });
 
-test('full mode fills the window and the page itself never scrolls', async ({ page }) => {
+test('a preset draws at its own size, is remembered, and rotates', async ({ page }) => {
   await openApp(page);
-  await page.locator('[data-frame-toggle]').click();
+  await pick(page, 'duo-closed');
+  expect(await shell(page)).toMatchObject({ mode: 'device', device: 'duo-closed', w: 466, h: 678, orient: 'portrait' });
+
+  await page.locator('[data-preview-rotate]').click();
+  expect(await shell(page)).toMatchObject({ device: 'duo-closed', w: 678, h: 466, orient: 'landscape' });
+
+  await page.reload();
+  expect(await shell(page)).toMatchObject({ device: 'duo-closed', w: 678, h: 466, orient: 'landscape' });
+  await expect(page.locator('[data-preview-device]')).toHaveValue('duo-closed');
+
+  // The open Duo is landscape to begin with; rotating it stands it on end.
+  await pick(page, 'duo-open');
+  await page.locator('[data-preview-rotate]').click();
+  expect(await shell(page)).toMatchObject({ device: 'duo-open', orient: 'portrait' });
+});
+
+test('a device too big for the window is scaled to fit, and the page does not scroll', async ({ page }) => {
+  await openApp(page);
+  await pick(page, 'ipad-pro');
+  const fit = await page.evaluate(() => {
+    const box = document.querySelector('.device').getBoundingClientRect();
+    const doc = document.scrollingElement;
+    return {
+      scale: Number(document.documentElement.style.getPropertyValue('--preview-scale')),
+      layoutW: document.querySelector('.device').offsetWidth,
+      right: box.right, bottom: box.bottom, innerWidth, innerHeight,
+      overflowX: doc.scrollWidth - innerWidth, overflowY: doc.scrollHeight - innerHeight,
+    };
+  });
+  // Still a 1032px iPad to the layout inside — only what is painted shrinks.
+  expect(fit.layoutW).toBe(1032);
+  expect(fit.scale).toBeGreaterThan(0);
+  expect(fit.scale).toBeLessThan(1);
+  expect(fit.right).toBeLessThanOrEqual(fit.innerWidth);
+  expect(fit.bottom).toBeLessThanOrEqual(fit.innerHeight);
+  expect(fit.overflowX).toBeLessThanOrEqual(0);
+  expect(fit.overflowY).toBeLessThanOrEqual(0);
+  // The readout says so (it is hidden in a window this narrow, but present).
+  await expect(page.locator('[data-preview-size]')).toHaveText(/^1032 × 1376 · expanded · \d+%$/);
+});
+
+test('a free size starts as the device it came from and remembers where it was left', async ({ page }) => {
+  await openApp(page);
+  await pick(page, 'iphone-se');
+  await pick(page, 'free');
+  expect(await shell(page)).toMatchObject({ device: 'free', w: 375, h: 667 });
+  expect(await page.locator('.device').evaluate((el) => getComputedStyle(el).resize)).toBe('both');
+
+  // What the browser's own resize handle does: write the element's size.
+  await page.locator('.device').evaluate((el) => { el.style.width = '640px'; el.style.height = '700px'; });
+  await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('meeple:preview')).free))
+    .toEqual({ w: 640, h: 700 });
+  await page.reload();
+  expect(await shell(page)).toMatchObject({ device: 'free', w: 640, h: 700 });
+
+  // Leaving it drops the size it was holding.
+  await pick(page, 'iphone');
+  expect(await shell(page)).toMatchObject({ device: 'iphone', w: 402, h: 874 });
+});
+
+test('Fit window fills the window and the page itself never scrolls', async ({ page }) => {
+  await openApp(page);
+  await pick(page, 'full');
+  expect((await shell(page)).mode).toBe('full');
+  await expect(page.locator('[data-preview-rotate]')).toBeDisabled();
 
   const fit = await page.evaluate(() => {
     const box = document.querySelector('.device').getBoundingClientRect();
@@ -52,20 +123,28 @@ test('full mode fills the window and the page itself never scrolls', async ({ pa
   expect(fit.overflowX).toBeLessThanOrEqual(0);
 });
 
-test('a window narrower than the frame is treated as a phone, and widening gives the choice back', async ({ page }) => {
+test('a desktop that chose full window with the old toggle keeps it', async ({ page }) => {
+  await page.addInitScript(() => { if (!localStorage.getItem('meeple:preview')) localStorage.setItem('meeple:frame', 'full'); });
   await openApp(page);
-  const toggle = page.locator('[data-frame-toggle]');
-  expect((await frameOf(page)).mode).toBe('phone');
+  expect((await shell(page)).mode).toBe('full');
+  await expect(page.locator('[data-preview-device]')).toHaveValue('full');
+});
+
+test('a window narrower than a phone is treated as one, and widening gives the choice back', async ({ page }) => {
+  await openApp(page);
+  const bar = page.locator('[data-preview]');
+  await pick(page, 'ipad-mini');
+  const chosen = await page.evaluate(() => localStorage.getItem('meeple:preview'));
 
   await page.setViewportSize({ width: 400, height: 800 });
-  await expect.poll(() => frameOf(page)).toEqual({ mode: 'full', locked: true });
-  await expect(toggle).toBeHidden();
+  await expect.poll(() => shell(page).then((s) => [s.mode, s.locked, s.device])).toEqual(['full', true, null]);
+  await expect(bar).toBeHidden();
   // Locking is not choosing: the stored desktop preference is untouched.
-  expect(await page.evaluate(() => localStorage.getItem('meeple:frame'))).toBeNull();
+  expect(await page.evaluate(() => localStorage.getItem('meeple:preview'))).toBe(chosen);
 
-  await page.setViewportSize({ width: 460, height: 940 });
-  await expect.poll(() => frameOf(page)).toEqual({ mode: 'phone', locked: false });
-  await expect(toggle).toBeVisible();
+  await page.setViewportSize({ width: 460, height: 1000 });
+  await expect.poll(() => shell(page).then((s) => [s.mode, s.locked, s.device])).toEqual(['device', false, 'ipad-mini']);
+  await expect(bar).toBeVisible();
 });
 
 test('the home-screen manifest and every icon it names resolve', async ({ page, request }) => {

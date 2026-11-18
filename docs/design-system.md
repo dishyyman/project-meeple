@@ -157,7 +157,7 @@ Do not change any token names, and do not touch non-color tokens.
 |---|---|---|---|
 | **Primary** | `--accent` | `#a73500` | Fills only. As text/icon use `--accent-bright` `#ee6728` (4.9:1). |
 | **Secondary** | `--line-gold` / `--gold` | `#a47e05` / `#cb9f13` | Gold — rules and edges / gold as text (6.4:1). |
-| **Background** | `--bg-page` | `#232323` | `--bg-app` `#131313` is the space behind the phone frame. |
+| **Background** | `--bg-page` | `#232323` | `--bg-app` `#131313` is the space behind the drawn preview device. |
 | **Surface** | `--bg-card` | `#2b2926` | Raised cards. |
 | **Text** | `--ink` | `#f0e9dd` | Display text. Body text is `--ink-soft` `#d6cdbd`. |
 | **Muted Text** | `--ink-muted` | `#a89881` | Labels (5.6:1). Captions use `--ink-faint` `#a19583` (4.7:1). |
@@ -389,7 +389,7 @@ A **fighter** (Combat tab) is drawn from the same parts (`vitalParts()` in `main
 | **Header** | `.topbar`: back button (left), screen title, menu button (right). `--statusbar-clear` top padding. |
 | **Menu** | A drawer from the right (82% width) over a `--scrim`, reached from every main screen. Holds Edit Character, Rules, Settings. |
 | **Mobile navigation** | The character sheet has a bottom tab bar: Action · Character · Gear. Labels are Marcellus `--fs-caption` uppercase. Inactive is `--ink-faint`; active is `--accent-bright`. Top edge is a `--rule-strong` line. |
-| **Sidebar** | None — the app is a single phone-width column. |
+| **Sidebar** | None as navigation. In the expanded band the character sheet's hero and vitals stand in a left pane (§15.1). |
 | **Modals** | Centered card over a scrim; one open at a time (`data-modal` on `.app`). Each card is a named `role="dialog"`: focus moves onto the dialog when it opens (or stays on the field its opener focused), Tab stays inside it, the page behind is `inert` (and so is the shell outside `.app`, such as the frame toggle), and focus returns to the opener on close. Escape closes every sheet, alert and notice (§12.1) and any modal whose scrim is its only exit (roll result, calculator); forms keep Escape inert so a half-filled form isn't lost. |
 | **Back** | Every screen but Home has a back button marked `data-back`; "back" is whatever it does. A **swipe in from the left edge** (within 24px) presses it on an iPhone home-screen install — the screen follows the finger, casting `--shadow-edge` over the one it returns to, which slides in from a third of the way left and brightens; past a third of the width or on a flick it goes back, otherwise it springs home. Elsewhere the phone's own back (Android, iPhone Safari) and the browser's Back press it through history. A popup or the drawer closes first. Reduce Motion: nothing slides. Rules' back returns to where Rules opened (the sheet and its tab, Edit Character, Settings). |
 | **Mechanism** | Screens, tabs, modals and the drawer switch via `data-view`, `data-tab`, `data-modal`, `data-menu` on `.app`; CSS decides what shows. A campaign's tabs use `data-campaign-tab`, never `data-tab`, so the two screens can't set each other's tab. |
@@ -494,33 +494,43 @@ Amber sits between the gold and the ember, so it is close to both. **A warning i
 
 ## 15. Responsive Design
 
-The app is designed for phones and only phones, today.
+The app fills whatever it is given — a phone, a foldable, a tablet, a desktop window — and lays itself out by **layout band**. Phones are the design target and the base styles; every wider or shorter layout is added on top.
+
+### 15.1 Layout bands
+
+Every size-dependent rule asks how big **the app** is, never the browser window: `.app` is a size container named `app` (`frame.css`), and rules ask it with `@container app (…)`. (On a desktop the window is wide while the drawn phone inside it is 402px, so a media query would answer for the wrong box.) The bands are documented once, in `tokens.css` under "Layout bands":
+
+| Band | Size | Who lands there | What changes |
+|---|---|---|---|
+| **compact** | < 600px wide | Phones, a closed iPhone Duo | Nothing — this is the base layout. |
+| **medium** | 600–1023px | iPad upright, the closed Duo on its side | Wider column (to `--measure`); the hero may grow to 440px tall; card grids widen (Home's destinations and a campaign's party and enemies two a row, attributes three a row). |
+| **expanded** | ≥ 1024px, or ≥ 840px in landscape | iPad on its side, iPad Pro, the open Duo, a phone on its side, a desktop window | **The character sheet goes two-pane**: hero and vitals in a left pane (`--pane-side`) that is always on show, the tabs beside it with the tab bar under their own pane. The tab pages' Home/Menu buttons hide (the hero's are on show); the Action tab gets a titled header like the others. |
+| **short** | < 700px tall | A closed Duo, iPhone SE, any phone on its side | The hero scales with the height (`--hero-h` is `clamp(200px, 44cqh, 376px)`), and an empty hero's uploader becomes a pill on the Home/Menu row. Short **and** medium-or-wider: the dice roller puts the readout beside the keypad, keys still 44px. |
+
+**Two kinds of query:**
+- **Screen layout** (is the sheet two-pane? how tall is the hero?) asks the app: `@container app (…)`, using only the four bands above.
+- **A component in the content** (how many cards a row?) asks its own column: an unnamed `@container (…)`. That finds the nearest container — the app, or the pane the component sits in — so one card grid is right in a full-width iPad column and in the two-pane sheet's right pane. A component may use its own width where it needs one (the bio grid's 340px), with a comment saying why.
+
+**The content column.** Backgrounds, top bars and tab bars run edge to edge; content is held to `--measure` (760px). `--gutter` is the screen's side padding — 16px on a phone, and on anything wider whatever centres the column (`max(16px, (100cqw − --measure) / 2)`). Every screen edge uses it. Tab bars gather to `--tabbar-max` (560px). Popups stop at `--modal-max` (440px, cards) and `--sheet-max` (520px, bottom sheets); the menu drawer at `--drawer-max` (360px). Rules text caps at 70ch. All of these are wider than any phone, so no phone layout moves.
+
+**Rules:**
+- Phone-first: base styles are the compact layout; wider and shorter layouts are added with container queries, never the other way round.
+- Screen layout uses only the four bands; a new one goes in the `tokens.css` list first.
+- Tap targets stay at least 44px at every size.
+- A reorderable list (the roster, the campaign list) stays one column: its drag measures rows top to bottom.
+
+### 15.2 Context
 
 | Context | Rules |
 |---|---|
-| **Mobile** | The design target. On a desktop the app previews inside a drawn 402×874px phone. **On a real phone it always fills the screen**: `frame.js` locks `data-frame="full"` for a touch-first device or any window under 460px, and the Phone/Full toggle is hidden. The page itself never scrolls (the app is pinned to the viewport); only screens inside `.app` do. Installable to the home screen (`manifest.webmanifest`, standalone, opaque `black` status bar — **not** black-translucent, which on iOS 26 leaves an unpainted ~60pt strip over the bottom of a home-screen app; see `index.html`). |
-| **Tablet / Desktop** | Not designed. With the frame turned off ("full window"), the column grows to `--frame-max` (520px) and stops, so layouts never stretch past phone widths. A tablet counts as touch-first, so it is full window too. |
-| **Breakpoints** | One today: `max-width: 340px` collapses the bio grid to one column. Wider layouts are planned — see §15.1. |
-| **Safe areas** | `viewport-fit=cover`, so the app paints edge to edge and reads the real insets back. In full mode `--statusbar-clear` and `--home-clear` become `max(env(safe-area-inset-top/bottom), a floor)` (`tokens.css`), so every top bar, modal, the menu, the hero buttons and the tab bar clear the clock and home indicator. Anything new near the top or bottom edge hangs from those two tokens, never a fixed px. A few bottom controls also add `env(safe-area-inset-bottom)` directly. |
+| **Phone** | The design target. **On a real phone it always fills the screen**: `frame.js` locks `data-frame="full"` for a touch-first device or any window under 460px, and the preview bar is hidden. The page itself never scrolls (the app is pinned to the viewport); only screens inside `.app` do. Installable to the home screen (`manifest.webmanifest`, standalone, opaque `black` status bar — **not** black-translucent, which on iOS 26 leaves an unpainted ~60pt strip over the bottom of a home-screen app; see `index.html`). |
+| **Tablet / foldable** | Full window (touch-first, like a phone), in the medium or expanded band. |
+| **Desktop** | Previews inside a drawn device, picked from the **preview bar** above it: iPhone (402×874, the default), iPhone Pro Max, iPhone SE, iPhone Duo closed (466×678) and open (890×626), iPad mini, iPad Pro 13″, a **free size** (drag the corner), or **Fit window** (no device; the app is the window). Rotate turns the device on its side. A device too big for the window is scaled to fit — painted smaller, laid out at its true size. The readout gives the size and the band it lands in. Presets live in `frame.css` §3a; the Duo's are illustrative (not measured Safari viewports) and should be checked against a real device. |
+| **Safe areas** | `viewport-fit=cover`, so the app paints edge to edge and reads the real insets back. In full mode `--statusbar-clear` and `--home-clear` become `max(env(safe-area-inset-top/bottom), a floor)` (`tokens.css`), and the app is inset by `env(safe-area-inset-left/right)` so a phone on its side keeps clear of the island. In the drawn preview the same two tokens are the drawn device's own status bar and home indicator (`--device-status`, `--device-home`). Anything new near the top or bottom edge hangs from those two tokens, never a fixed px. A few bottom controls also add `env(safe-area-inset-bottom)` directly. |
 | **Fields** | Every text field is `--fs-input` (16px) or larger — iOS Safari zooms the page in on focus below that (`phone.spec.js` checks). |
 | **Reduced motion** | `prefers-reduced-motion` turns off the dice tumble and settle, slows the spinner, and turns spatial motion into fades or instant changes: the dice sheet and toast fade in rather than slide, carets turn without sweeping, and roster rows jump rather than slide during a drag. Opacity fades stay, because they aren't movement. |
 
-### 15.1 Planned — wider layouts (not implemented)
-
-The app will grow beyond phone width. Nothing below is built; `--frame-max` keeps the column at 520px until it is.
-
-| Range | Name | Plan |
-|---|---|---|
-| < 600px | Phone | Today's layout. The design target, and always the baseline. |
-| 600–1023px | Tablet | Still one column for the sheet, wider. Modals stay centered at a capped width. Rules may open as a side sheet rather than a full screen. |
-| ≥ 1024px | Desktop | Two panes: the character sheet beside a persistent Rules reference — the PRD's "reference rules without leaving the character" made literal. Tab bar becomes a side or top nav. |
-
-**Rules for when this is built:**
-- Phone-first: base styles are the phone layout; wider layouts are added with `min-width` queries, never the other way round.
-- Breakpoints become tokens-adjacent constants documented here; no ad hoc widths in screen files.
-- Line length for rules text caps at ~70 characters regardless of screen width.
-- Tap targets stay at least 44px even with a mouse.
-- Raising `--frame-max` only happens alongside real layout work (as `tokens.css` already warns).
+**Not yet:** the Game Master combat screen stays one column at every width (turn order beside the party is the natural two-pane for it); Rules opens as a full screen rather than beside the sheet.
 
 ---
 

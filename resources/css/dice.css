@@ -62,13 +62,16 @@
 .app[data-modal="member-menu"]  .modal--member-menu  { display: flex; }
 .app[data-modal="monsters"]     .modal--monsters     { display: flex; }
 .modal__scrim { position: absolute; inset: 0; background: var(--scrim); }
-/* No max-width. The .modal's own padding is the single place a card's inset is
-   decided — a second constraint here meant the padding could be tightened all
+/* On a phone the .modal's own padding is the single place a card's inset is
+   decided — a narrower cap here once meant the padding could be tightened all
    day and the card would stay 300px wide, stranding 50px of dead space either
-   side of a 402px screen. The dice sheet opts out separately (.modal--dice
-   zeroes the padding), which is what makes it a full-bleed bottom sheet. */
+   side of a 402px screen. So the cap, --modal-max, is wider than any phone:
+   it only ever binds on a tablet or a desktop, where a card stretched edge to
+   edge reads as a page rather than a question. The dice sheet opts out
+   separately (.modal--dice zeroes the padding), which is what makes it a
+   full-bleed bottom sheet. */
 .modal__card {
-  position: relative; width: 100%;
+  position: relative; width: 100%; max-width: var(--modal-max);
   background: var(--bg-page); border: 1px solid var(--line-hair); border-radius: var(--r-modal);
   box-shadow: var(--shadow-modal), inset 0 0 0 4px var(--bg-page), inset 0 0 0 5px var(--line-gold);
   padding: var(--space-5);
@@ -113,8 +116,10 @@
    rule comes later. The dice roller (.modal--dice, §12) was the first sheet
    and does the same thing by hand. */
 .modal.modal--action-sheet { align-items: flex-end; padding: 0; }
+/* Full width on a phone; on anything wider it stops at --sheet-max and
+   stays centred on the bottom edge (.modal centres it). */
 .action-sheet {
-  position: relative; width: 100%;
+  position: relative; width: 100%; max-width: var(--sheet-max);
   max-height: calc(100% - var(--statusbar-clear) - var(--space-6));
   display: flex; flex-direction: column; gap: var(--space-4);
   overflow-y: auto;
@@ -280,6 +285,7 @@
 .dice-sheet {
   position: relative;
   width: 100%;
+  max-width: var(--sheet-max);   /* as .action-sheet: full width on a phone only */
   max-height: 82%;
   display: flex;
   flex-direction: column;
@@ -351,6 +357,33 @@
 .keypad { display: grid; grid-template-columns: 3fr 1fr; gap: var(--space-2); }
 .keypad__main { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-2); }
 .keypad__side { display: grid; grid-template-rows: repeat(7, 1fr); gap: var(--space-2); }
+
+/* ---- short and wide: readout beside the keypad ----
+   A phone on its side, or the open Duo: seven rows of keys under the
+   readout come to ~520px, and the screen is ~400. Side by side they fit —
+   the readout and the close button on the left, the keypad down the right —
+   with the keys still at the 44px a finger needs (design-system §15.1),
+   only the gaps tighter. The sheet may then use the screen's whole height
+   (less the status bar) rather than 82% of it, and widen to hold two
+   columns. Bands: short, and medium or wider (tokens.css). */
+@container app (height < 700px) and (width >= 600px) {
+  .dice-sheet {
+    display: grid;
+    grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+    grid-template-rows: auto minmax(0, 1fr);
+    column-gap: var(--space-3);
+    max-width: calc(var(--sheet-max) * 1.4);
+    max-height: calc(100% - var(--statusbar-clear));
+    padding-top: var(--space-2-5);
+  }
+  .dice-sheet__grab { display: none; }
+  .dice-sheet__head { grid-column: 1; grid-row: 1; }
+  .dice-sheet__display { grid-column: 1; grid-row: 2; margin-bottom: 0; }
+  .dice-sheet .keypad { grid-column: 2; grid-row: 1 / -1; gap: var(--space-1-5); }
+  .dice-sheet .keypad__main,
+  .dice-sheet .keypad__side { gap: var(--space-1-5); }
+  .dice-sheet .key { min-height: 44px; }
+}
 
 .key {
   display: flex; align-items: center; justify-content: center;

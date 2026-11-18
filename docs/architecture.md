@@ -70,7 +70,7 @@ A server, accounts, and cloud sync are on the roadmap (`prd.md` §8, Nice to Hav
 | **Boot** | `resources/js/boot.js` | Fetches every fragment in `pages/`, injects them into `.app` in a fixed order, resolves `window.MEEPLE_READY`. Shows an explanation if the app was opened from `file://`. |
 | **Screens** | `pages/*.html`, `pages/modals/*.html`, `pages/toast.html` | Structure only: semantic markup, classes, and `data-*` hooks. One file per screen. |
 | **Styles** | `resources/css/` — `style.css` (import index), `tokens.css` (all design values), one file per screen | All appearance. Import order is the cascade. |
-| **Frame mode** | `resources/js/frame.js` | Phone-frame / full-window preview toggle on a desktop; on a real phone (touch-first, or a window under 460px) locks full window and hides the toggle. Touches nothing inside `.app`. |
+| **Device preview** | `resources/js/frame.js` | The desktop preview bar: draws the app inside a chosen device (iPhone, SE, Pro Max, iPhone Duo closed/open, iPad mini/Pro, a free size, or Fit window), rotates it, scales one too big for the window, and reads out its size and layout band. On a real phone or tablet (touch-first, or a window under 460px) locks full window and hides the bar. Touches nothing inside `.app`. |
 | **Home-screen app** | `manifest.webmanifest`, `resources/images/icons/` | Name, standalone display, theme colours and icons for "Add to Home Screen". Icons generated from `icon.svg` by `tools/make-icons.mjs`. |
 | **Dice engine** | `resources/js/dice.js` | The only dice parser (`evaluateDice()`). Shared by the app and the content converter. Never uses `eval()`. |
 | **Mechanics engine** | `resources/js/mechanics.js` | The only implementation of the game's arithmetic: every derived stat and every play rule (heal, damage, Wound cascade, rests, Patches, effects). No DOM, no storage. Shared by the app and the unit tests (Decision 11). |
@@ -105,7 +105,7 @@ None today. **Open.** Expected responsibilities when one exists:
 Today, `localStorage` in each browser. Responsibilities:
 - Hold the roster, each character's play state, and each portrait.
 - Hold an installed compendium and any entries imported to fill gaps.
-- Hold preferences (frame mode, placeholder account flag).
+- Hold preferences (device preview, placeholder account flag).
 
 **Storage keys:**
 
@@ -117,7 +117,8 @@ Today, `localStorage` in each browser. Responsibilities:
 | `meeple.library` | A compendium installed in place of the built-in one | Compendium import (Replace) |
 | `meeple.imported-entries` | Individual content entries that filled gaps (from Add or an imported character) | Imports |
 | `meeple.account` | Placeholder signed-in flag and name | Account stub |
-| `meeple:frame` | Phone-frame or full-window preference (desktop; ignored, not overwritten, on a phone) | `frame.js` |
+| `meeple:preview` | The desktop device preview: `{ device, rotated, free: { w, h } }` (ignored, not overwritten, on a phone or tablet) | `frame.js` |
+| `meeple:frame` | *Retired.* The old Phone/Full toggle; read once so a desktop that chose full window keeps it, never written | `frame.js` |
 
 Server-side database: **Open** — see `database.md` when it exists.
 
@@ -157,7 +158,7 @@ Server-side database: **Open** — see `database.md` when it exists.
 ## 6. Data Flow
 
 **Loading the app**
-1. Browser loads `index.html` over `http://` and runs `frame.js` (applies the frame mode before first paint — full on a phone, else the stored choice).
+1. Browser loads `index.html` over `http://` and runs `frame.js` (applies the device preview before first paint — full on a phone or tablet, else the stored choice).
 2. `boot.js` fetches all screen fragments in parallel and inserts them in order, then resolves `MEEPLE_READY`.
 3. `dice.js`, `mechanics.js`, `portrait.js`, `library.js`, `library-check.js`, and `rules.js` define their globals.
 4. `main.js` waits on `MEEPLE_READY`, then `init()` loads imported entries, the roster (opening a character), and the account flag; renders everything; wires the click handler; and lands on Home.
@@ -196,7 +197,7 @@ project-meeple/              # repo root = site root (GitHub Pages serves it as-
 │   ├── css/                 # style.css (import index), tokens.css, one file per screen
 │   ├── js/
 │   │   ├── boot.js          # fetches and injects pages/
-│   │   ├── frame.js         # preview frame toggle
+│   │   ├── frame.js         # desktop device preview bar
 │   │   ├── dice.js          # the one dice engine (also used by tools/)
 │   │   ├── mechanics.js     # the one game-mechanics engine (also used by tests/)
 │   │   ├── campaign.js      # Game Master Tools: campaign data, its normalizer, turn tracking

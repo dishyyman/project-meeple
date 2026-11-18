@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-frame="phone">
+<html lang="en" data-frame="device" data-device="iphone">
 <head>
   <meta charset="utf-8">
   <!-- viewport-fit=cover lets the app paint edge to edge on a notched
@@ -77,7 +77,7 @@
      Opening the file directly will show a boot error explaining that.
      ===================================================================== -->
 
-<!-- Phone frame -->
+<!-- The drawn device (a desktop preview; the whole window on a phone) -->
 <div class="device">
   <div class="device__notch"></div>
   <div class="device__statusbar">
@@ -106,13 +106,39 @@
 
 </div><!-- /.device -->
 
-<!-- Shell chrome, outside .app on purpose: main.js owns the delegated
-     handler inside the app, and how the app is housed is not its business.
-     frame.js wires this directly. -->
-<button class="frame-toggle" data-frame-toggle type="button" aria-pressed="false">
-  <span class="frame-toggle__icon" aria-hidden="true"></span>
-  <span data-frame-label>Full</span>
-</button>
+<!-- The device preview bar (desktop only — hidden on a real phone or
+     tablet). Shell chrome, outside .app on purpose: main.js owns the
+     delegated handler inside the app, and how the app is housed is not its
+     business. frame.js wires this directly; the sizes behind each option
+     are in frame.css §3a. Option values are the data-device names. -->
+<div class="preview" data-preview role="group" aria-label="Preview size">
+  <span class="preview__size" data-preview-size></span>
+  <label>
+    <span class="visually-hidden">Device</span>
+    <select class="preview__select" data-preview-device>
+      <optgroup label="Phones">
+        <option value="iphone">iPhone</option>
+        <option value="iphone-max">iPhone Pro Max</option>
+        <option value="iphone-se">iPhone SE</option>
+      </optgroup>
+      <optgroup label="Foldables">
+        <option value="duo-closed">iPhone Duo · closed</option>
+        <option value="duo-open">iPhone Duo · open</option>
+      </optgroup>
+      <optgroup label="Tablets">
+        <option value="ipad-mini">iPad mini</option>
+        <option value="ipad-pro">iPad Pro 13″</option>
+      </optgroup>
+      <optgroup label="Any size">
+        <option value="free">Free size · drag the corner</option>
+        <option value="full">Fit window</option>
+      </optgroup>
+    </select>
+  </label>
+  <button class="preview__rotate" data-preview-rotate type="button" aria-label="Rotate device" title="Rotate">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 0 1 15.5-6.2L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-15.5 6.2L3 16"/><path d="M3 21v-5h5"/></svg>
+  </button>
+</div>
 
 <!-- boot.js first: it defines MEEPLE_READY, which main.js waits on
      instead of DOMContentLoaded. The two engines (dice, mechanics) and the

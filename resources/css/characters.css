@@ -8,11 +8,16 @@
 /* ----------------------------------------------------------------- */
 /* 7. CHARACTERS LIST                                                 */
 /* ----------------------------------------------------------------- */
-.topbar { display: flex; align-items: center; gap: var(--space-3-5); padding: var(--statusbar-clear) var(--space-4) var(--space-3); }
+/* --gutter, not a literal 16px: on a phone it IS 16px, and wider than the
+   content column it centres the bar's contents over it (tokens.css). The
+   bar itself still runs edge to edge. Every screen edge below does the same. */
+.topbar { display: flex; align-items: center; gap: var(--space-3-5); padding: var(--statusbar-clear) var(--gutter) var(--space-3); }
 .topbar--between { justify-content: space-between; }
+/* A header with nothing but its title (the two-pane sheet's Action pane). */
+.topbar--center { justify-content: center; }
 .icon-btn--back svg { color: var(--ink-muted); }
 
-.section-pad { padding: var(--space-6) var(--space-4) var(--space-10); }
+.section-pad { padding: var(--space-6) var(--gutter) var(--space-10); }
 /* The card is a DIV holding several buttons, not one big button: edit mode
    puts a delete, an export and a drag grip on it, and none of those may be
    nested inside the button that opens the character. `__main` is the row that

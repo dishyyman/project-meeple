@@ -29,14 +29,14 @@ const pageOverflow = (page) => page.evaluate(() => {
   return { x: doc.scrollWidth - innerWidth, y: doc.scrollHeight - innerHeight };
 });
 
-test('the app fills the screen, with no frame and no toggle', async ({ page }) => {
+test('the app fills the screen, with no device drawn and no preview bar', async ({ page }) => {
   await openApp(page);
   const root = await page.evaluate(() => ({
     mode: document.documentElement.getAttribute('data-frame'),
     locked: document.documentElement.hasAttribute('data-frame-locked'),
   }));
   expect(root).toEqual({ mode: 'full', locked: true });
-  await expect(page.locator('[data-frame-toggle]')).toBeHidden();
+  await expect(page.locator('[data-preview]')).toBeHidden();
   await expect(page.locator('.device__notch')).toBeHidden();
   await expect(page.locator('.device__statusbar')).toBeHidden();
 
@@ -45,12 +45,14 @@ test('the app fills the screen, with no frame and no toggle', async ({ page }) =
   expect(box).toEqual({ x: 0, y: 0, width: viewport.width, height: viewport.height });
 });
 
-test('a phone-frame choice stored on this device is ignored, and left as it was', async ({ page }) => {
+test('a device preview stored on this device is ignored, and left as it was', async ({ page }) => {
   // e.g. chosen on a desktop sharing the same storage, or before this fix.
-  await page.addInitScript(() => localStorage.setItem('meeple:frame', 'phone'));
+  const choice = JSON.stringify({ device: 'ipad-mini', rotated: true, free: null });
+  await page.addInitScript((v) => localStorage.setItem('meeple:preview', v), choice);
   await openApp(page);
   expect(await page.evaluate(() => document.documentElement.getAttribute('data-frame'))).toBe('full');
-  expect(await page.evaluate(() => localStorage.getItem('meeple:frame'))).toBe('phone');
+  expect(await page.evaluate(() => document.documentElement.hasAttribute('data-device'))).toBe(false);
+  expect(await page.evaluate(() => localStorage.getItem('meeple:preview'))).toBe(choice);
 });
 
 test('the page itself never scrolls, on any screen', async ({ page }) => {

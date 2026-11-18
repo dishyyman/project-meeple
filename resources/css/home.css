@@ -20,7 +20,8 @@
   display: flex; flex-direction: column;
   /* The status bar's clearance plus one step — 64px in the drawn phone,
      as it always was, and the real safe area plus one step on a device. */
-  padding: calc(var(--statusbar-clear) + var(--space-2-5)) var(--space-6) var(--space-12);
+  /* Sides: Home's own 24px, or wider, to centre the column (tokens.css). */
+  padding: calc(var(--statusbar-clear) + var(--space-2-5)) max(var(--space-6), var(--measure-pad)) var(--space-12);
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   scroll-padding-block: var(--space-2);   /* focus-ring room, see .scroll */
@@ -92,6 +93,11 @@
   flex-shrink: 0;
   display: flex; flex-direction: column;
   gap: var(--space-3);
+}
+/* Two a row once the column holds two phone-width rows (a tablet). Asks its
+   own column, not the window — see "Layout bands" in tokens.css. */
+@container (width >= 600px) {
+  .navlist { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 .navcard {
   /* Icon, label, chevron — the same three-part row the Settings screen uses,

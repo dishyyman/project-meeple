@@ -2,8 +2,17 @@
     <section class="screen screen--sheet sheet">
       <div class="sheet__scroll">
 
-        <!-- ---------- CHARACTER TAB ---------- -->
-        <div class="tabpage tabpage--action">
+        <!-- ---------- THE SIDE: hero + vitals ----------
+             The portrait and the numbers you watch during a fight. On a phone
+             it is simply the top of the Action tab (frame.css §4 shows it only
+             there), and the page reads exactly as it always has: hero, vitals,
+             then the rest of the tab below. On a wide screen (the expanded
+             band) the sheet goes two-pane and this becomes the left-hand
+             pane, on screen whichever tab is open beside it — vitals are what
+             a player looks at most, and a wide screen has room to never hide
+             them (docs/design-system.md §15). It sits outside the tab pages
+             for that reason alone. -->
+        <div class="sheet__side">
           <div class="hero">
             <!-- The portrait itself. An <img> rather than a CSS background:
                  it is content, so it gets alt text and the browser's own
@@ -43,7 +52,7 @@
             </div>
           </div>
 
-          <div class="sheet__pad">
+          <div class="sheet__pad sheet__pad--side">
             <!-- VITALS -->
             <div class="vitals">
               <span class="vitals__corner vitals__corner--tl"></span>
@@ -121,7 +130,20 @@
               </div>
 
             </div>
+          </div>
+        </div>
 
+        <!-- ---------- ACTION TAB ----------
+             Everything else the Action tab holds, under the side above. -->
+        <div class="tabpage tabpage--action">
+          <!-- A header for the tab, shown only when it stands in its own pane
+               (two-pane sheet): every other tab opens with one, and on a phone
+               the hero is this tab's header. -->
+          <div class="sheet__pane-head">
+            <div class="topbar topbar--center"><h2 class="title">Action</h2></div>
+            <div class="divider"></div>
+          </div>
+          <div class="sheet__pad sheet__pad--rest">
             <!-- COMBAT -->
             <div class="combat-grid" data-list="combat"></div>
 

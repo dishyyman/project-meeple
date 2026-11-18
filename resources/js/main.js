@@ -4645,14 +4645,29 @@
   };
 
   const heroEl = () => $('.hero');
-  const scrollerEl = () => $('.sheet__scroll');
+  const sheetScrollEl = () => $('.sheet__scroll');
+  const sideEl = () => $('.sheet__side');
 
-  // The pull belongs to the character tab and nothing else: the other tabs
-  // have no hero to reveal, and a modal is its own surface.
-  const canPull = () =>
-    app.getAttribute('data-view') === 'sheet' &&
-    app.getAttribute('data-tab') === 'action' &&
-    app.getAttribute('data-modal') === 'closed';
+  /* Which box scrolls the hero. On a phone it is the sheet's one scroller.
+     On a wide screen the sheet is two-pane (sheet.css) and the hero and
+     vitals have a pane of their own, which scrolls by itself while the tabs
+     scroll beside it. The stylesheet decides which layout is showing, so
+     this asks it: the side only scrolls on its own when it is a pane. */
+  const twoPane = () => {
+    const side = sideEl();
+    return Boolean(side) && getComputedStyle(side).overflowY !== 'visible';
+  };
+  const scrollerEl = () => (twoPane() ? sideEl() : sheetScrollEl());
+
+  // The pull belongs to the hero and nothing else: on a phone that means the
+  // Action tab (the other tabs have no hero to reveal); two-pane it means a
+  // gesture over the side pane, whichever tab is open beside it. A modal is
+  // its own surface either way.
+  const canPull = (target) => {
+    if (app.getAttribute('data-view') !== 'sheet' || app.getAttribute('data-modal') !== 'closed') return false;
+    if (twoPane()) return !target || sideEl().contains(target);
+    return app.getAttribute('data-tab') === 'action';
+  };
 
   /* Resistance. Distance dragged maps onto an asymptote at --pull-max, so the
      stretch never runs out abruptly and never exceeds its ceiling — it just
@@ -10749,10 +10764,15 @@
 
     /* ---- elastic hero: touch, then wheel ---------------------------- */
     // The handlers only record input; pullFrame() does all the moving.
-    const scroller = scrollerEl();
-    if (scroller) {
-      scroller.addEventListener('touchstart', (e) => {
-        if (!canPull() || e.touches.length !== 1 || scroller.scrollTop > 0) return;
+    // Bound once, to the sheet's scroller, which hears the side pane's
+    // events too (it is the side's parent in the DOM even when two-pane
+    // lays it out as nothing). Each handler asks scrollerEl() which box is
+    // the one at its top right now.
+    const sheetScroll = sheetScrollEl();
+    if (sheetScroll) {
+      sheetScroll.addEventListener('touchstart', (e) => {
+        const scroller = scrollerEl();
+        if (!canPull(e.target) || e.touches.length !== 1 || scroller.scrollTop > 0) return;
         // Anchored so that the CURRENT stretch is where the finger already
         // is — touching a hero that is still springing back catches it in
         // place instead of snapping it shut.
@@ -10766,8 +10786,9 @@
 
       // Not passive: a real pull has to preventDefault, or the list scrolls
       // underneath the stretch.
-      scroller.addEventListener('touchmove', (e) => {
-        if (!pull.tracking || !canPull() || e.touches.length !== 1) return;
+      sheetScroll.addEventListener('touchmove', (e) => {
+        if (!pull.tracking || !canPull(e.target) || e.touches.length !== 1) return;
+        const scroller = scrollerEl();
         const y = e.touches[0].clientY;
         const down = y - pull.anchor;
 
@@ -10801,16 +10822,17 @@
         pull.v = Math.max(-3000, Math.min(3000, pull.v));
         letGoPull();
       };
-      scroller.addEventListener('touchend', endTouch, { passive: true });
-      scroller.addEventListener('touchcancel', endTouch, { passive: true });
+      sheetScroll.addEventListener('touchend', endTouch, { passive: true });
+      sheetScroll.addEventListener('touchcancel', endTouch, { passive: true });
 
       // Desktop equivalent. Every upward wheel delta at the top pushes against
       // the spring; there is no release to detect, because the spring is
       // pulling home the whole time and simply wins once the pushes fade.
       // Off under reduced motion: with no glide, a stretch that only exists
       // between wheel events would just flicker.
-      scroller.addEventListener('wheel', (e) => {
-        if (!canPull() || prefersReducedMotion()) return;
+      sheetScroll.addEventListener('wheel', (e) => {
+        if (!canPull(e.target) || prefersReducedMotion()) return;
+        const scroller = scrollerEl();
         if (scroller.scrollTop > 0 && pull.x === 0) return;
         // Firefox can report in lines rather than pixels.
         const dy = e.deltaMode === 1 ? e.deltaY * 16 : e.deltaY;

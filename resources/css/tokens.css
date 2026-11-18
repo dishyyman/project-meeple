@@ -268,7 +268,14 @@
      --hero-h is the hero's resting height; --pull is how far past it the
      gesture has currently stretched, written by JS (see main.js) and read
      back here. Nothing else in the app should set --pull. */
-  --hero-h:       376px;
+  /* Scales with the screen's HEIGHT, not a fixed 376px: on a short screen (a
+     closed foldable, any phone on its side) a fixed hero took over half the
+     height before the first number. 44cqh is a share of the app's own box —
+     .app is the size container (frame.css) — so the drawn phone and a real one
+     agree. It still rests at exactly 376px on the 874px design phone (44% of
+     874 is 385, capped). The floor keeps the name and the dice button clear of
+     the buttons at the top. Wider screens raise the cap; see "Layout bands". */
+  --hero-h:       clamp(200px, 44cqh, 376px);
   --pull:         0px;    /* live stretch — JS owns this */
   --pull-max:     130px;  /* the stretch ceiling the resistance curve approaches */
   --pull-settle:  420ms;  /* roughly how long the spring takes to get home;
@@ -284,16 +291,48 @@
   --pv-zoom: 1;
 
   /* Layout */
-  /* How wide the app is allowed to grow when the phone frame is off.
-     Not a desktop layout — the stylesheet reasons in phone widths
-     throughout, so this caps the column at a readable measure instead
-     of stretching rows that were never designed to stretch. Raise it
-     only alongside real work on the layouts it releases. */
-  --frame-max: 520px;
+  /* The app fills whatever it is given — a phone, a foldable, a tablet, a
+     desktop window — and the CONTENT keeps a readable column inside that.
+     (Until 2026-11 the whole app stopped at 520px and centred, which left an
+     iPad a phone-width strip with dark bars either side.)
+
+     --measure is how wide a screen's content column may grow. Backgrounds,
+     top bars and tab bars still run edge to edge; only what is inside them
+     is held to the column.
+
+     --gutter is the screen's side padding, and it is what does the holding:
+     16px on a phone, exactly as before, and on anything wider than
+     --measure, whatever centres the column. 100cqw is the width of the
+     nearest container — the app itself, or a pane in the two-pane sheet —
+     so the same token is right in either. --measure-pad is the centring
+     term alone, for the few edges that keep a different floor (Home's 24px).
+
+     This replaces a gutter that used to be written as a literal 16px in
+     each screen file. */
+  --measure:     760px;
+  --measure-pad: calc((100cqw - var(--measure)) / 2);
+  --gutter:      max(var(--space-4), var(--measure-pad));
+  /* A tab bar's buttons share its width evenly; across a tablet that put
+     them a hand's width apart. They gather to this width and centre. */
+  --tabbar-max:  560px;
+  /* Popups. A card or a sheet fills a phone's width (less the gutter) and
+     stops here on anything wider, centred — a dialog stretched across an
+     iPad reads as a page, not a question. Both are wider than any phone, so
+     no phone layout moves. */
+  --modal-max:   440px;
+  --sheet-max:   520px;
+  /* The menu drawer: 82% of a phone, never more than this. */
+  --drawer-max:  360px;
+  /* The two-pane sheet (expanded band): the hero and vitals pane's width. */
+  --pane-side:   clamp(320px, 34cqw, 420px);
+
   /* Layout constants. Not spacing — each is the size of something else, so
-     they are named for what they clear rather than taken from the scale. */
-  --statusbar-clear: 54px;   /* top of a screen clears the phone's status bar */
-  --home-clear:      30px;   /* foot of the tab bar clears the home indicator */
+     they are named for what they clear rather than taken from the scale.
+     In the drawn preview they are the drawn device's own status bar and
+     home indicator, which frame.css sets per device (--device-status,
+     --device-home); 54px and 30px are the iPhone's, the default. */
+  --statusbar-clear: var(--device-status, 54px);   /* top of a screen clears the status bar */
+  --home-clear:      var(--device-home, 30px);     /* foot of the tab bar clears the home indicator */
 
   /* Radii */
   --r-lg: 14px;
@@ -382,4 +421,48 @@
 :root[data-frame="full"] {
   --statusbar-clear: max(env(safe-area-inset-top, 0px), var(--space-4));
   --home-clear:      max(env(safe-area-inset-bottom, 0px), var(--space-3));
+}
+
+/* ---- Layout bands ---------------------------------------------------
+   Every size-dependent rule in the app asks how big the APP is — never how
+   big the browser window is. On a desktop the window is wide while the
+   drawn phone inside it is 402px, so a media query would answer for the
+   wrong box. .app is a size container named `app` (frame.css), and rules
+   ask it with @container app (…). (docs/design-system.md §15.)
+
+     compact    narrower than 600px    phones; the design target, and the
+                                       base styles — nothing below is needed
+                                       for it
+     medium     600–1023px             iPad portrait, a phone on its side
+                                       too short for two panes
+     expanded   1024px and wider, OR   iPad landscape, iPad Pro, an open
+                840px+ in landscape    foldable, a desktop window: the
+                                       character sheet goes two-pane
+     short      shorter than 700px     a closed foldable, iPhone SE, any
+                                       phone on its side
+
+   A container query cannot read a custom property, so the numbers are
+   written out where they are used (and restated, for its readout only, in
+   frame.js). SCREEN layout uses only these four; a new width for a screen
+   is a new band, and belongs in this list first.
+
+   Two kinds of rule:
+     · SCREEN layout (is the sheet two-pane? how tall is the hero?) asks the
+       app: @container app (…).
+     · A COMPONENT inside the content (how many stat cards a row?) asks its
+       own column: an unnamed @container (…), which finds the nearest
+       container — the app, or the pane the component sits in. The same card
+       grid is then right in a full-width iPad column and in the narrower
+       right-hand pane of the two-pane sheet. A component may pick its own
+       width where it needs one, with a comment saying why.
+
+   Phone first: base styles are the compact layout, and wider bands only
+   ever ADD with min-width; nothing is written phone-last. */
+
+/* Wider than a phone, the hero grows a little taller before it caps: at
+   744px wide a 376px band shows a strip of a portrait photo. On a phone the
+   height term (44cqh) is what binds anyway. Set on the app's children
+   because a token can only change below the container it depends on. */
+@container app (width >= 600px) {
+  .app > * { --hero-h: clamp(200px, 44cqh, 440px); }
 }

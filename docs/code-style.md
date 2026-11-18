@@ -282,6 +282,8 @@ Avoid comments that repeat the code. **Update comments when the code changes** �
 | **A storage key** | `meeple.<dotted.path>` → wrap reads/writes in `try/catch` → list it in `architecture.md` §4 and `database.md` A2 |
 | **A content field** | Column in the Google Sheet → `library-schema.md` → rerun `node tools/csv-to-json.mjs` |
 | **Feedback** | Inline: `.status` variant. After an action with no visible result: `showToast()` |
+| **A size-dependent rule** | Screen layout: `@container app (…)` with one of the four bands in `tokens.css` ("Layout bands"), in that screen's CSS file. A component inside the content: an unnamed `@container (…)`, so it measures its own column. Never `@media (max-width…)` for app layout — it measures the window, which in the desktop preview is not the app. Check it in the preview bar at a size either side of the line, and add a case to `layout.spec.js` |
+| **A preview device** | One `:root[data-device="<id>"]` line in `frame.css` §3a (size upright, radius, status bar, home indicator, island) → an `<option value="<id>">` in the preview bar in `index.html` → if it is a phone, add it to the landscape `:is(…)` lists below the presets |
 
 ---
 
@@ -299,6 +301,7 @@ New or changed conventions, newest first. Add a row whenever this doc changes.
 
 | Date | Convention | Notes |
 |---|---|---|
+| 2026-11-18 | Layout bands; `--gutter` for every screen edge; no viewport media queries for app layout | The app fills any screen (the 520px cap is gone). Four bands asked of `.app` with container queries — `tokens.css`, `design-system.md` §15. The desktop Phone/Full toggle became the device preview bar |
 | 2026-11-13 | Edge clearances hang from `--statusbar-clear` / `--home-clear`, never a fixed px | On a real phone those tokens are the device's safe area (`tokens.css`); fixed offsets land under the clock |
 | 2026-11-13 | Text fields are `--fs-input` (16px) or larger | iOS zooms the page on focus below 16px; `phone.spec.js` enforces it |
 | 2026-10-05 | Game arithmetic lives in `mechanics.js`; `main.js` wraps it | Extracted so rules can be unit-tested. Older history shows them in `main.js` |

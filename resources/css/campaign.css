@@ -25,7 +25,8 @@
   display: flex; align-items: flex-end;
   /* Top: clear of the glass buttons — where they hang (statusbar − 2px), their
      42px, and a gap — so a long two-line name never runs up under them. */
-  padding: calc(var(--statusbar-clear) - 2px + 42px + var(--space-2-5)) var(--space-5) var(--space-4);
+  /* Sides: its own 20px, or wider to sit over the content column. */
+  padding: calc(var(--statusbar-clear) - 2px + 42px + var(--space-2-5)) max(var(--space-5), var(--measure-pad)) var(--space-4);
   background-color: var(--bg-parchment2);
   background-image:
     var(--fade-banner),
@@ -51,7 +52,7 @@
   flex: 1; min-height: 0; overflow-y: auto;
   -webkit-overflow-scrolling: touch; overscroll-behavior-y: contain;
   scroll-padding-block: var(--space-2);   /* focus-ring room, see .scroll */
-  padding: 0 var(--space-4) var(--space-8);
+  padding: 0 var(--gutter) var(--space-8);
 }
 
 /* ---- the three tabs ----
@@ -146,6 +147,14 @@
    rows with its own roll boxes (.gear-row, .mini, .val-box), so an enemy's
    Greatclub reads — and rolls — exactly as a player's weapon does. */
 .enemies { display: flex; flex-direction: column; gap: var(--space-2-5); }
+/* The party and the enemies, two cards a row when the column has room (a
+   tablet). Neither list is reordered by dragging — the roster and campaign
+   lists are, and stay one column, because their drag measures rows top to
+   bottom. The turn order (.fighters) stays one column too: it is a sequence. */
+@container (width >= 640px) {
+  .party,
+  .enemies { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
 /* The ⋯ in the row's head: an .icon-btn a size down, like a hero card's. */
 .enemy__more { width: 32px; height: 32px; }
 .enemy__tags { display: flex; flex-wrap: wrap; gap: var(--space-1-5); margin-bottom: var(--space-3); }

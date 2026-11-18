@@ -1,12 +1,13 @@
 /* =====================================================================
    MEEPLE — Playwright configuration (development only)
    ---------------------------------------------------------------------
-   Run:  npm run test:e2e              (Chrome, Safari, and the iPhone layout)
-         npm run test:chrome / test:safari / test:iphone   (one project)
+   Run:  npm run test:e2e              (Chrome, Safari, iPhone and iPad layouts)
+         npm run test:chrome / test:safari / test:iphone / test:ipad
          npm run test:report           (open the last run's HTML report)
 
    Every browser test runs twice, once per desktop project below (the
-   third, iphone, runs only phone.spec.js — see `projects`):
+   device projects — iphone, ipad, ipad-landscape — run only phone.spec.js;
+   see `projects`):
 
      · chrome — the Chrome already installed on the machine (channel:
                 'chrome'), not a Playwright download.
@@ -42,15 +43,19 @@ module.exports = defineConfig({
   snapshotPathTemplate: '{testDir}/{testFileDir}/{testFileName}-snapshots/{arg}{ext}',
   use: {
     baseURL: `http://localhost:${PORT}`,
-    // The phone frame is the design target (docs/design-system.md §15).
-    viewport: { width: 460, height: 940 },
+    // The drawn iPhone is the design target (docs/design-system.md §15).
+    // 1000px tall so it fits at full size under the device preview bar
+    // (32px page padding + the bar + 16px + 874px + 32px): a device that
+    // does not fit is scaled down to, which would put every pointer test
+    // through a transform it does not need.
+    viewport: { width: 460, height: 1000 },
     // Kept only for a failed test: a screenshot of the moment it failed, and
     // a step-by-step replay (npx playwright show-trace …, or from the HTML
     // report). No video — the trace already shows every step.
     screenshot: 'only-on-failure',
     trace: 'retain-on-failure',
   },
-  /* chrome and safari are a DESKTOP browser at 460px — the phone frame,
+  /* chrome and safari are a DESKTOP browser at 460px — the drawn iPhone,
      which is what most specs are written against. iphone is the real
      thing as far as an emulator goes: WebKit at an iPhone's size, with
      touch and no hover, so frame.js locks the app to full screen. It runs
@@ -63,6 +68,13 @@ module.exports = defineConfig({
     { name: 'chrome', use: { browserName: 'chromium', channel: 'chrome' }, testIgnore: /phone\.spec\.js/ },
     { name: 'safari', use: { browserName: 'webkit' }, testIgnore: /phone\.spec\.js/ },
     { name: 'iphone', use: { ...devices['iPhone 15'] }, testMatch: /phone\.spec\.js/ },
+    /* The same real-device checks on two tablets, one per layout band the
+       phone never reaches: an iPad mini upright (medium — one wide column)
+       and an iPad Pro on its side (expanded — the two-pane sheet). Touch and
+       no hover, so frame.js locks them full screen exactly as on a phone.
+       layout.spec.js covers every band from a desktop browser. */
+    { name: 'ipad', use: { ...devices['iPad Mini'] }, testMatch: /phone\.spec\.js/ },
+    { name: 'ipad-landscape', use: { ...devices['iPad Pro 11 landscape'] }, testMatch: /phone\.spec\.js/ },
   ],
   webServer: {
     command: `node tests/serve.mjs ${PORT}`,

@@ -11,7 +11,7 @@
    drawn just outside the control, is never cut off by the container. */
 .scroll { overflow-y: auto; height: 100%; -webkit-overflow-scrolling: touch; scroll-padding-block: var(--space-2); }
 
-.divider { height: 1px; background: var(--line); margin: 0 var(--space-4); }
+.divider { height: 1px; background: var(--line); margin: 0 var(--gutter); }
 
 /* round outline icon buttons in headers */
 .icon-btn {

@@ -20,14 +20,13 @@
    AFTER this file, so anything that has to beat it needs the compound
    selector below rather than a copied rule. Nothing here does beat it: the
    three chips only need to share the row evenly, which the picker's do not. */
-/* 18px is the app's screen gutter, written as a literal because that is how
-   it is written everywhere else it matters — .divider's margin and
-   .sheet__pad's padding both state it directly. There is no token for it, and
-   inventing one here would put the gutter in two places at once. */
+/* The sides are the app's screen gutter, --gutter (tokens.css) — the same
+   token .divider and .sheet__pad use, so the chips line up with the page
+   below at every width. */
 .edit-tabs {
   flex-shrink: 0;
   display: flex; gap: var(--space-1-5);
-  padding: var(--space-2-5) var(--space-4) var(--space-3);
+  padding: var(--space-2-5) var(--gutter) var(--space-3);
   border-bottom: 1px solid var(--line-hair);
 }
 /* Equal thirds. The picker's chips are content-width because its set follows
@@ -162,7 +161,10 @@
    of scroll rather than five. Collapses to one column where a phone is too
    narrow to keep both legible. */
 .bio__grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 var(--space-3); }
-@media (max-width: 340px) { .bio__grid { grid-template-columns: 1fr; } }
+/* Its own column's width, not the window's: a media query here never fired
+   in the drawn preview, where the window is wide and the phone is not.
+   340px is this grid's own limit (two fields stop fitting), not a band. */
+@container (width < 340px) { .bio__grid { grid-template-columns: 1fr; } }
 /* A button, not a div: the portrait menu has to be reachable from the
    keyboard, and "click the picture" is the affordance asked for. */
 .portrait-edit__frame {

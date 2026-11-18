@@ -104,7 +104,7 @@ project-meeple/
     │   ├── content.test.js    #  7 — the real compendium vs the guide
     │   ├── css-tokens.test.js #  2 — no colour written outside tokens.css
     │   └── library-check.test.js # 14 — the compendium/entry shape check
-    ├── e2e/                 # Playwright — every test runs in Chrome AND Safari
+    ├── e2e/                 # Playwright — every test runs in Chrome AND Safari (phone.spec.js: emulated iPhone and iPads)
     │   ├── helpers/test.js    # the `test` to import: fails on any page error
     │   ├── helpers/app.js     # openApp, press, seed storage, files, downloads
     │   ├── characterization.spec.js  # 2 — the whole sheet, step by step
@@ -118,8 +118,9 @@ project-meeple/
     │   ├── a11y.spec.js       # 34 — axe on every screen and main modal, incl. the Rest sheet, Downed notice, portrait sheet, the Undo toast, the campaign screens, the Party tab with a hero and its popups, a fight in progress with Start Combat, the ✎ sheet and End Fight (Chrome); collapsible tap targets, note state, reduced motion (both)
     │   ├── rules.spec.js      # 3 — Flow 10: back to the tab Rules was opened from; back to Edit Character with the draft kept; back to Settings
     │   ├── back.spec.js       # 10 — Flow 20: the phone's own back through history (out of a screen, Rules to its tab, a popup or the drawer first, a creation step), and the swipe (follows the finger over the screen beneath, springs back, edge only, blocked over popups and Home, only on a home-screen install, Reduce Motion). Swipes are real touch events via Chrome DevTools, so Chrome only
-    │   ├── frame.spec.js      # 5 — desktop frame: default, toggle remembered, full mode fits, narrow window locks; manifest + icons resolve; opaque iOS status bar
-    │   ├── phone.spec.js      # 6 — iphone project ONLY: fills the screen, no toggle, page never scrolls (campaign screens too), both tab bars on screen, fields ≥16px, Add a Portrait takes a tap
+    │   ├── frame.spec.js      # 9 — the desktop device preview: iPhone by default, a preset's size remembered and rotated, too big scaled to fit, free size, Fit window fills, the old toggle's choice kept, narrow window locks; manifest + icons resolve; opaque iOS status bar
+    │   ├── layout.spec.js     # 25 — every layout band, at ten device sizes (iPhone, SE, on its side, Duo closed/open, iPad mini/Pro, desktop): nothing off the side on any screen, the hero in proportion, two panes exactly where expected; the phone layout unchanged; wide screens keep a readable column and popup sizes; the dice keypad on a phone held sideways; the short hero's uploader; the pull over the side pane
+    │   ├── phone.spec.js      # 6 — the device projects ONLY (iphone, ipad, ipad-landscape): fills the screen, no preview bar, page never scrolls (campaign screens too), both tab bars on screen, fields ≥16px, Add a Portrait takes a tap
     │   ├── combat.spec.js     # 7 — Flow 18: Start Combat (whole party, counts, sharing a turn, no surprise round), the line (pick, End Turn, a boss's three turns, the round count, kept over a reload), Armor per goblin, down greyed and skipped but pickable, the ✎ (manual heal even when down, effects, a Wound cleared, Back to Full), End Fight, a deleted stat card leaving the fight
     │   ├── enemies.spec.js    # 9 — Flows 16, 17, 19: the Monster Compendium (stock goblins, tap to add a copy, New Enemy saved to both, removal with Undo, campaign deletes never reach it, backups by id), stat cards made and checked, an enemy crits on a natural 20 only, edit/duplicate/delete, monster files (export, import as copies, refusals, hostile), backups carrying campaigns (restore in place, as copies, campaigns-only)
     │   ├── party.spec.js      # 9 — Flow 15: a file's hero matches the sheet, Armor and Armor Piercing, Wounds and Boons move the defences, downed, a newer file keeps the vitals, several characters ask who, hostile file, typed-in hero edit/notes/remove/reload; the open character and the GM's compendium never change

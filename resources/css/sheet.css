@@ -17,7 +17,68 @@
    alongside the hero's pull — without it two elastic effects compete for the
    same gesture and the whole page bounces under the stretch. */
 .sheet__scroll { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior-y: contain; scroll-padding-block: var(--space-2); }  /* focus-ring room, see .scroll */
-.sheet__pad { padding: var(--space-5) var(--space-4) var(--space-8); }
+.sheet__pad { padding: var(--space-5) var(--gutter) var(--space-8); }
+/* The Action tab is two pads since the hero and vitals moved into the side
+   (pages/sheet.html): the side's holds the vitals card, the rest continues
+   under it. On a phone they read as the one padded column they used to be —
+   the side's gives up its foot, the rest its head, and the combat grid's own
+   margin-top is the gap between them, exactly as before. */
+.sheet__pad--side { padding-bottom: 0; }
+.sheet__pad--rest { padding-top: 0; }
+
+/* ---- two panes (expanded band: tokens.css, "Layout bands") ----
+   An iPad on its side, an iPad Pro, an open foldable, a desktop window:
+   the hero and vitals take a pane on the left that never scrolls away,
+   and the tabs run beside them with the tab bar under their own pane.
+   Vitals are what a player looks at most in a fight, and a wide screen has
+   room to never hide them. (frame.css §4 decides what shows.)
+
+   .sheet__scroll stops being a box at all (display: contents), so the side
+   and the tab pages become the grid's own cells and scroll independently.
+   It stays in the DOM, so the hero's pull handlers bound to it still hear
+   every touch and wheel that bubbles up from the side (main.js).
+
+   Each pane is an inline-size container, so everything in it that asks
+   its own column (--gutter, the card grids) measures the pane, not the app. */
+@container app (width >= 1024px) or ((width >= 840px) and (orientation: landscape)) {
+  .sheet {
+    grid-template-columns: var(--pane-side) minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr) auto;
+  }
+  .sheet__scroll { display: contents; }
+  .sheet .sheet__side,
+  .sheet .tabpage {
+    min-height: 0;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-y: contain;
+    scroll-padding-block: var(--space-2);   /* focus-ring room, see .scroll */
+    container-type: inline-size;
+  }
+  .sheet .sheet__side {
+    grid-column: 1; grid-row: 1 / -1;
+    border-right: 1.5px solid var(--rule-strong);
+  }
+  .sheet .tabpage { grid-column: 2; grid-row: 1; }
+  /* The bar sits under its own pane, and gathers over THAT pane's middle:
+     the app's width less the side's (the bar is not inside a pane). */
+  .sheet .tabbar {
+    grid-column: 2; grid-row: 2;
+    padding-left:  max(var(--space-1-5), calc((100cqw - var(--pane-side) - var(--tabbar-max)) / 2));
+    padding-right: max(var(--space-1-5), calc((100cqw - var(--pane-side) - var(--tabbar-max)) / 2));
+  }
+  /* The two pads are apart now, so each gets back the edge it gave up. */
+  .sheet__pad--side { padding-bottom: var(--space-8); }
+  .sheet__pad--rest { padding-top: var(--space-5); }
+  .sheet__pad--rest > .combat-grid:first-child { margin-top: 0; }
+  /* Home and Menu are on the hero, always on show beside these headers, so a
+     second pair here would be two buttons for one thing. Hidden, not removed:
+     the titles stay centred, and the hero's Home is the first [data-back]
+     in the screen, which is the one back gestures press (main.js). Notes'
+     own back (to the Action tab) is not [data-back], and stays. */
+  .sheet .tabpage .topbar [data-back],
+  .sheet .tabpage .topbar .icon-btn--menu { visibility: hidden; }
+}
 
 /* ---- hero ---- */
 /* The hero stretches when the character tab is pulled down past its top.
@@ -94,6 +155,26 @@
   font-family: var(--font-body); font-style: italic; font-size: var(--fs-note); color: var(--ink-faint);
 }
 .portrait-drop:active { background: var(--wash-lift2); transform: translateY(1px); }
+/* A short screen (a closed foldable, an SE, any phone on its side) has a
+   short hero — down to 200px — and the full-size uploader, centred, ran into
+   the name at its foot. There it becomes a pill on the same line as Home and
+   Menu: the one free strip in a short hero, and still the first thing seen.
+   It keeps the glass buttons' 42px height so the three read as one row. */
+@container app (height < 700px) {
+  .portrait-empty {
+    align-self: flex-start;
+    padding-top: calc(var(--statusbar-clear) - 2px);
+  }
+  .portrait-drop {
+    flex-direction: row; gap: var(--space-2);
+    min-height: 42px;
+    padding: 0 var(--space-4);
+    border-radius: 999px;
+  }
+  .portrait-drop__glyph svg { width: 20px; height: 20px; }
+  .portrait-drop__label { font-size: var(--fs-input); }
+  .portrait-drop__hint { display: none; }
+}
 
 /* Drag-and-drop feedback (desktop only in practice — a phone has no drag). */
 .hero.is-dropping .portrait-drop { border-color: var(--accent); border-style: solid; }
@@ -380,6 +461,10 @@
 
 /* ---- stats grid (Stats tab) ---- */
 .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3); }
+/* Six attributes: 2 × 3 on a phone, 3 × 2 once the column has room for
+   three cards at a phone card's width (unnamed: asks its own column, so it
+   is right in a full iPad column and in the two-pane sheet's right pane). */
+@container (width >= 560px) { .stats-grid { grid-template-columns: repeat(3, 1fr); } }
 /* Attribute cards. Same hairline as everything else on the sheet — twelve of
    these in a grid made the heavier edge read as a table rule, and the number
    inside is what the card is for. */
@@ -551,7 +636,9 @@
   display: flex;
   background: var(--bg-page);
   border-top: 1.5px solid var(--rule-strong);
-  padding: var(--space-2) var(--space-1-5) var(--home-clear);
+  /* Sides: the buttons share the bar evenly, so across a tablet they would
+     sit a hand's width apart. They gather to --tabbar-max and centre. */
+  padding: var(--space-2) max(var(--space-1-5), calc((100cqw - var(--tabbar-max)) / 2)) var(--home-clear);
   box-shadow: var(--shadow-tabbar);
 }
 .tabbar__btn {

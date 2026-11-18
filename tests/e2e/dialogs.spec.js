@@ -156,42 +156,44 @@ test('focus finds its way back even when the opener was re-rendered', async ({ p
 });
 
 /* Round-2 review, finding 7. Only .app's children were made inert, and the
-   FULL/PHONE frame toggle lives outside .app (index.html, frame.js) — so it
-   could be tabbed to or tapped while a dialog was open, changing the whole
-   shell behind it. Everything outside the open modal is inert now. */
+   shell's own control — the frame toggle then, the device preview bar now —
+   lives outside .app (index.html, frame.js) — so it could be tabbed to or
+   tapped while a dialog was open, changing the whole shell behind it.
+   Everything outside the open modal is inert now. */
 test('the shell outside the app is out of reach while a modal is open, and back after', async ({ page }) => {
   await openApp(page);
   await openFirstCharacter(page);
-  const toggle = page.locator('[data-frame-toggle]');
+  const bar = page.locator('[data-preview]');
+  const picker = page.locator('[data-preview-device]');
   const frame = () => page.evaluate(() => document.documentElement.getAttribute('data-frame'));
   const before = await frame();
 
   await press(page, '[data-menu="open"]');
   await press(page, '[data-action="rest"]');
   await expect.poll(() => modal(page)).toBe('rest');
-  expect(await toggle.evaluate((el) => el.inert)).toBe(true);
+  expect(await bar.evaluate((el) => el.inert)).toBe(true);
 
   // Not focusable…
-  await toggle.focus();
-  await expect(toggle).not.toBeFocused();
+  await picker.focus();
+  await expect(picker).not.toBeFocused();
   // …and a tap where it sits does not reach it. (Whatever is under that
   // point may take the tap instead — the assertion is only about the shell.)
-  const box = await toggle.boundingBox();
+  const box = await picker.boundingBox();
   await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
   expect(await frame()).toBe(before);
 
   // Closed: given back, and it works.
   if ((await modal(page)) !== 'closed') await page.keyboard.press('Escape');
   await expect.poll(() => modal(page)).toBe('closed');
-  expect(await toggle.evaluate((el) => el.inert)).toBe(false);
-  await toggle.click();
+  expect(await bar.evaluate((el) => el.inert)).toBe(false);
+  await picker.selectOption('full');
   expect(await frame()).not.toBe(before);
 });
 
 test('a modal handing over to another keeps the shell inert throughout', async ({ page }) => {
   await openApp(page);
   await openFirstCharacter(page);
-  const toggleInert = () => page.locator('[data-frame-toggle]').evaluate((el) => el.inert);
+  const toggleInert = () => page.locator('[data-preview]').evaluate((el) => el.inert);
   // Advantage hands over to the roll result: two modals, no gap between.
   await page.locator('[data-roll="tohit"]:visible').first().focus();
   await page.keyboard.press('Shift+Enter');

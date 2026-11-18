@@ -245,7 +245,7 @@
 /* ----------------------------------------------------------------- */
 /* The field is pinned and the list scrolls under it, so the search stays
    reachable however far down the guide you have read. */
-.rules__search { padding: var(--space-3) var(--space-4) var(--space-2-5); flex-shrink: 0; }
+.rules__search { padding: var(--space-3) var(--gutter) var(--space-2-5); flex-shrink: 0; }
 /* Count left, control right. Baseline-aligned rather than centred so the two
    bits of small caps sit on one line the eye can run along. */
 .rules__meta {
@@ -271,7 +271,9 @@
 
 /* Body copy, set for reading rather than for scanning — this is the one
    place in the app with paragraphs long enough to need a reading measure. */
-.rules__body { font-family: var(--font-body); font-size: var(--fs-body); line-height: 1.6; color: var(--ink-soft); }
+/* ~70 characters a line at most, whatever the screen: on a tablet the column
+   is wide enough for 110, and lines that long are hard to track back from. */
+.rules__body { font-family: var(--font-body); font-size: var(--fs-body); line-height: 1.6; color: var(--ink-soft); max-width: 70ch; }
 .rules__p { margin: 0 0 var(--space-3); }
 .rules__body > *:last-child { margin-bottom: 0; }
 /* A sub-heading inside a section — "Harder Tasks", "Move — 1 AP". Set in the
