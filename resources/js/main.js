@@ -682,12 +682,9 @@
     // Set when the open result window is reporting something that only takes
     // effect on the next load — a compendium install. closeModal() reloads.
     reloadOnClose: false,
-    /* Appearance, chosen and remembered and READ BY NOTHING. The controls are
-       built and the CSS behind them is not, so this is deliberately not
-       persisted either: a preference that survives a reload and still changes
-       nothing is a stronger claim than the app can currently make good on.
-       See renderAppearance(). */
-    appearance: { mode: 'system', theme: 'journal' },
+    // Appearance is NOT here: theme.js owns it (it has to apply the choice
+    // before this file has even loaded), and a second copy in state would be
+    // a second answer to "which theme is on?". See renderAppearance().
   };
 
   /* ------------------------------------------------------------------ */
@@ -8543,7 +8540,7 @@
   /*               array from the first version for exactly this.        */
   /*   Compendium  the game's content in and out, per                    */
   /*               docs/library-schema.md.                               */
-  /*   Appearance  FRAME ONLY. Controls, no effect — see below.          */
+  /*   Appearance  theme and light/dark, through theme.js — see below.   */
   /*   Feedback    buttons only; neither destination exists yet, so      */
   /*               both fall through to the not-yet-implemented stub.    */
   /*                                                                     */
@@ -9113,15 +9110,15 @@
     ask.run(mode);
   }
 
-  /* ---- appearance — the frame, and nothing behind it ------------------
-     Every control here draws its selection and changes nothing else. The
-     design tokens these would drive live in :root in style.css and are
-     expected to move before any of this is wired up, so what is built is the
-     shape of the choice rather than a half-applied theme that would be harder
-     to finish than an unstarted one.
+  /* ---- appearance ------------------------------------------------------
+     The picker for theme.js, which owns the choice: it applies it to <html>
+     (data-theme, data-mode), stores it, and follows the device while on Auto.
+     This side only draws which tile and chip are chosen and hands a tap back
+     through MEEPLE_THEME.set(). What a theme LOOKS like is entirely
+     tokens.css; nothing here knows a colour.
 
-     The lists are data so that adding a theme later is one line here and one
-     token block there. */
+     The theme list is theme.js's registry, not a copy of it, so adding a
+     theme is one line there and two token blocks in tokens.css. */
   /* Mode glyphs. Drawn on Lucide's 0 0 24 24 bed like the rest of the app's
      icons, stroked rather than filled so they take their colour from the tile
      and shift with its selected state.
@@ -9161,16 +9158,6 @@
     { id: 'system', label: 'Auto' },
   ];
 
-  const APPEARANCE_THEMES = [
-    // The one the app actually wears today, named for the design direction the
-    // stylesheet is built on — so the default chip is not a promise of
-    // anything new.
-    { id: 'journal', label: 'Field Journal' },
-    { id: 'ink',     label: 'Ink & Iron' },
-    { id: 'ember',   label: 'Ember' },
-    { id: 'moss',    label: 'Moss' },
-    { id: 'dusk',    label: 'Dusk' },
-  ];
 
   function renderAppearance() {
     // aria-pressed, matching the share window's format chips and the weapon
@@ -9178,10 +9165,17 @@
     // set is chosen. role="radio" would describe an exclusive set more
     // precisely, but every other one-of-many control in this app is a pressed
     // button, and CLAUDE.md puts consistency above the finer ARIA.
-    const chips = (list, chosen, attr) => list.map((o) => {
-      const on = o.id === chosen;
-      return `<button class="tag-pick${on ? ' is-on' : ''}" ${attr}="${esc(o.id)}"`
-        + ` aria-pressed="${on}">${esc(o.label)}</button>`;
+    const pref = window.MEEPLE_THEME.get();
+
+    /* Each chip leads with a dot of its theme's accent (settings.css,
+       .tag-pick__swatch). Decorative, and so hidden from assistive tech: the
+       word is the label, and "Moss, green dot" says nothing "Moss" does not. */
+    const themes = window.MEEPLE_THEME.THEMES.map((o) => {
+      const on = o.id === pref.theme;
+      return `<button class="tag-pick${on ? ' is-on' : ''}" data-ap-theme="${esc(o.id)}"`
+        + ` aria-pressed="${on}">`
+        + `<span class="tag-pick__swatch tag-pick__swatch--${esc(o.id)}" aria-hidden="true"></span>`
+        + `${esc(o.label)}</button>`;
     }).join('');
 
     /* Mode gets picture tiles instead: glyph above, word below, whole tile is
@@ -9189,7 +9183,7 @@
        input, so it goes in unescaped — the label beside it is escaped as
        everything from a data list is. */
     const modes = APPEARANCE_MODES.map((o) => {
-      const on = o.id === state.appearance.mode;
+      const on = o.id === pref.mode;
       return `<button class="mode-pick${on ? ' is-on' : ''}" data-ap-mode="${esc(o.id)}"`
         + ` aria-pressed="${on}">`
         + `<span class="mode-pick__icon">${MODE_GLYPHS[o.id] || ''}</span>`
@@ -9198,7 +9192,7 @@
     }).join('');
 
     fillList('apMode',  modes);
-    fillList('apTheme', chips(APPEARANCE_THEMES, state.appearance.theme, 'data-ap-theme'));
+    fillList('apTheme', themes);
   }
 
   /* Ids the imported character named that nothing can resolve — not the local
@@ -10679,10 +10673,10 @@
       if (t.hasAttribute('data-backup-export'))     { exportBackup(); return; }
       if (t.hasAttribute('data-compendium-export')) { exportCompendium(); return; }
       if (t.hasAttribute('data-compendium-reset'))  { askCompendiumReset(); return; }
-      // Appearance is frame only: these record a choice, repaint the chips to
-      // show it, and are read by nothing. See renderAppearance().
-      if (t.dataset.apMode)  { state.appearance.mode  = t.dataset.apMode;  renderAppearance(); return; }
-      if (t.dataset.apTheme) { state.appearance.theme = t.dataset.apTheme; renderAppearance(); return; }
+      // Appearance: theme.js applies and stores the choice; this repaints the
+      // picker to show it. A tap ASSIGNS, so exactly one of each is chosen.
+      if (t.dataset.apMode)  { window.MEEPLE_THEME.set({ mode:  t.dataset.apMode });  renderAppearance(); return; }
+      if (t.dataset.apTheme) { window.MEEPLE_THEME.set({ theme: t.dataset.apTheme }); renderAppearance(); return; }
 
       // --- character creation ---
       // Every branch repaints through renderWizard(), which is also what keeps

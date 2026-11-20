@@ -55,19 +55,19 @@ The app will ship with multiple themes. A theme is chosen on two independent axe
 | **Color theme** | one of the themes in the registry below | `appearance.theme` (e.g. `journal`) |
 | **Mode** | Light · Dark · Auto (follows the device) | `appearance.mode` — `light` / `dark` / `system` |
 
-**Current state:** the Settings → Appearance picker is built but **frame only** — it records a choice and nothing reads it (`main.js`, `renderAppearance()`). The app always wears the dark Field Journal tokens. The choice is deliberately not persisted yet.
+**Current state (2026-11-20):** built. Settings → Appearance applies a theme and a mode at once and remembers them on this device. **The default is Ember, dark** — the app exactly as it shipped before themes existed — so a player who never opens Appearance sees no change, whatever their phone is set to.
 
 ### 3.1 Theme registry
 
 | id | Picker label | Light mode | Dark mode | Status |
 |---|---|---|---|---|
-| `journal` | Field Journal | Parchment (in git history, see §3.4) — not planned yet | **The current app** | Dark shipped |
-| `ink` | Ink & Iron | _TBD_ | _TBD_ | Name only — on hold |
-| `ember` | Ember | _TBD_ | _TBD_ | Name only — on hold |
-| `moss` | Moss | _TBD_ | _TBD_ | Name only — on hold |
-| `dusk` | Dusk | _TBD_ | _TBD_ | Name only — on hold |
+| `ember` | Ember | Ash-grey paper, darkened brass, deepened ember | **The original app** — the default | Shipped (both) |
+| `journal` | Field Journal | Parchment and sepia, verdigris accent | Leather-brown, verdigris accent | Shipped (both) |
+| `moss` | Moss | Near-neutral paper, bark rules, lichen accent | Near-black, bark rules, lichen accent | Shipped (both) |
+| `dusk` | Dusk | Near-neutral paper, slate-lavender rules, violet accent | Near-black, slate-lavender rules, violet accent | Shipped (both) |
+| `ink` | Ink & Iron | White paper, steel greys, black accent | Black, steel greys, white accent | Shipped (both) |
 
-**On hold.** No work is planned on the other themes or on light mode for now. When it is picked up, start with the prompt in §3.5.
+The registry itself is `THEMES` in `resources/js/theme.js` — the picker draws from it and `tests/unit/themes.test.js` holds `tokens.css` to it. A new theme is one line there and two blocks in `tokens.css`; start with the prompt in §3.5.
 
 ### 3.2 How a theme is logged
 
@@ -98,32 +98,97 @@ Every theme gets an entry in §3.4 using this template, filled in before its tok
 - **Fixed meanings stay recognizable across themes:** health is warm red-orange, mana is blue, heal is green, damage and danger are red. A theme may shift their shade, not their hue family.
 - **The `--fill` / `--bright` split is per mode** (see §4.3). Dark mode needs it; light mode may let both point at one value.
 
-**Planned implementation** (_proposed — not built_): set `data-theme` and `data-mode` on `<html>`, the same place `data-frame` lives. Each theme × mode is one block of color overrides, e.g. `:root[data-theme="moss"][data-mode="dark"] { … }`. Auto mode resolves `system` to `light` or `dark` through `prefers-color-scheme` in JS, so CSS only ever sees two modes.
+**Implementation (built 2026-11-20):**
+- `resources/js/theme.js` loads in `<head>`, next to `frame.js`, and sets `data-theme` and `data-mode` on `<html>` before first paint, so a light theme never flashes the dark one. It resolves Auto (`system`) to `light` or `dark` through `prefers-color-scheme` and follows the device live while on Auto, so CSS only ever sees two modes. It also points `<meta name="theme-color">` at the theme's `--bg-page`. The choice is stored as `meeple:appearance` — a device preference, so it is not in backups.
+- `tokens.css` cascades in three layers: the base `:root` (Ember dark, the complete set) → `:root[data-mode="light"]` (what every light theme shares: the deepened semantic colours, inverted washes, soft shadows) → `:root[data-theme="…"][data-mode="…"]` (what makes one theme itself). The theme blocks carry two attributes, so they outrank the shared light block where they need to (Moss's heal).
+- **Not themed, on purpose:** `--on-dark` / `--on-dark-soft` and the portrait fades (they sit on a photo), the `--frame-*` tokens (the drawn device and its preview bar are black glass in every theme), and `--focus` / `--focus-ring` (derived from `--accent-bright` / `--accent-wash`, so they follow on their own).
+- **Enforced:** `tests/unit/themes.test.js` fails if a registered theme lacks a block, if a block invents a token name, or if any of ~30 text and focus pairs misses AA in any theme × mode. `a11y.spec.js` runs axe over the main screens in all ten.
 
 ### 3.4 Theme entries
 
+#### Ember (`ember`) — the default
+
+**Status:** shipped, light and dark (2026-11-20). Dark is the original app, token for token.
+**Naming:** until 2026-11-20 this theme *was* "Field Journal" (and briefly "Ember Journal" before that). It was renamed Ember because its accent is the ember and its tokens already described it as "the coal in the brazier"; the name Field Journal moved to a new theme below. "1a Field Journal" is still the name of the design *direction* (`design/`), which every theme shares.
+**Mood:** dark — the desk, the lamp, and the coal in the brazier. Light — ash-grey paper under the same lamp.
+
+| share | Light | Dark | role |
+|---|---|---|---|
+| 60% | `#ecebe7` ash | `#232323` | page surfaces |
+| 30% | `#d3c39a` / `#a8841c` | `#684d00` / `#a47e05` | rules, labels, secondary fills |
+| 10% | `#b03800` | `#a73500` ember | the one standout |
+
+**Overrides:** light deepens the gold until it reads on paper (`--gold` `#765a04`, `--heading` `#5f4500`) and the ember a step (`--accent-bright` `#a33400` as text).
+**Notes / decisions:**
+- Light is ash-grey rather than cream, so it never reads as Field Journal's parchment.
+- In the old parchment theme, oxblood `#742230` meant both "screen title" and "destructive". In dark these were split: titles moved to gold (`--heading`) and destructive to red (`--danger`), so one color never means both "you are here" and "this deletes things". Every theme keeps the split.
+- Health keeps the brighter `#bd4200` and the accent sits deeper, so a readout and a button are not the same color.
+
 #### Field Journal (`journal`)
 
-**Status:** dark shipped. Light archived in git history (`tokens.css` at commit `fb800f7`) — not planned yet.
-**Naming:** this theme was briefly called "Ember Journal" in code comments; it is **Field Journal** everywhere now. "Ember" is a separate, unbuilt theme in the registry.
-**Mood:** dark — the field journal after dark: the desk, the lamp, and the coal in the brazier. Light — aged parchment and ink.
+**Status:** shipped, light and dark (2026-11-20).
+**Mood:** a naturalist's notebook — kraft parchment, sepia pencil and verdigris ink. Dark is the same notebook in a leather cover.
 
-**Source palette:**
-
-| share | Light (archived) | Dark (current) | role |
+| share | Light | Dark | role |
 |---|---|---|---|
-| 60% | `#f3e7cf` parchment | `#232323` | page surfaces |
-| 30% | `#c3ab74` / `#d9c187` | `#684d00` / `#a47e05` | rules, labels, secondary fills |
-| 10% | `#b5623a` rust | `#a73500` ember | the one standout |
+| 60% | `#f3e7cf` parchment | `#211d18` leather | page surfaces |
+| 30% | `#d9c187` / `#a98a4f` | `#4e4130` / `#8a7250` | rules, labels, secondary fills |
+| 10% | `#1d6b62` verdigris | `#1f7268` verdigris | the one standout |
 
-**Decisions:**
-- The 30% is a *range*, not one value: the two golds share a hue (44.4° / 45.7°) and differ only in weight, so they read as one material at two depths.
-- In the light theme, oxblood `#742230` meant both "screen title" and "destructive". In dark, these were split: titles moved to gold (`--heading`) and destructive to red (`--danger`), so one color never means both "you are here" and "this deletes things".
-- Health was the accent in light. In dark, health keeps the brighter `#bd4200` and the accent moved deeper, so a readout and a button are no longer the same color.
+**Notes / decisions:**
+- Light is the parchment theme this app started with (`tokens.css` at commit `fb800f7`), its rust accent swapped for verdigris so it is not a second Ember.
+- Teal sits between mana blue and heal green; those stay told apart by place and label, not by this accent.
+
+#### Moss (`moss`)
+
+**Status:** shipped, light and dark (2026-11-20).
+**Mood:** the forest floor after rain — bark, damp stone and lichen.
+
+| share | Light | Dark | role |
+|---|---|---|---|
+| 60% | `#f3f3f0` | `#1d1e1c` | page surfaces |
+| 30% | `#cfc3a8` / `#9c8660` bark | `#4a3f2e` / `#7d6a4a` bark | rules, labels, secondary fills |
+| 10% | `#47701a` lichen | `#4a7518` lichen | the one standout |
+
+**Overrides:** `--heal` moves toward sea-green (`#2d6b57` light, `#2f7560` dark) so it is not the accent's green.
+**Notes / decisions:**
+- The pages are all but neutral. The first mock-up tinted them green (`#eceee6`, `#1c201b`) and they read as sickly; the hue now lives in the rules and the accent, not the paper.
+- The 30% is bark brown, not green, so the lichen accent is the only green that shouts.
+
+#### Dusk (`dusk`)
+
+**Status:** shipped, light and dark (2026-11-20).
+**Mood:** the hour before the session — slate sky, lavender cloud and a violet lamp.
+
+| share | Light | Dark | role |
+|---|---|---|---|
+| 60% | `#f3f2f5` | `#1e1e21` | page surfaces |
+| 30% | `#cdc8dc` / `#8f88b0` slate-lavender | `#3d3a55` / `#6c6794` | rules, labels, secondary fills |
+| 10% | `#6c2fa6` violet | `#7438b0` violet | the one standout |
+
+**Notes / decisions:**
+- Near-neutral pages, for the same reason as Moss (first mock-up: `#efedf3`, `#1e1c26`).
+- The violet leans toward magenta so it never reads as mana blue. Health orange is the warmest thing on screen, which keeps it the first number found.
+
+#### Ink & Iron (`ink`)
+
+**Status:** shipped, light and dark (2026-11-20).
+**Mood:** black ink and cold iron. The only colour left is your vitals.
+
+| share | Light | Dark | role |
+|---|---|---|---|
+| 60% | `#f3f3f1` | `#151618` | page surfaces |
+| 30% | `#d0d0cc` / `#8c8d90` steel | `#34363a` / `#5e6066` steel | rules, labels, secondary fills |
+| 10% | `#17181a` black | `#ececec` white | the one standout |
+
+**Notes / decisions:**
+- The accent is the page inverted, so `--on-accent` is black in dark mode. That is what exposed every place that set type on a red fill with `--on-accent` (the wound pip, the destructive Save) — those now take `--on-dark` (§4.3).
+- Health, mana, heal, damage and wounds keep their colours, so the sheet's readouts are the only colour on screen.
+- Its picker swatch is `--ink` itself — no single colour can be "black in light, white in dark".
 
 ### 3.5 Prompt — starting work on a new theme
 
-Paste this into a session when a theme in §3.1 comes off hold. Fill in the bracketed parts first.
+Paste this into a session to start a new theme. Fill in the bracketed parts first.
 
 ```text
 We're starting work on the [THEME NAME] theme (id `[id]`) for the Meeple
@@ -142,8 +207,8 @@ Please:
 3. Keep the fixed meanings recognizable (§3.3): health warm red-orange,
    mana blue, heal green, damage/danger red.
 4. Fill in the theme entry template (§3.2) in docs/design-system.md.
-5. If the theme × mode plumbing (§3.3 "Planned implementation") isn't built
-   yet, plan that first and wait for my thumbs-up before writing code.
+5. Add it to THEMES in resources/js/theme.js and give it a light and a dark
+   block in tokens.css (§3.3); tests/unit/themes.test.js must pass.
 Do not change any token names, and do not touch non-color tokens.
 ```
 
@@ -151,7 +216,7 @@ Do not change any token names, and do not touch non-color tokens.
 
 ## 4. Color Palette
 
-### 4.1 Template roles → tokens (current dark theme)
+### 4.1 Template roles → tokens (Ember dark, the default)
 
 | Role | Token | Value | Notes |
 |---|---|---|---|
@@ -182,7 +247,8 @@ The full set. Themes override these values; components only ever use these names
 | Danger | `--danger`, `--danger-deep`, `--danger-bright`, `--danger-wash` | Destructive actions and alarms. Kept red, never orange, so it can't be mistaken for the accent. |
 | Vitals | `--health`, `--wound`, `--health-off`, `--mana`, `--mana-bright`, `--mana-deep`, `--mana-off`, `--mana-text` | Health, wound pips, mana. |
 | Actions | `--heal`, `--heal-border`, `--heal-text`, `--damage`, `--damage-border`, `--damage-text` | The Heal / Damage pair — always equally loud. |
-| Washes | `--wash-lift`, `--wash-lift2`, `--scrim`, `--hairline`, `--gold-wash`, `--accent-wash`, `--hatch` | Lifts, overlays, highlights, focus wash, portrait texture. |
+| Washes | `--wash-lift`, `--wash-lift2`, `--glass`, `--scrim`, `--hairline`, `--gold-wash`, `--accent-wash`, `--hatch` | Lifts, overlays, the round buttons over the portrait, highlights, focus wash, portrait texture. A lift is white in dark and a faint dark tint in light; `--glass` is smoked in light so a white glyph survives a light portrait. |
+| Not themed | `--swatch-*`, `--frame-*` | The Color chips' dots (each theme's accent, shown whatever theme is on), and the desktop preview's own inks — shell chrome, dark glass in every theme. |
 | Focus & disabled | `--focus`, `--focus-ring`, `--disabled-opacity` | Keyboard focus edge (`--accent-bright`, clears 3:1) and its glow; the one dimming for disabled controls (0.45). |
 
 ### 4.3 Color rules
@@ -190,10 +256,11 @@ The full set. Themes override these values; components only ever use these names
 - **`--accent` fills, `--accent-bright` speaks.** Same for `--danger` / `--danger-bright`. Using a fill token as text is a contrast bug, not a style choice.
 - **`--heal` and `--damage` are fills too.** Red text, icons or outlines on the page take `--danger-bright` (`--damage` as text is 2.3:1).
 - **Focus is `--focus`**, never `--accent` — the ember fill is 2.4:1 on the page and a focus edge needs 3:1.
-- **`--on-accent`** for type on an accent fill; **`--on-dark`** for type over a photo or glass.
+- **`--on-accent`** for type on an accent fill; **`--on-dark`** for type over a photo or glass, **and on any fill that is red in every theme** (a filled wound, `--danger`). The accent is not always dark — Ink & Iron's dark accent is white — so `--on-accent` on a red is a bug even where it happens to look right.
+- **A chosen chip or tile says so with its fill and edge, not its word.** `.tag-pick.is-on` and `.mode-pick.is-on` keep their label in `--ink`; `--accent-bright` on `--bg-parchment2` is 4.3:1, short of AA for small type.
 - **`--ink-soft` is body text; `--rule-strong` is structure.**
 - **Gold at size is `--gold-fill`**, not `--gold-bright` — the bright gold is sized for 8px diamonds.
-- **A wound pip and a button share `--accent`'s red.** They are told apart by shape and place: pips are 22px squares in the vitals card; buttons are wide and sit at the foot of a screen.
+- **In Ember, a wound pip and a button share `--accent`'s red.** They are told apart by shape and place: pips are 22px squares in the vitals card; buttons are wide and sit at the foot of a screen.
 - **Never hardcode a color outside `tokens.css`** — not in a shadow, a fade or the device frame either. `tests/unit/css-tokens.test.js` fails on any `rgb()`/`hsl()`/hex/named colour in another stylesheet.
 
 ---

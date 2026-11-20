@@ -154,7 +154,7 @@ Functions should:
 | `byLibraryId(id)` | Look up any content entry |
 
 - **Game rules are named constants**, defined once in `RULES` in `mechanics.js` (`PRECISION_TO_HIT`). Change the rule in one place and every readout follows.
-- **Data-driven over hard-coded.** Lists that might grow (`ATTRIBUTES`, `BIO_FIELDS`, `COST_KEYS`, `APPEARANCE_THEMES`) are arrays the UI and loader both read, so adding one is a one-line change.
+- **Data-driven over hard-coded.** Lists that might grow (`ATTRIBUTES`, `BIO_FIELDS`, `COST_KEYS`, `THEMES` in `theme.js`) are arrays the UI and loader both read, so adding one is a one-line change.
 
 ---
 
@@ -316,4 +316,5 @@ New or changed conventions, newest first. Add a row whenever this doc changes.
 | 2026-10-05 | Focus uses `--focus` / `--focus-ring`; disabled uses `--disabled-opacity` | Anything that sets `outline: none` must draw its own focus |
 | 2026-10-05 | Red text on the page uses `--danger-bright`; `--damage` / `--heal` are fills only | Contrast fix |
 | 2026-10-05 | Theme name is "Field Journal" | Previously "Ember Journal" in comments |
+| 2026-11-20 | The shipped theme is renamed **Ember** (still the default, dark); "Field Journal" is now a separate theme | Five themes × light/dark, `design-system.md` §3 |
 | 2026-10-05 | Console messages prefixed `[meeple]` | Older messages use `Meeple:` |

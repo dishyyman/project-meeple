@@ -22,6 +22,8 @@
        The manifest loads under default-src 'self' in the policy below —
        no new source is needed. -->
   <link rel="manifest" href="manifest.webmanifest">
+  <!-- Ember dark's page colour: right for the default, and theme.js
+       rewrites it to the chosen theme's --bg-page before first paint. -->
   <meta name="theme-color" content="#232323">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -62,6 +64,10 @@
        the phone shell paint and snap away. Wiring the button waits for
        DOMContentLoaded; only the attribute is urgent. -->
   <script src="resources/js/frame.js"></script>
+  <!-- Same reason, same place: it puts the stored theme and light/dark mode
+       on <html> (data-theme, data-mode) before anything paints, so a light
+       theme never opens on a flash of the dark one. -->
+  <script src="resources/js/theme.js"></script>
 </head>
 <body>
 

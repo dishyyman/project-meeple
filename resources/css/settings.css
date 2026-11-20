@@ -94,7 +94,29 @@
 .screen--settings .tag-picks--flush { margin-top: 0; }
 /* Roomier than the chips inside a modal: these are the whole control on
    a screen with space to spare, not a footnote under a detail card. */
-.screen--settings .tag-pick { font-size: var(--fs-note); padding: var(--space-2) var(--space-3-5); }
+.screen--settings .tag-pick {
+  font-size: var(--fs-note); padding: var(--space-2) var(--space-3-5);
+  display: inline-flex; align-items: center; gap: var(--space-1-5);
+}
+
+/* ---- appearance: colour swatches ----
+   The dot at the head of each Color chip: that theme's accent, drawn the
+   same whatever theme is on, so the five can be told apart before one is
+   tapped. Decorative — the chip's word is the label — so it is aria-hidden
+   in the markup and needs no contrast of its own, but it is mid-weight on
+   purpose so it holds up on a light card and a dark one (tokens.css,
+   "theme swatches"). The hairline ring keeps a dot that happens to match
+   the card it sits on (Ink & Iron's) from disappearing into it. */
+.tag-pick__swatch {
+  width: 10px; height: 10px; flex-shrink: 0;
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px var(--line);
+}
+.tag-pick__swatch--ember   { background: var(--swatch-ember); }
+.tag-pick__swatch--journal { background: var(--swatch-journal); }
+.tag-pick__swatch--moss    { background: var(--swatch-moss); }
+.tag-pick__swatch--dusk    { background: var(--swatch-dusk); }
+.tag-pick__swatch--ink     { background: var(--swatch-ink); }
 
 /* ---- account block ----
    Which of the two blocks paints is decided by data-account on .app, the

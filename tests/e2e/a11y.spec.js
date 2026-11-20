@@ -268,6 +268,38 @@ test('axe: modal — Portrait menu', async ({ page }) => {
   await expectClean(page);
 });
 
+/* Every theme and mode (Settings → Appearance). Everything above runs in the
+   default, Ember dark; this runs the screens that between them draw nearly
+   every colour role — page, card and input inks, gold rules, the accent as
+   fill and as text, the chosen chips and tiles, vitals, Heal and Damage, a
+   red key, the gold keypad rail — under each of the other nine. The token
+   pairs are checked one by one in tests/unit/themes.test.js; this is the
+   same promise checked on the real screens, where a pair the unit test did
+   not think of would show up. */
+const THEME_SCREENS = ['Home', 'Sheet — Action, an ability open', 'Sheet — Character, a skill open', 'Settings', 'Menu drawer'];
+for (const theme of ['ember', 'journal', 'moss', 'dusk', 'ink']) {
+  for (const mode of ['light', 'dark']) {
+    if (theme === 'ember' && mode === 'dark') continue;   // = every test above
+    test(`axe: ${theme} ${mode} — main screens and the dice roller`, async ({ page }) => {
+      await page.addInitScript(([t, m]) => localStorage.setItem('meeple:appearance', JSON.stringify({ theme: t, mode: m })), [theme, mode]);
+      for (const [name, go] of SCREENS.filter(([n]) => THEME_SCREENS.includes(n))) {
+        await test.step(name, async () => {
+          await openApp(page);
+          await go(page);
+          await expectClean(page);
+        });
+      }
+      await test.step('Dice roller', async () => {
+        await openApp(page);
+        await toSheet(page);
+        await press(page, '.hero__btn-dice');
+        await expect.poll(() => appAttr(page, 'data-modal')).toBe('dice');
+        await expectClean(page);
+      });
+    });
+  }
+}
+
 test('axe: toast with Undo (portrait removed)', async ({ page }) => {
   await editWithPhoto(page);
   await press(page, '[data-portrait-menu]');

@@ -321,7 +321,7 @@ The following are intentionally **not** part of this version. Most were tested a
 - Minimal team resources.
 
 **Design**
-- The **"Field Journal"** theme (dark): Marcellus / Spectral type, 60/30/10 palette split. See `design-system.md`.
+- Design direction **"Field Journal"**: Marcellus / Spectral type, 60/30/10 palette split, in five colour themes (Ember — the default, dark — Field Journal, Moss, Dusk, Ink & Iron), each light and dark. See `design-system.md` §3.
 - Every foreground/background color pair clears **WCAG AA (4.5:1)**.
 - One ember (accent) standout per screen.
 - Phone-first layout.

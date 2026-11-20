@@ -365,9 +365,11 @@
   padding: 4px 4px 4px 14px;
   font-family: var(--font-label);
   font-size: 12px; letter-spacing: 0.04em;
-  color: var(--ink-muted);
+  /* The bar's own --frame-* inks, never the app's: it is shell chrome, dark
+     glass in every theme, and a light theme's ink is dark (tokens.css). */
+  color: var(--frame-ink-muted);
   background: var(--frame-chip);
-  border: 1px solid color-mix(in srgb, var(--accent) 50%, transparent);
+  border: 1px solid var(--frame-edge);
   border-radius: 999px;
   /* The select's own drop-down is drawn by the system; this asks for the
      dark one, so it is not a white sheet over the dark desk. */
@@ -381,7 +383,7 @@
    at opacity 0.45 its label was 2.1:1). Quiet through --ink-muted and a
    half-strength border; hover and focus light the border. */
 .preview:hover,
-.preview:focus-within { border-color: var(--focus); }
+.preview:focus-within { border-color: var(--frame-focus); }
 
 /* Width × height and the band they land in — the readout that says
    whether a size is a "phone" to the layout or not. Tabular figures, so
@@ -404,9 +406,9 @@
 .preview__select {
   font-family: var(--font-label);
   font-size: var(--fs-input);
-  color: var(--ink);
-  background: var(--bg-page);
-  border: 1px solid var(--line);
+  color: var(--frame-ink);
+  background: var(--frame-field);
+  border: 1px solid var(--frame-line);
   border-radius: 999px;
   padding: 5px 10px;
   cursor: pointer;
@@ -415,9 +417,9 @@
   width: 34px; height: 34px;
   display: grid; place-items: center;
   border-radius: 50%;
-  color: var(--ink-muted);
+  color: var(--frame-ink-muted);
 }
-.preview__rotate:hover { color: var(--ink); }
+.preview__rotate:hover { color: var(--frame-ink); }
 .preview__rotate:disabled { opacity: var(--disabled-opacity); cursor: default; }
 .preview__rotate svg { width: 18px; height: 18px; }
 

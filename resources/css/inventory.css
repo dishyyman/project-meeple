@@ -238,7 +238,7 @@
 }
 /* Destructive save: oxblood instead of rust. Must follow .btn-save — same
    specificity, so source order is what decides which colour lands. */
-.btn-save--danger { border-color: var(--danger-deep); background: var(--danger); }
+.btn-save--danger { border-color: var(--danger-deep); background: var(--danger); color: var(--on-dark); }
 
 /* ----------------------------------------------------------------- */
 /* 14b. RULES — the Player's Guide, searchable                        */
@@ -549,8 +549,12 @@
   background: var(--bg-card); padding: var(--space-1-5) var(--space-3);
 }
 .tag-pick:active { background: var(--bg-parchment2); }
+/* The chosen chip's WORD is ink; the accent is its edge. --accent-bright on
+   --bg-parchment2 is 4.30:1 in Ember dark, short of the 4.5:1 small type
+   needs — the same shortfall the Appearance mode tiles had (settings.css),
+   fixed the same way. Fill and edge still say "this one". */
 .tag-pick.is-on {
-  background: var(--bg-parchment2); border-color: var(--accent); color: var(--accent-bright);
+  background: var(--bg-parchment2); border-color: var(--accent); color: var(--ink);
 }
 .armor-pick__flag {
   font-family: var(--font-mono);

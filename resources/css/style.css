@@ -1,8 +1,10 @@
 /* =====================================================================
    MEEPLE — Character Companion · Stylesheet
-   Design theme: "Field Journal" (dark) — the field journal after dark. Built on a
-   60/30/10 split: #232323 surfaces, dark gold rules and labels, ember orange
-   reserved for the one standout per screen. See the note atop tokens.css.
+   Design direction "1a Field Journal", in five colour themes × light/dark
+   (Settings → Appearance). The default, Ember dark, is a 60/30/10 split:
+   #232323 surfaces, dark gold rules and labels, ember orange reserved for the
+   one standout per screen. See the notes atop tokens.css and its THEMES
+   section.
 
    ALL appearance lives here. HTML carries structure + class/data hooks;
    JS carries behavior. To re-skin the app, edit the tokens in tokens.css —
