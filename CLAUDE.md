@@ -27,6 +27,7 @@ The app deliberately keeps behavior, structure, and appearance apart. Preserve t
 - **`resources/css/style.css`** — an index of `@import`s and nothing else. The import order IS the cascade; it follows the original §1–§25 numbering deliberately.
 - **`resources/css/tokens.css`** — ALL design tokens. To re-skin, edit here — never hardcode colors/sizes elsewhere. The remaining CSS files are one per screen, mirroring `pages/`.
 - **`resources/js/frame.js`** — the desktop device preview bar (iPhone, SE, iPhone Duo closed/open, iPad mini/Pro, free size, Fit window; rotate; scale-to-fit). On a real phone or tablet it locks full window and hides the bar. Shell chrome only; it sets `data-frame` (`device` | `full`), `data-device`, `data-rotated`, `data-orient` (and `data-frame-locked`) on the root element and touches nothing inside `.app`.
+- **`resources/js/theme.js`** — Settings → Appearance: puts `data-theme` (ember · journal · moss · dusk · ink) and `data-mode` (`light` | `dark`; Auto is resolved here) on `<html>` before first paint, and owns the `THEMES` registry. A theme is colour token values in `tokens.css` and nothing else; components never know which is on.
 - **Edges on a real phone:** anything near the top or bottom hangs from `--statusbar-clear` / `--home-clear` (the device's safe area in full mode), never a fixed px; text fields are ≥ `--fs-input` (16px) or iOS zooms on focus.
 - **Every size, by band:** the app fills any screen and lays out by four bands — compact / medium / expanded / short — asked of the app's own box with `@container app (…)`, never a viewport media query (`tokens.css` "Layout bands", `docs/design-system.md` §15). Screen edges use `--gutter`, which is 16px on a phone and centres a `--measure` column on anything wider. Phone-first: base styles are compact; wider layouts only add.
 - **`resources/js/mechanics.js`** — THE game arithmetic: every derived stat and play rule (heal, damage, Wound cascade, rests, Patches, effects). Pure — no DOM, no storage, no UI state; takes the character as its first argument and gets content through `create()`. Loaded by the app and by the unit tests.
@@ -53,9 +54,14 @@ The app deliberately keeps behavior, structure, and appearance apart. Preserve t
 
 ## Design language
 
-Theme **"Field Journal"** (dark) — design direction 1a "Field Journal" after dark. Same
-Marcellus / Spectral type and Latin flavor; the parchment is now lamplit dark.
-Built on a 60/30/10 split, declared at the top of `tokens.css`:
+Design direction **1a "Field Journal"** — Marcellus / Spectral type, Latin flavor — in
+**five colour themes, each light and dark** (Settings → Appearance): **Ember** (the
+default, dark), Field Journal, Moss, Dusk, Ink & Iron. Every theme is a block of colour
+token values in `tokens.css`; the rules below hold in all ten (`docs/design-system.md` §3).
+`tests/unit/themes.test.js` checks every theme's contrast pairs.
+
+The default, **Ember dark**, is the base `:root` and the app as it first shipped (until
+2026-11-20 it was itself called "Field Journal"). Built on a 60/30/10 split:
 
 | share | token | value | role |
 |-------|-------|-------|------|
@@ -90,7 +96,9 @@ conflate. Reach for the right half — the wrong one is a contrast bug, not tast
   so accent-coloured *text or icons* take `--accent-bright`. Same for
   `--danger` / `--danger-bright`.
 - **`--on-accent` for type on an accent fill; `--on-dark` for type over a photo
-  or glass**, where the surface underneath is out of our control.
+  or glass**, where the surface underneath is out of our control — and on any
+  fill that is red in every theme (a wound, `--danger`): Ink & Iron's dark
+  accent is white, so its `--on-accent` is black.
 - **`--ink-soft` is body text; `--rule-strong` is structure.** The light theme
   spent ink on both, which inverted into a near-white bar under the app.
 - Gold at size is `--gold-fill`, not `--gold-bright` — the latter is sized for
@@ -107,5 +115,5 @@ Every foreground/background pair in `tokens.css` clears **WCAG AA (4.5:1)**;
 the muted and faint inks are the floor, not a starting point. Re-check before
 darkening any of them.
 
-The light-parchment tokens are preserved in git history (`tokens.css` before the
-dark pass) if the Appearance → Mode picker is ever wired up for real.
+**A new colour is a token in the base `:root` first**, then re-valued per theme where
+it differs. A theme block that invents a name fails the unit test.

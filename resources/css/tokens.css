@@ -3,9 +3,15 @@
    Loaded first by style.css, so every other part can read these. Change a
    value here and it cascades everywhere; that is the point of the file.
 
-   THEME: "Field Journal" (dark) — the field journal after dark. The parchment is
-   gone; what is left is the desk it sat on, the lamp over it, and the coal
-   in the brazier. Built on a 60/30/10 split:
+   THEME: this :root block is EMBER, DARK — the app as it shipped, and the
+   default. (Until 2026-11-20 it was called "Field Journal"; that name now
+   belongs to a theme of its own.) The other nine looks — Ember light, and
+   Field Journal, Moss, Dusk and Ink & Iron in both modes — are blocks of
+   colour overrides further down, under "THEMES"; everything not colour is
+   shared and lives only here.
+
+   Ember dark: the desk, the lamp over it, and the coal in the brazier.
+   Built on a 60/30/10 split:
 
      60%  --palette-1  #232323  near-black neutral — every page and screen
      30%  --palette-2  #684d00  deep gold  \
@@ -184,6 +190,12 @@
      because a dark card on a dark page needs the separation. */
   --wash-lift:  rgba(255,255,255,0.055);   /* raise a panel off its surface */
   --wash-lift2: rgba(255,255,255,0.10);    /* the same panel, pressed */
+  /* The round buttons floating over the hero (.glass-btn). Its own token
+     because what it sits on is a photo or the empty-portrait hatch, NOT the
+     page: in dark it is the pressed lift above, but a light theme's lift is a
+     faint dark tint, and a white glyph on a light portrait through a faint
+     tint is invisible. The light modes make it smoked glass instead. */
+  --glass:      rgba(255,255,255,0.10);
   --scrim:      rgba(0,0,0,0.66);
   --hairline:   rgba(255,255,255,0.22);    /* an edge catching light */
   --gold-wash:  rgba(203,159,19,0.20);     /* search hits, selected bands */
@@ -260,9 +272,34 @@
   --frame-rim:     #2b2926;                 /* the metal band outside it */
   --frame-chip:    rgba(43,41,38,0.92);     /* the frame toggle, over the desk */
   --shadow-device: 0 30px 60px rgba(0,0,0,0.7);
+  /* The preview bar's own inks. It used to borrow the app's (--ink-muted,
+     --bg-page, --focus), which was fine while the app only had one look. But
+     the bar is black glass like the bezel, whatever theme the app inside is
+     wearing — so in a light theme the borrowed dark ink would have sat on
+     the dark chip at ~1.5:1. These are Ember dark's values, frozen. */
+  --frame-ink:       #f0e9dd;
+  --frame-ink-muted: #a89881;               /* 5.4:1 on the chip */
+  --frame-field:     #232323;               /* the device picker's well */
+  --frame-line:      #564211;
+  --frame-edge:      rgba(167,53,0,0.5);    /* the bar's resting border */
+  --frame-focus:     #ee6728;
   /* A `code` run on the boot-error card: a lift, a touch stronger than
      --wash-lift so it holds as a chip at text size. */
   --code-bg:       rgba(255,255,255,0.08);
+
+  /* ---- theme swatches ----
+     The dot on each Color chip in Settings → Appearance: that theme's accent,
+     shown whatever theme is on, so the chips can be told apart before one is
+     tapped. Mid-weight on purpose — one value has to hold up on a light card
+     and a dark one. These are the only colours here that name a theme, and
+     they are constants: no theme block re-values them.
+     Ink & Iron's accent is "the page inverted", which no single colour can
+     be, so its dot IS the ink — black on a light card, white on a dark. */
+  --swatch-ember:   #c4470f;
+  --swatch-journal: #23857a;
+  --swatch-moss:    #5f8f22;
+  --swatch-dusk:    #8a4fc9;
+  --swatch-ink:     var(--ink);
 
   /* Hero & the elastic pull.
      --hero-h is the hero's resting height; --pull is how far past it the
@@ -425,6 +462,494 @@
      controls side by side are spaced so their areas meet without crossing,
      which is why the tally rows' gaps are written in terms of it. */
   --tap-min: 44px;
+}
+
+/* =====================================================================
+   THEMES — Settings → Appearance
+   ---------------------------------------------------------------------
+   Everything above is EMBER, DARK: the app as it shipped, and the default
+   (resources/js/theme.js). Every other look is a block below that re-values
+   colour tokens and nothing else — same names, different values; type,
+   spacing, radii and shadow geometry are shared (docs/design-system.md §3.3).
+
+   theme.js sets two attributes on <html>, and the cascade does the rest:
+
+     :root                              Ember dark — the complete set
+     :root[data-mode="light"]           what EVERY light theme shares
+     :root[data-theme=…][data-mode=…]   what makes one theme itself
+
+   The theme blocks carry two attributes and so outrank the mode block, which
+   is how a theme overrides a shared light value where it needs to (Moss's
+   heal). Dark themes have no shared block: the base already is one.
+
+   WHAT IS NOT HERE, ON PURPOSE
+   · --on-dark, --on-dark-soft, the portrait fades — they sit on someone's
+     photo, which no theme controls.
+   · The --frame-* tokens — the drawn phone is black glass whatever the app
+     inside it is wearing.
+   · --focus and --focus-ring — derived from --accent-bright and
+     --accent-wash, so they follow every theme on their own.
+
+   Each theme keeps the 60/30/10 split (--palette-1…4 name its source) and
+   the one-standout rule: the 10% accent is the loudest thing on a screen.
+   Every text pair clears WCAG AA in every block — tests/unit/themes.test.js
+   checks them all, and fails on any new token name a block invents.
+   ===================================================================== */
+
+/* ---- every light theme ----
+   The semantic colours (health, mana, heal, damage, danger, warning,
+   success) keep their hue families in every theme — a player learns "red
+   means hurt" once. On a light page their FILLS barely move; their TEXT
+   forms are deepened, since a colour bright enough to read on #232323 is
+   too pale to read on paper. In light the fill / bright split mostly
+   collapses: one value can be both dark enough for type and a fill.
+
+   Depth inverts. On a dark page a lift was white at a few percent; on paper
+   a pressed panel goes slightly DARKER, and shadows are soft warm ink rather
+   than black — the woodcut offsets keep their geometry, at a fraction of the
+   weight, or every card would wear a bruise. */
+:root[data-mode="light"] {
+  --danger:        #b3261e;   /* 5.9:1 under --on-dark */
+  --danger-deep:   #8c1d17;
+  --danger-bright: #a8241c;   /* danger as text on paper */
+  --danger-wash:   rgba(168,36,28,0.10);
+  --warning-bright: #855300;
+  --warning-wash:   rgba(133,83,0,0.12);
+  --success-bright: #3b6620;
+  --success-wash:   rgba(59,102,32,0.12);
+
+  --health:     #c24a0a;
+  --wound:      #b03800;
+  --health-off: #dcd6cc;
+  --mana:       #3f6a9e;
+  --mana-bright:#2f5888;      /* the mana label — mana as text on paper */
+  --mana-deep:  #33577f;
+  --mana-off:   #d3d9e1;
+  --mana-text:  #f4f7fb;
+
+  --heal:         #4a7536;
+  --heal-border:  #3b5e2b;
+  --heal-text:    #f4f8ef;
+  --damage:       #a33232;
+  --damage-border:#7a2222;
+  --damage-text:  #fbeae4;
+
+  --wash-lift:  rgba(0,0,0,0.035);
+  --wash-lift2: rgba(0,0,0,0.07);
+  --glass:      rgba(24,20,16,0.40);   /* smoked glass — see the base token */
+  /* Lighter than dark's 0.66, and capped here for a reason: in a light theme
+     the type left uncovered by a modal (the drawn status bar's clock) is DARK
+     ink, so a heavier scrim darkens its background toward its own colour. At
+     0.45 the clock fell to 4.3:1 on Field Journal's parchment (axe). */
+  --scrim:      rgba(24,20,16,0.38);
+  --hatch:      rgba(0,0,0,0.05);
+  --code-bg:    rgba(0,0,0,0.06);
+
+  --shadow-card:   3px 3px 0 rgba(40,30,20,0.12);
+  --shadow-soft:   2px 2px 0 rgba(40,30,20,0.10);
+  --shadow-hair:   1px 1px 0 rgba(40,30,20,0.08);
+  --shadow-modal:  0 18px 44px rgba(30,22,14,0.24);
+  --shadow-edge:   -10px 0 28px rgba(30,22,14,0.18);
+  --shadow-sheet:  0 -12px 40px rgba(30,22,14,0.18);
+  --shadow-tray:   0 -10px 34px rgba(30,22,14,0.16);
+  --shadow-tabbar: 0 -3px 14px rgba(30,22,14,0.08);
+  --shadow-drawer: -8px 0 30px rgba(30,22,14,0.20);
+  --shadow-lift:   0 8px 20px rgba(30,22,14,0.18);
+  --shadow-glass:  0 2px 8px rgba(0,0,0,0.25);
+}
+
+/* ---- Ember · light ----
+   Ash-grey paper rather than cream, so it never reads as Field Journal's
+   parchment. The brass rules are darkened until they read on a light page,
+   and the ember is deepened a step so white type still sits on it. */
+:root[data-theme="ember"][data-mode="light"] {
+  --palette-1: #ecebe7;
+  --palette-2: #d3c39a;
+  --palette-3: #a8841c;
+  --palette-4: #b03800;
+
+  --bg-app:        #d6d3cc;
+  --bg-page:       #ecebe7;
+  --bg-card:       #f8f7f4;
+  --bg-inset:      #e2e0da;
+  --bg-parchment2: #e6dfcf;
+  --bg-input:      #f4f3ef;
+
+  --ink:        #1f1b17;
+  --ink-soft:   #3a332c;
+  --ink-muted:  #635a50;
+  --ink-faint:  #665d53;
+
+  --line:        #d3c39a;
+  --line-gold:   #a8841c;
+  --line-soft:   #ddd2b5;
+  --line-warm:   #a88a40;
+  --line-hair:   #e0d8c4;
+  --rule-strong: #b39350;
+
+  --accent:        #b03800;
+  --accent-deep:   #8a2c00;
+  --accent-bright: #a33400;
+  --on-accent:     #fff6ee;
+
+  --gold:        #765a04;
+  --gold-bright: #a47e05;
+  --gold-fill:   #7d5f03;
+  --heading:     #5f4500;
+
+  --gold-wash:   rgba(164,126,5,0.16);
+  --accent-wash: rgba(176,56,0,0.16);
+}
+
+/* ---- Field Journal ----
+   A naturalist's notebook: kraft parchment, sepia pencil and verdigris ink.
+   Light is the parchment theme this app started with (tokens.css before the
+   dark pass, commit fb800f7), its rust accent swapped for verdigris so it is
+   not a second Ember. Dark is the same notebook in a leather cover.
+   Teal sits between mana blue and heal green; those two stay told apart by
+   their place and their label, never by this accent. */
+:root[data-theme="journal"][data-mode="light"] {
+  --palette-1: #f3e7cf;
+  --palette-2: #d9c187;
+  --palette-3: #a98a4f;
+  --palette-4: #1d6b62;
+
+  --bg-app:        #d8c9a8;
+  --bg-page:       #f3e7cf;
+  --bg-card:       #f9f1df;
+  --bg-inset:      #e9dcc0;
+  --bg-parchment2: #ead9b6;
+  --bg-input:      #f6ecd6;
+
+  --ink:        #2f2416;
+  --ink-soft:   #3b2e21;
+  --ink-muted:  #67563f;
+  --ink-faint:  #6a5a45;
+
+  --line:        #cbb890;
+  --line-gold:   #a98a4f;
+  --line-soft:   #e0cfa8;
+  --line-warm:   #9c7f45;
+  --line-hair:   #d8c59b;
+  --rule-strong: #a98a4f;
+
+  --accent:        #1d6b62;
+  --accent-deep:   #14504a;
+  --accent-bright: #18605a;
+  --on-accent:     #f1fbf8;
+
+  --gold:        #6f5316;
+  --gold-bright: #a9822f;
+  --gold-fill:   #6e531c;
+  --heading:     #5a3a1a;
+
+  --health-off:  #e3d2ad;
+  --gold-wash:   rgba(169,130,47,0.18);
+  --accent-wash: rgba(29,107,98,0.16);
+}
+:root[data-theme="journal"][data-mode="dark"] {
+  --palette-1: #211d18;
+  --palette-2: #4e4130;
+  --palette-3: #8a7250;
+  --palette-4: #1f7268;
+
+  --bg-app:        #100d0a;
+  --bg-page:       #211d18;
+  --bg-card:       #2a251e;
+  --bg-inset:      #191612;
+  --bg-parchment2: #342b20;
+  --bg-input:      #1b1814;
+
+  --ink:        #efe6d6;
+  --ink-soft:   #d4c8b4;
+  --ink-muted:  #a69680;
+  --ink-faint:  #a19481;
+
+  --line:        #4e4130;
+  --line-gold:   #8a7250;
+  --line-soft:   #3a3228;
+  --line-warm:   #5e4d36;
+  --line-hair:   #332c22;
+  --rule-strong: #6e5b40;
+
+  --accent:        #1f7268;
+  --accent-deep:   #16564f;
+  --accent-bright: #5cc4b6;
+  --on-accent:     #f0fbf8;
+
+  --gold:        #c9a36a;
+  --gold-bright: #ddb878;
+  --gold-fill:   #6a5430;
+  --heading:     #e0c28e;
+
+  --health-off:  #3a3128;
+  --gold-wash:   rgba(201,163,106,0.18);
+  --accent-wash: rgba(92,196,182,0.16);
+}
+
+/* ---- Moss ----
+   The forest floor after rain: bark, damp stone and lichen. The page is all
+   but neutral (a green-tinted page read as sickly), the 30% is bark brown,
+   and so the lichen accent is the only green that shouts.
+   Heal is green in every theme, so here it moves toward sea-green to stay
+   clear of the accent — the same family, a different shade (§3.3). */
+:root[data-theme="moss"][data-mode="light"] {
+  --palette-1: #f3f3f0;
+  --palette-2: #cfc3a8;
+  --palette-3: #9c8660;
+  --palette-4: #47701a;
+
+  --bg-app:        #dcdcd6;
+  --bg-page:       #f3f3f0;
+  --bg-card:       #fbfbf9;
+  --bg-inset:      #e6e6e2;
+  --bg-parchment2: #e7e5da;
+  --bg-input:      #f7f7f4;
+
+  --ink:        #1c2119;
+  --ink-soft:   #343c2f;
+  --ink-muted:  #56614c;
+  --ink-faint:  #5b6651;
+
+  --line:        #cfc3a8;
+  --line-gold:   #9c8660;
+  --line-soft:   #ddd5c2;
+  --line-warm:   #a08c66;
+  --line-hair:   #e2ddd0;
+  --rule-strong: #9c8660;
+
+  --accent:        #47701a;
+  --accent-deep:   #365512;
+  --accent-bright: #3b5f13;
+  --on-accent:     #f6fbee;
+
+  --gold:        #655330;
+  --gold-bright: #8f7646;
+  --gold-fill:   #665332;
+  --heading:     #4a3c22;
+
+  --heal:         #2d6b57;
+  --heal-border:  #22523f;
+  --heal-text:    #f2f8f5;
+
+  --gold-wash:   rgba(156,134,96,0.18);
+  --accent-wash: rgba(71,112,26,0.16);
+}
+:root[data-theme="moss"][data-mode="dark"] {
+  --palette-1: #1d1e1c;
+  --palette-2: #4a3f2e;
+  --palette-3: #7d6a4a;
+  --palette-4: #4a7518;
+
+  --bg-app:        #0d0e0d;
+  --bg-page:       #1d1e1c;
+  --bg-card:       #262725;
+  --bg-inset:      #151614;
+  --bg-parchment2: #2c2d28;
+  --bg-input:      #181917;
+
+  --ink:        #e9eee3;
+  --ink-soft:   #cdd4c4;
+  --ink-muted:  #9aa58f;
+  --ink-faint:  #97a08c;
+
+  --line:        #4a3f2e;
+  --line-gold:   #7d6a4a;
+  --line-soft:   #36322a;
+  --line-warm:   #5c4e38;
+  --line-hair:   #2f2c25;
+  --rule-strong: #655638;
+
+  --accent:        #4a7518;
+  --accent-deep:   #385a12;
+  --accent-bright: #9acb52;
+  --on-accent:     #f4fae9;
+
+  --gold:        #c2a77a;
+  --gold-bright: #d8bc88;
+  --gold-fill:   #5e4f36;
+  --heading:     #d6c194;
+
+  --heal:         #2f7560;
+  --heal-border:  #245a4a;
+  --heal-text:    #f2f8f5;
+
+  --health-off:  #343530;
+  --mana-off:    #282c31;
+  --gold-wash:   rgba(194,167,122,0.18);
+  --accent-wash: rgba(154,203,82,0.16);
+}
+
+/* ---- Dusk ----
+   The hour before the session: slate sky, lavender cloud, a violet lamp.
+   Like Moss, the page itself stays almost neutral; the slate-lavender lives
+   in the rules, and the violet leans toward magenta so it never reads as
+   mana blue. Health orange is the warmest thing on screen, which keeps it
+   the first number the eye finds. */
+:root[data-theme="dusk"][data-mode="light"] {
+  --palette-1: #f3f2f5;
+  --palette-2: #cdc8dc;
+  --palette-3: #8f88b0;
+  --palette-4: #6c2fa6;
+
+  --bg-app:        #dcdae2;
+  --bg-page:       #f3f2f5;
+  --bg-card:       #fbfbfc;
+  --bg-inset:      #e6e5ea;
+  --bg-parchment2: #e6e2ef;
+  --bg-input:      #f7f6f9;
+
+  --ink:        #1d1a26;
+  --ink-soft:   #36314a;
+  --ink-muted:  #5d5673;
+  --ink-faint:  #605a76;
+
+  --line:        #cdc8dc;
+  --line-gold:   #8f88b0;
+  --line-soft:   #dcd8e6;
+  --line-warm:   #948db5;
+  --line-hair:   #e3e0ea;
+  --rule-strong: #8f88b0;
+
+  --accent:        #6c2fa6;
+  --accent-deep:   #52237f;
+  --accent-bright: #6a2ea3;
+  --on-accent:     #faf5ff;
+
+  --gold:        #544d77;
+  --gold-bright: #7d75a6;
+  --gold-fill:   #554d80;
+  --heading:     #3d2f66;
+
+  --gold-wash:   rgba(143,136,176,0.20);
+  --accent-wash: rgba(108,47,166,0.16);
+}
+:root[data-theme="dusk"][data-mode="dark"] {
+  --palette-1: #1e1e21;
+  --palette-2: #3d3a55;
+  --palette-3: #6c6794;
+  --palette-4: #7438b0;
+
+  --bg-app:        #0e0e10;
+  --bg-page:       #1e1e21;
+  --bg-card:       #27272b;
+  --bg-inset:      #161619;
+  --bg-parchment2: #2d2c34;
+  --bg-input:      #19191c;
+
+  --ink:        #ece8f4;
+  --ink-soft:   #cfc9dc;
+  --ink-muted:  #9f97b3;
+  --ink-faint:  #9c95ae;
+
+  --line:        #3d3a55;
+  --line-gold:   #6c6794;
+  --line-soft:   #313047;
+  --line-warm:   #4c4870;
+  --line-hair:   #2c2b3a;
+  --rule-strong: #56517a;
+
+  --accent:        #7438b0;
+  --accent-deep:   #5a2a8a;
+  --accent-bright: #c193f5;
+  --on-accent:     #f8f2ff;
+
+  --gold:        #aaa3d0;
+  --gold-bright: #c4bdf0;
+  --gold-fill:   #4f4878;
+  --heading:     #d4c8f0;
+
+  --health-off:  #34333a;
+  --mana-off:    #282b35;
+  --gold-wash:   rgba(170,163,208,0.18);
+  --accent-wash: rgba(193,147,245,0.16);
+}
+
+/* ---- Ink & Iron ----
+   Black ink and cold iron. Greys with a faint steel bias carry the 30%, and
+   the accent is the page inverted: a white button in dark, a black one in
+   light. Health, mana, heal, damage and wounds keep their colours, so on
+   this theme the sheet's readouts are the only colour on the screen — the
+   most important numbers, finally the only bright things.
+   The wound pip, the destructive Save and every red fill set --on-dark
+   type, never --on-accent: here --on-accent is black in dark mode. */
+:root[data-theme="ink"][data-mode="light"] {
+  --palette-1: #f3f3f1;
+  --palette-2: #d0d0cc;
+  --palette-3: #8c8d90;
+  --palette-4: #17181a;
+
+  --bg-app:        #d9d9d6;
+  --bg-page:       #f3f3f1;
+  --bg-card:       #ffffff;
+  --bg-inset:      #e6e6e3;
+  --bg-parchment2: #e4e4e1;
+  --bg-input:      #f8f8f6;
+
+  --ink:        #111214;
+  --ink-soft:   #2a2b2e;
+  --ink-muted:  #5a5b5f;
+  --ink-faint:  #5e5f63;
+
+  --line:        #d0d0cc;
+  --line-gold:   #8c8d90;
+  --line-soft:   #dcdcd9;
+  --line-warm:   #939497;
+  --line-hair:   #e3e3e0;
+  --rule-strong: #8c8d90;
+
+  --accent:        #17181a;
+  --accent-deep:   #000000;
+  --accent-bright: #17181a;
+  --on-accent:     #f7f7f7;
+
+  --gold:        #47484c;
+  --gold-bright: #6b6c70;
+  --gold-fill:   #46474b;
+  --heading:     #000000;
+
+  --gold-wash:   rgba(0,0,0,0.08);
+  --accent-wash: rgba(23,24,26,0.16);
+}
+:root[data-theme="ink"][data-mode="dark"] {
+  --palette-1: #151618;
+  --palette-2: #34363a;
+  --palette-3: #5e6066;
+  --palette-4: #ececec;
+
+  --bg-app:        #08090a;
+  --bg-page:       #151618;
+  --bg-card:       #1f2023;
+  --bg-inset:      #0e0f10;
+  --bg-parchment2: #2a2b2f;
+  --bg-input:      #111214;
+
+  --ink:        #f2f2f2;
+  --ink-soft:   #d0d1d3;
+  --ink-muted:  #9a9b9e;
+  --ink-faint:  #96979a;
+
+  --line:        #34363a;
+  --line-gold:   #5e6066;
+  --line-soft:   #2a2c30;
+  --line-warm:   #4a4c52;
+  --line-hair:   #26282b;
+  --rule-strong: #4a4c52;
+
+  --accent:        #ececec;
+  --accent-deep:   #bdbdbd;
+  --accent-bright: #ffffff;
+  --on-accent:     #111214;
+
+  --gold:        #b8b9bd;
+  --gold-bright: #dadbde;
+  --gold-fill:   #4a4c52;
+  --heading:     #ffffff;
+
+  --health-off:  #2c2d30;
+  --mana-off:    #262a31;
+  --gold-wash:   rgba(255,255,255,0.10);
+  --accent-wash: rgba(255,255,255,0.16);
 }
 
 /* Full mode: the layout constants become the real screen's safe area.

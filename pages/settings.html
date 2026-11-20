@@ -12,8 +12,8 @@
          Four sections under the app's own ✦ rules. The two that do something —
          Backup and Compendium — are built on the export/import engine that
          already carries a single character, so there is one file format and one
-         importer rather than three. Appearance is FRAME ONLY: the controls are
-         here and they show a selection, but nothing reads them yet (see
+         importer rather than three. Appearance hands its choice to theme.js,
+         which re-skins the whole app through tokens.css (see
          renderAppearance() in main.js). -->
     <section class="screen screen--settings">
       <div class="topbar topbar--between">
@@ -111,11 +111,9 @@
           </div>
 
           <!-- ---------- APPEARANCE ---------- -->
-          <!-- FRAME ONLY, deliberately. The controls below track a choice and
-               draw it, and nothing else in the app reads that choice — the
-               design tokens these would drive are expected to move before any
-               of this is wired up, and a half-applied theme is harder to finish
-               than an unstarted one. -->
+          <!-- Two independent choices: Mode (light / dark / Auto) and Color
+               (one of theme.js's registry). Either takes effect at once and
+               is remembered on this device. -->
           <div class="rule"><span class="rule__label">&#10022; Appearance &#10022;</span></div>
           <!-- Mode is three picture tiles rather than word chips: light, dark
                and auto are the one setting here a player recognises faster by

@@ -71,6 +71,7 @@ A server, accounts, and cloud sync are on the roadmap (`prd.md` §8, Nice to Hav
 | **Screens** | `pages/*.html`, `pages/modals/*.html`, `pages/toast.html` | Structure only: semantic markup, classes, and `data-*` hooks. One file per screen. |
 | **Styles** | `resources/css/` — `style.css` (import index), `tokens.css` (all design values), one file per screen | All appearance. Import order is the cascade. |
 | **Device preview** | `resources/js/frame.js` | The desktop preview bar: draws the app inside a chosen device (iPhone, SE, Pro Max, iPhone Duo closed/open, iPad mini/Pro, a free size, or Fit window), rotates it, scales one too big for the window, and reads out its size and layout band. On a real phone or tablet (touch-first, or a window under 460px) locks full window and hides the bar. Touches nothing inside `.app`. |
+| **Appearance** | `resources/js/theme.js` | The colour theme and light/dark mode: sets `data-theme` and `data-mode` on `<html>` before first paint, resolves Auto through `prefers-color-scheme` (and follows it live), points `theme-color` at the page. `main.js`'s Settings picker drives it through `window.MEEPLE_THEME`. What a theme looks like is only ever `tokens.css` (`design-system.md` §3). |
 | **Home-screen app** | `manifest.webmanifest`, `resources/images/icons/` | Name, standalone display, theme colours and icons for "Add to Home Screen". Icons generated from `icon.svg` by `tools/make-icons.mjs`. |
 | **Dice engine** | `resources/js/dice.js` | The only dice parser (`evaluateDice()`). Shared by the app and the content converter. Never uses `eval()`. |
 | **Mechanics engine** | `resources/js/mechanics.js` | The only implementation of the game's arithmetic: every derived stat and every play rule (heal, damage, Wound cascade, rests, Patches, effects). No DOM, no storage. Shared by the app and the unit tests (Decision 11). |
@@ -118,6 +119,7 @@ Today, `localStorage` in each browser. Responsibilities:
 | `meeple.imported-entries` | Individual content entries that filled gaps (from Add or an imported character) | Imports |
 | `meeple.account` | Placeholder signed-in flag and name | Account stub |
 | `meeple:preview` | The desktop device preview: `{ device, rotated, free: { w, h } }` (ignored, not overwritten, on a phone or tablet) | `frame.js` |
+| `meeple:appearance` | Settings → Appearance: `{ theme, mode }`, mode `light` / `dark` / `system`. A device preference, so not in backups; absent means Ember dark | `theme.js` |
 | `meeple:frame` | *Retired.* The old Phone/Full toggle; read once so a desktop that chose full window keeps it, never written | `frame.js` |
 
 Server-side database: **Open** — see `database.md` when it exists.
@@ -158,7 +160,7 @@ Server-side database: **Open** — see `database.md` when it exists.
 ## 6. Data Flow
 
 **Loading the app**
-1. Browser loads `index.html` over `http://` and runs `frame.js` (applies the device preview before first paint — full on a phone or tablet, else the stored choice).
+1. Browser loads `index.html` over `http://` and runs `frame.js` (applies the device preview before first paint — full on a phone or tablet, else the stored choice), then `theme.js` (applies the stored theme and mode, same reason).
 2. `boot.js` fetches all screen fragments in parallel and inserts them in order, then resolves `MEEPLE_READY`.
 3. `dice.js`, `mechanics.js`, `portrait.js`, `library.js`, `library-check.js`, and `rules.js` define their globals.
 4. `main.js` waits on `MEEPLE_READY`, then `init()` loads imported entries, the roster (opening a character), and the account flag; renders everything; wires the click handler; and lands on Home.
@@ -198,6 +200,7 @@ project-meeple/              # repo root = site root (GitHub Pages serves it as-
 │   ├── js/
 │   │   ├── boot.js          # fetches and injects pages/
 │   │   ├── frame.js         # desktop device preview bar
+│   │   ├── theme.js         # colour theme + light/dark, applied before first paint
 │   │   ├── dice.js          # the one dice engine (also used by tools/)
 │   │   ├── mechanics.js     # the one game-mechanics engine (also used by tests/)
 │   │   ├── campaign.js      # Game Master Tools: campaign data, its normalizer, turn tracking

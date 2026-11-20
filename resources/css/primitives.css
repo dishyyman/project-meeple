@@ -33,7 +33,10 @@
 .glass-btn {
   width: 42px; height: 42px;
   border-radius: 50%;
-  background: var(--wash-lift2);
+  /* --glass, not a page wash: these float over a photo or the empty
+     portrait's hatch, and in a light theme the page washes are dark tints
+     too faint to carry a white glyph (tokens.css, --glass). */
+  background: var(--glass);
   backdrop-filter: blur(6px);
   -webkit-backdrop-filter: blur(6px);
   box-shadow: inset 0 0 0 1px var(--hairline);
@@ -42,6 +45,10 @@
 }
 .glass-btn--accent {
   background: var(--accent);
+  /* Type on an accent fill is --on-accent. Ember's two values are the same
+     warm white, which hid the difference; on Ink & Iron's white accent the
+     glyph would vanish in --on-dark. */
+  color: var(--on-accent);
   box-shadow: inset 0 0 0 1px var(--hairline), var(--shadow-glass);
 }
 

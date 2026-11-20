@@ -325,7 +325,10 @@
   fill: none; stroke: currentColor;
   stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round;
 }
-.pip.is-on { border-color: var(--wound); background: var(--wound); color: var(--on-accent); }
+/* The glyph on a filled wound is --on-dark, not --on-accent: the wound is a
+   red in every theme, while the accent is not (Ink & Iron's dark accent is
+   white, and its --on-accent black — 3:1 on the red). */
+.pip.is-on { border-color: var(--wound); background: var(--wound); color: var(--on-dark); }
 /* Reset (26px) to the first pip (22px): centres one square apart. */
 .wounds__controls { display: flex; align-items: center; gap: calc(var(--tap-min) - (26px + 22px) / 2); }
 /* Sized and bordered like .stepper so the three round controls in the vitals

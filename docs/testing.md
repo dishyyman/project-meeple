@@ -103,6 +103,7 @@ project-meeple/
     │   ├── campaign.test.js   # 42 — GM Tools: records, the normalizer vs junk and hostile input (every pool clamped to its card, Health included), enemies through the vitals rules, turn tracking and the round count, fight ids, members, settling a fight, the Monster Compendium (stock, copies, the stored half), the monster file
     │   ├── content.test.js    #  7 — the real compendium vs the guide
     │   ├── css-tokens.test.js #  2 — no colour written outside tokens.css
+    │   ├── themes.test.js     # 14 — every theme × mode: a block exists for each registered theme, no block invents a token, ~30 text/focus pairs clear WCAG AA
     │   └── library-check.test.js # 14 — the compendium/entry shape check
     ├── e2e/                 # Playwright — every test runs in Chrome AND Safari (phone.spec.js: emulated iPhone and iPads)
     │   ├── helpers/test.js    # the `test` to import: fails on any page error
@@ -115,9 +116,10 @@ project-meeple/
     │   ├── compendium.spec.js # 8 — Flow 9; malformed compendiums; launch safety net and its grace period
     │   ├── keyboard.spec.js   # 6 — Enter/Space on custom buttons, Shift+Enter holds
     │   ├── dialogs.spec.js    # 8 — dialog markup, focus in/kept/back (the Patch alert), Escape (Cancel on sheets and alerts), the shell made inert; Delete character from the keyboard (the alert, Escape is Cancel, then Undo — focus lands on something real)
-    │   ├── a11y.spec.js       # 34 — axe on every screen and main modal, incl. the Rest sheet, Downed notice, portrait sheet, the Undo toast, the campaign screens, the Party tab with a hero and its popups, a fight in progress with Start Combat, the ✎ sheet and End Fight (Chrome); collapsible tap targets, note state, reduced motion (both)
+    │   ├── a11y.spec.js       # 43 — axe on every screen and main modal (Ember dark), and the main screens + dice roller in each of the other nine themes × modes, incl. the Rest sheet, Downed notice, portrait sheet, the Undo toast, the campaign screens, the Party tab with a hero and its popups, a fight in progress with Start Combat, the ✎ sheet and End Fight (Chrome); collapsible tap targets, note state, reduced motion (both)
     │   ├── rules.spec.js      # 3 — Flow 10: back to the tab Rules was opened from; back to Edit Character with the draft kept; back to Settings
     │   ├── back.spec.js       # 10 — Flow 20: the phone's own back through history (out of a screen, Rules to its tab, a popup or the drawer first, a creation step), and the swipe (follows the finger over the screen beneath, springs back, edge only, blocked over popups and Home, only on a home-screen install, Reduce Motion). Swipes are real touch events via Chrome DevTools, so Chrome only
+    │   ├── appearance.spec.js # 9 — Settings → Appearance: first run is Ember dark, a pick re-skins at once and survives a reload, swatches, applied before the screens load, Auto follows the device (live), a fixed mode ignores it, damaged prefs fall back, kept out of backups
     │   ├── frame.spec.js      # 9 — the desktop device preview: iPhone by default, a preset's size remembered and rotated, too big scaled to fit, free size, Fit window fills, the old toggle's choice kept, narrow window locks; manifest + icons resolve; opaque iOS status bar
     │   ├── layout.spec.js     # 25 — every layout band, at ten device sizes (iPhone, SE, on its side, Duo closed/open, iPad mini/Pro, desktop): nothing off the side on any screen, the hero in proportion, two panes exactly where expected; the phone layout unchanged; wide screens keep a readable column and popup sizes; the dice keypad on a phone held sideways; the short hero's uploader; the pull over the side pane
     │   ├── phone.spec.js      # 6 — the device projects ONLY (iphone, ipad, ipad-landscape): fills the screen, no preview bar, page never scrolls (campaign screens too), both tab bars on screen, fields ≥16px, Add a Portrait takes a tap
