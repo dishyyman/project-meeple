@@ -63,28 +63,6 @@
       </div>
     </div>
 
-    <!-- ================= DELETE CAMPAIGN CONFIRM =================
-         An ALERT (dice.css §11a). A campaign is a party, a bestiary and a fight
-         in progress, none of which the app can rebuild, so it asks first —
-         the way deleting a character does. The heroes' players keep their own
-         characters; only the GM's copies go. -->
-    <div class="modal modal--campaign-del">
-      <div class="modal__scrim" data-modal="close"></div>
-      <div class="modal__card alert" role="dialog" aria-modal="true" aria-labelledby="campaign-del-title" aria-describedby="campaign-del-text" tabindex="-1">
-        <span class="alert__icon alert__icon--danger" aria-hidden="true">
-          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
-        </span>
-        <div class="alert__title" id="campaign-del-title">Delete campaign?</div>
-        <p class="alert__text" id="campaign-del-text"><strong data-bind="campaignDelName"></strong> will be deleted from this device
-          &mdash; its party, its enemies and any fight in progress.</p>
-        <p class="alert__meta">Players keep their own characters.</p>
-        <div class="alert__actions">
-          <button class="btn-ghost" data-modal="close">Cancel</button>
-          <button class="btn-save btn-save--danger" data-campaign-del-confirm>Delete</button>
-        </div>
-      </div>
-    </div>
-
     <!-- ================= HERO OPTIONS =================
          The ⋯ on a hero card. A SHEET (dice.css §11a). Which rows show depends
          on where the hero came from — renderHeroMenu() hides the other:
@@ -200,24 +178,6 @@
       </div>
     </div>
 
-    <!-- ================= REMOVE HERO CONFIRM =================
-         An ALERT. Only the GM's copy goes; the player's character is theirs. -->
-    <div class="modal modal--hero-del">
-      <div class="modal__scrim" data-modal="close"></div>
-      <div class="modal__card alert" role="dialog" aria-modal="true" aria-labelledby="hero-del-title" aria-describedby="hero-del-text" tabindex="-1">
-        <span class="alert__icon alert__icon--danger" aria-hidden="true">
-          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
-        </span>
-        <div class="alert__title" id="hero-del-title">Remove from party?</div>
-        <p class="alert__text" id="hero-del-text"><strong data-bind="heroDelName"></strong> leaves this campaign, with your notes on them.</p>
-        <p class="alert__meta">The player keeps their own character.</p>
-        <div class="alert__actions">
-          <button class="btn-ghost" data-modal="close">Cancel</button>
-          <button class="btn-save btn-save--danger" data-hero-del-confirm>Remove</button>
-        </div>
-      </div>
-    </div>
-
     <!-- ================= ENEMY OPTIONS =================
          The ⋯ on a stat card. A SHEET: four things you can do to a monster,
          the destructive one last and red. -->
@@ -322,23 +282,6 @@
         <div class="form-actions">
           <button class="btn-ghost" data-modal="close">Cancel</button>
           <button class="btn-save" data-enemy-save data-bind="enemyFormSave"></button>
-        </div>
-      </div>
-    </div>
-
-    <!-- ================= DELETE ENEMY CONFIRM ================= -->
-    <div class="modal modal--enemy-del">
-      <div class="modal__scrim" data-modal="close"></div>
-      <div class="modal__card alert" role="dialog" aria-modal="true" aria-labelledby="enemy-del-title" aria-describedby="enemy-del-text" tabindex="-1">
-        <span class="alert__icon alert__icon--danger" aria-hidden="true">
-          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
-        </span>
-        <div class="alert__title" id="enemy-del-title">Delete this enemy?</div>
-        <p class="alert__text" id="enemy-del-text"><strong data-bind="enemyDelName"></strong>&rsquo;s stat card is removed from this campaign.</p>
-        <p class="alert__meta">Export it first to keep a copy.</p>
-        <div class="alert__actions">
-          <button class="btn-ghost" data-modal="close">Cancel</button>
-          <button class="btn-save btn-save--danger" data-enemy-del-confirm>Delete</button>
         </div>
       </div>
     </div>

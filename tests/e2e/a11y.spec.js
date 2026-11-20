@@ -142,8 +142,9 @@ test('axe: modals — campaign form, options sheet, delete alert', async ({ page
   await press(page, '[data-campaign-menu]');
   await expect.poll(() => appAttr(page, 'data-modal')).toBe('campaign-menu');
   await expectClean(page);
+  // Delete acts at once: what is left is the list, with an Undo toast over it.
   await press(page, '[data-campaign-del-open]');
-  await expect.poll(() => appAttr(page, 'data-modal')).toBe('campaign-del');
+  await expect.poll(() => appAttr(page, 'data-toast')).toBe('on');
   await expectClean(page);
 });
 
@@ -225,12 +226,16 @@ test('axe: Combat tab mid-fight, and the combat popups', async ({ page }) => {
   await expectClean(page);
 });
 
-test('axe: modal — Delete character', async ({ page }) => {
+test('axe: modal — Delete character, then the roster with its Undo toast', async ({ page }) => {
   await openApp(page);
   await press(page, '[data-nav="characters"]');
   await press(page, '[data-roster-edit]');
   await press(page, '[data-char-del]');
   await expect.poll(() => appAttr(page, 'data-modal')).toBe('char-del');
+  await expectClean(page);
+  // Confirmed: the emptied roster and the Undo toast (role="status") over it.
+  await press(page, '[data-char-del-confirm]');
+  await expect.poll(() => appAttr(page, 'data-toast')).toBe('on');
   await expectClean(page);
 });
 
@@ -337,36 +342,30 @@ test('a journal note says whether it is open — after a tap, a search and a re-
 });
 
 /* Round-2 review, finding 9. The dice sheet slid up on open even with Reduce
-   Motion on. Read from the stylesheet rather than watched, because a 0.22s
-   animation can be over before a test looks: whatever animation the sheet
-   is given, none of its keyframes may move it. A fade is allowed — opacity
-   is not motion. */
+   Motion on. The rise is a transition entered through @starting-style now
+   (dice.css "sheet motion"), so the test watches the very first frame the
+   sheet renders — set the attribute and read it in the same task, on the
+   next animation frame, before a 0.22s transition can be over: under Reduce
+   Motion it must already be in place (fading is allowed — opacity is not
+   motion); ordinarily it must start below where it comes to rest. */
 for (const reduce of [true, false]) {
   test(`the dice sheet ${reduce ? 'fades in without moving under Reduce Motion' : 'still rises in ordinarily'}`, async ({ page }) => {
     await page.emulateMedia({ reducedMotion: reduce ? 'reduce' : 'no-preference' });
     await openApp(page);
     await openFirstCharacter(page);
-    await press(page, '.hero__btn-dice');
-    await expect.poll(() => appAttr(page, 'data-modal')).toBe('dice');
-
-    const { name, found, moves } = await page.evaluate(() => {
-      const anim = getComputedStyle(document.querySelector('.dice-sheet')).animationName;
-      // style.css is an index of @imports, so imported sheets are followed
-      // (CSSImportRule.styleSheet), as are @media blocks (cssRules).
-      const walk = (list) => [...list].flatMap((r) => (
-        r instanceof CSSImportRule ? walk(r.styleSheet.cssRules)
-          : r.cssRules && !(r instanceof CSSKeyframesRule) ? walk(r.cssRules)
-            : [r]));
-      // The app's own sheets; a cross-origin one (the web fonts) cannot be
-      // read, and holds no animations of ours.
-      const rules = [...document.styleSheets].flatMap((sh) => {
-        try { return walk(sh.cssRules); } catch (_) { return []; }
+    const first = await page.evaluate(() => new Promise((done) => {
+      document.querySelector('.hero__btn-dice').click();
+      requestAnimationFrame(() => {
+        const cs = getComputedStyle(document.querySelector('.dice-sheet'));
+        done({ y: new DOMMatrix(cs.transform).m42, opacity: Number(cs.opacity) });
       });
-      const kf = rules.find((r) => r instanceof CSSKeyframesRule && r.name === anim);
-      return { name: anim, found: !!kf, moves: !!kf && [...kf.cssRules].some((k) => k.style.transform && k.style.transform !== 'none') };
-    });
-    expect(name).not.toBe('none');            // it still arrives with a cue either way
-    expect(found, `@keyframes ${name}`).toBe(true);
-    expect(moves).toBe(!reduce);
+    }));
+    expect(await appAttr(page, 'data-modal')).toBe('dice');
+    if (reduce) {
+      expect(first.y).toBe(0);
+      expect(first.opacity).toBeLessThan(1);   // it still arrives with a cue
+    } else {
+      expect(first.y).toBeGreaterThan(0);
+    }
   });
 }

@@ -45,47 +45,86 @@ test('every modal card is a dialog with aria-modal and a name', async ({ page })
   for (const r of report) expect(r, r.name).toMatchObject({ count: 1, modal: 'true', focusable: '-1', named: true });
 });
 
-test('a destructive confirmation: focus moves in, stays in, and comes back', async ({ page, browserName }) => {
+test('an alert: focus moves in, stays in, and comes back', async ({ page, browserName }) => {
+  await openApp(page);
+  await openFirstCharacter(page);
+
+  // Spend a Patch? — Cancel | Spend, reached from the keyboard by the hold's
+  // twin, Shift+Enter (design-system.md: every press-and-hold has one).
+  const patch = page.locator('.screen--sheet .patch.is-on').first();
+  await patch.focus();
+  await page.keyboard.press('Shift+Enter');
+  await expect.poll(() => modal(page)).toBe('patch');
+  await expect(page.getByRole('dialog', { name: 'Spend a Patch?' })).toBeVisible();
+
+  // Focus is on the dialog itself — NOT on Spend, so a second Enter is safe.
+  expect(await focusInfo(page)).toMatchObject({ role: 'dialog', inModal: 'patch' });
+  // The page behind is out of reach.
+  expect(await patch.evaluate((el) => !!el.closest('[inert]'))).toBe(true);
+
+  // Tab and Shift+Tab never leave the dialog, however many times.
+  for (let i = 0; i < 6; i++) {
+    await page.keyboard.press(tabKey(browserName));
+    expect((await focusInfo(page)).inModal, `Tab #${i + 1}`).toBe('patch');
+  }
+  for (let i = 0; i < 6; i++) {
+    await page.keyboard.press(tabKey(browserName, true));
+    expect((await focusInfo(page)).inModal, `Shift+Tab #${i + 1}`).toBe('patch');
+  }
+
+  // Escape is Cancel on an alert (dice.css §11a) — never the verb. Nothing
+  // was spent, and focus goes back to the box that opened it.
+  const before = await page.locator('.screen--sheet .patch.is-on').count();
+  await page.keyboard.press('Escape');
+  await expect.poll(() => modal(page)).toBe('closed');
+  expect(await patch.evaluate((el) => !el.closest('[inert]'))).toBe(true);
+  await expect(patch).toBeFocused();
+  await expect(page.locator('.screen--sheet .patch.is-on')).toHaveCount(before);
+
+  // Cancel from the keyboard does the same.
+  await page.keyboard.press('Shift+Enter');
+  await expect.poll(() => modal(page)).toBe('patch');
+  await page.locator('.modal--patch').getByRole('button', { name: 'Cancel' }).focus();
+  await page.keyboard.press('Enter');
+  await expect.poll(() => modal(page)).toBe('closed');
+  await expect(patch).toBeFocused();
+});
+
+/* Deleting a character asks first (focus into the alert — NOT onto Delete,
+   so a second Enter is safe — and Escape is Cancel), then acts and offers
+   Undo. From the keyboard that must not strand focus: the pressed button is
+   gone with its row, so focus moves to what took its place — here, with the
+   only character gone and nothing left to edit, the empty list's own
+   "create" button — and the toast's Undo is a real, reachable button. */
+test('Delete character from the keyboard: the alert, then Undo — focus always lands somewhere real', async ({ page }) => {
   await openApp(page);
   await press(page, '[data-nav="characters"]');
   await press(page, '[data-roster-edit]');
-
   const del = page.locator('[data-char-del]').first();
   await del.focus();
   await page.keyboard.press('Enter');
   await expect.poll(() => modal(page)).toBe('char-del');
   await expect(page.getByRole('dialog', { name: 'Delete character?' })).toBeVisible();
-
-  // Focus is on the dialog itself — NOT on Delete, so a second Enter is safe.
   expect(await focusInfo(page)).toMatchObject({ role: 'dialog', inModal: 'char-del' });
-  // The page behind is out of reach.
-  expect(await del.evaluate((el) => !!el.closest('[inert]'))).toBe(true);
-
-  // Tab and Shift+Tab never leave the dialog, however many times.
-  for (let i = 0; i < 6; i++) {
-    await page.keyboard.press(tabKey(browserName));
-    expect((await focusInfo(page)).inModal, `Tab #${i + 1}`).toBe('char-del');
-  }
-  for (let i = 0; i < 6; i++) {
-    await page.keyboard.press(tabKey(browserName, true));
-    expect((await focusInfo(page)).inModal, `Shift+Tab #${i + 1}`).toBe('char-del');
-  }
-
-  // Escape is Cancel on an alert (dice.css §11a) — never the verb. The
-  // character is still there, and focus goes back to the Delete control.
   await page.keyboard.press('Escape');
   await expect.poll(() => modal(page)).toBe('closed');
-  expect(await del.evaluate((el) => !el.closest('[inert]'))).toBe(true);
   await expect(del).toBeFocused();
-  expect(await page.locator('[data-char-del]').count()).toBeGreaterThan(0);
 
-  // Cancel from the keyboard does the same.
   await page.keyboard.press('Enter');
   await expect.poll(() => modal(page)).toBe('char-del');
-  await page.locator('.modal--char-del').getByRole('button', { name: 'Cancel' }).focus();
+  await page.locator('.modal--char-del').getByRole('button', { name: 'Delete' }).focus();
   await page.keyboard.press('Enter');
-  await expect.poll(() => modal(page)).toBe('closed');
-  await expect(del).toBeFocused();
+  expect(await modal(page)).toBe('closed');
+  const create = page.locator('.screen--characters [data-action="create-character"]');
+  await expect(create).toBeFocused();
+
+  const undo = page.locator('.toast').getByRole('button', { name: 'Undo' });
+  await undo.focus();
+  await page.keyboard.press('Enter');
+  await expect(page.locator('[data-list="roster"] .persona-card__name')).toHaveText(['Elara Starwhisper']);
+  // Focus goes back to where it was before it entered the toast — never to
+  // the page.
+  await expect(create).toBeFocused();
 });
 
 test('an opener that focuses a field keeps it: the calculator starts in its input', async ({ page }) => {

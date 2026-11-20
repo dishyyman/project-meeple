@@ -134,7 +134,6 @@ test('Add Enemy opens the Monster Compendium: stock goblins, tap to add a copy, 
   // Editing or deleting the campaign's copy never touches the compendium.
   await page.locator('[data-enemy-menu]').nth(2).click();
   await page.locator('.modal--enemy-menu').getByRole('button', { name: 'Delete' }).click();
-  await page.locator('.modal--enemy-del').getByRole('button', { name: 'Delete' }).click();
   expect((await stored(page))[0].enemies).toHaveLength(2);
   expect((await storedMonsters(page)).map((m) => m.name)).toEqual(['Ogre Brute']);
 
@@ -202,9 +201,11 @@ test('edit, duplicate and delete a stat card', async ({ page }) => {
 
   await page.locator('[data-enemy-menu]').nth(1).click();
   await page.locator('.modal--enemy-menu').getByRole('button', { name: 'Delete' }).click();
-  expect(await appAttr(page, 'data-modal')).toBe('enemy-del');
-  await page.locator('.modal--enemy-del').getByRole('button', { name: 'Delete' }).click();
+  // At once — no second question — with Undo on the toast.
+  expect(await appAttr(page, 'data-modal')).toBe('closed');
   await expect(page.locator('[data-enemy] .collapse__title')).toHaveText(['Ogre Brute']);
+  await page.locator('.toast').getByRole('button', { name: 'Undo' }).click();
+  await expect(page.locator('[data-enemy] .collapse__title')).toHaveText(['Ogre Brute', 'Ogre Brute (copy)']);
 });
 
 test('a monster file: exported, imported as copies, and refused when it is not one', async ({ page }) => {
@@ -280,7 +281,6 @@ test('Settings → Backup carries campaigns; restore in place, or as a copy', as
   await press(page, '[data-nav="campaigns"]');
   await press(page, '[data-campaigns-edit]');
   await press(page, `[data-campaign-del="${original.id}"]`);
-  await press(page, '[data-campaign-del-confirm]');
   expect(await stored(page)).toEqual([]);
 
   const restore = async (button) => {

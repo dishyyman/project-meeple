@@ -86,7 +86,7 @@
 
 .hero-card {
   display: flex; flex-direction: column; gap: var(--space-3);
-  border: 1px solid var(--line-hair); border-radius: var(--r-md);
+  border: 1px solid var(--line-hair); border-radius: var(--r-md); corner-shape: var(--corner-shape);
   background: var(--bg-card); padding: var(--space-3-5);
   box-shadow: var(--shadow-hair);
 }
@@ -109,7 +109,7 @@
 .hero-card__state {
   flex-shrink: 0;
   padding: var(--space-0-5) var(--space-2);
-  border: 1px solid var(--danger-bright); border-radius: var(--r-xs);
+  border: 1px solid var(--danger-bright); border-radius: var(--r-xs); corner-shape: var(--corner-shape);
   font-family: var(--font-label); font-size: var(--fs-caption);
   letter-spacing: 0.1em; text-transform: uppercase; color: var(--danger-bright);
 }
@@ -160,7 +160,7 @@
 .enemy__tags { display: flex; flex-wrap: wrap; gap: var(--space-1-5); margin-bottom: var(--space-3); }
 .enemy__tag {
   padding: var(--space-0-5) var(--space-2);
-  border: 1px solid var(--line-warm); border-radius: var(--r-xs);
+  border: 1px solid var(--line-warm); border-radius: var(--r-xs); corner-shape: var(--corner-shape);
   font-family: var(--font-label); font-size: var(--fs-caption);
   letter-spacing: 0.1em; text-transform: uppercase; color: var(--gold);
 }
@@ -182,7 +182,7 @@
    then its note. An inset block, so each reads as one thing among several. */
 .enemy-attack {
   display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--space-2) var(--space-2);
-  padding: var(--space-2-5); border: 1px solid var(--line-soft); border-radius: var(--r-sm);
+  padding: var(--space-2-5); border: 1px solid var(--line-soft); border-radius: var(--r-sm); corner-shape: var(--corner-shape);
   background: var(--bg-inset);
 }
 .enemy-attack .field { margin-bottom: 0; }
@@ -245,7 +245,7 @@
 .fighters { display: flex; flex-direction: column; gap: var(--space-2-5); }
 .fighter {
   display: flex; flex-direction: column; gap: var(--space-3);
-  border: 1px solid var(--line-hair); border-radius: var(--r-md);
+  border: 1px solid var(--line-hair); border-radius: var(--r-md); corner-shape: var(--corner-shape);
   background: var(--bg-card); padding: var(--space-3-5);
   box-shadow: var(--shadow-hair);
 }
@@ -278,7 +278,7 @@
 .fighter__go {
   flex-shrink: 0; min-width: 52px; min-height: 36px;
   padding: var(--space-1-5) var(--space-3-5);
-  border: 1.5px solid var(--line-warm); border-radius: var(--r-sm); background: transparent;
+  border: 1.5px solid var(--line-warm); border-radius: var(--r-sm); corner-shape: var(--corner-shape); background: transparent;
   font-family: var(--font-label); font-size: var(--fs-small);
   letter-spacing: 0.08em; text-transform: uppercase; color: var(--gold);
 }
@@ -310,7 +310,7 @@
   display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center;
   gap: var(--space-1-5) var(--space-3);
   padding: var(--space-2-5) var(--space-3);
-  border: 1px solid var(--line-soft); border-radius: var(--r-sm); background: var(--bg-inset);
+  border: 1px solid var(--line-soft); border-radius: var(--r-sm); corner-shape: var(--corner-shape); background: var(--bg-inset);
 }
 .combat-start__who { display: flex; flex-direction: column; min-width: 0; }
 .combat-start__name { font-family: var(--font-display); font-size: var(--fs-row); color: var(--ink); overflow-wrap: anywhere; }
@@ -339,7 +339,7 @@
 .monster-row__stock {
   flex-shrink: 0; margin-right: var(--space-3-5);
   padding: var(--space-0-5) var(--space-2);
-  border: 1px solid var(--line-warm); border-radius: var(--r-xs);
+  border: 1px solid var(--line-warm); border-radius: var(--r-xs); corner-shape: var(--corner-shape);
   font-family: var(--font-label); font-size: var(--fs-caption);
   letter-spacing: 0.1em; text-transform: uppercase; color: var(--gold);
 }

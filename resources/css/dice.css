@@ -32,8 +32,8 @@
 .app[data-modal="pick"] .modal--pick { display: flex; }
 .app[data-modal="item"] .modal--item { display: flex; }
 .app[data-modal="backpack"] .modal--backpack { display: flex; }
-.app[data-modal="note-del"] .modal--note-del { display: flex; }
 .app[data-modal="skill-edit"] .modal--skill-edit { display: flex; }
+.app[data-modal="char-del"] .modal--char-del { display: flex; }
 .app[data-modal="rest"] .modal--rest { display: flex; }
 .app[data-modal="patch"] .modal--patch { display: flex; }
 .app[data-modal="tick"] .modal--tick { display: flex; }
@@ -41,7 +41,6 @@
 .app[data-modal="adv"] .modal--adv { display: flex; }
 .app[data-modal="portrait"] .modal--portrait { display: flex; }
 .app[data-modal="crop"] .modal--crop { display: flex; }
-.app[data-modal="char-del"] .modal--char-del { display: flex; }
 .app[data-modal="import"] .modal--import { display: flex; }
 .app[data-modal="file-ask"] .modal--file-ask { display: flex; }
 .app[data-modal="share"] .modal--share { display: flex; }
@@ -49,14 +48,11 @@
 .app[data-modal="wiz-pick"] .modal--wiz-pick { display: flex; }
 .app[data-modal="campaign-form"] .modal--campaign-form { display: flex; }
 .app[data-modal="campaign-menu"] .modal--campaign-menu { display: flex; }
-.app[data-modal="campaign-del"]  .modal--campaign-del  { display: flex; }
 .app[data-modal="hero-menu"]  .modal--hero-menu  { display: flex; }
 .app[data-modal="hero-form"]  .modal--hero-form  { display: flex; }
 .app[data-modal="hero-notes"] .modal--hero-notes { display: flex; }
-.app[data-modal="hero-del"]   .modal--hero-del   { display: flex; }
 .app[data-modal="enemy-menu"] .modal--enemy-menu { display: flex; }
 .app[data-modal="enemy-form"] .modal--enemy-form { display: flex; }
-.app[data-modal="enemy-del"]  .modal--enemy-del  { display: flex; }
 .app[data-modal="combat-start"] .modal--combat-start { display: flex; }
 .app[data-modal="combat-end"]   .modal--combat-end   { display: flex; }
 .app[data-modal="member-menu"]  .modal--member-menu  { display: flex; }
@@ -72,17 +68,25 @@
    full-bleed bottom sheet. */
 .modal__card {
   position: relative; width: 100%; max-width: var(--modal-max);
-  background: var(--bg-page); border: 1px solid var(--line-hair); border-radius: var(--r-modal);
+  background: var(--bg-page); border: 1px solid var(--line-hair); border-radius: var(--r-modal); corner-shape: var(--corner-shape);
   box-shadow: var(--shadow-modal), inset 0 0 0 4px var(--bg-page), inset 0 0 0 5px var(--line-gold);
   padding: var(--space-5);
 }
 .modal__head { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--space-4); }
-.modal__title { font-family: var(--font-display); font-size: var(--fs-title); color: var(--heading); }
+.modal__title { font-family: var(--font-display); font-size: var(--fs-title); color: var(--heading); text-wrap: balance; }
 .modal__meta { font-family: var(--font-label); font-size: var(--fs-note); color: var(--ink-muted); }
-.modal__close { width: 28px; height: 28px; position: relative; flex-shrink: 0; }
+/* Drawn as an 18px ✕ on a 28px bed, but the button is a full fingertip
+   (--tap-min) square, pulled back by the difference so the header lays out
+   as it always did. The cross is drawn with ::before and ::after, which is
+   why this grows its own box rather than joining the hit-slop list
+   (primitives.css). The strokes are centred on the box, so they stay put. */
+.modal__close {
+  width: var(--tap-min); height: var(--tap-min); position: relative; flex-shrink: 0;
+  margin: calc((28px - var(--tap-min)) / 2);
+}
 .modal__close::before,
 .modal__close::after {
-  content: ""; position: absolute; top: 13px; left: 5px;
+  content: ""; position: absolute; top: calc(50% - 0.9px); left: calc(50% - 9px);
   width: 18px; height: 1.8px; background: var(--ink-muted);
 }
 .modal__close::before { transform: rotate(45deg); }
@@ -100,7 +104,7 @@
              centred title, a list of rows that each say what they do, and a
              full-width Cancel at the foot. A row commits on tap — the iOS
              action sheet / Material bottom sheet.
-     ALERT   yes or no (Patch, an effect tick, a delete). A small centred
+     ALERT   yes or no (Patch, an effect tick, ending a fight). A small centred
              card: icon, question, what happens, then Cancel | the verb side
              by side and centred. The iOS / Material alert.
      NOTICE  something happened to you (Downed, Boons lost, an import
@@ -125,10 +129,10 @@
   overflow-y: auto;
   background: var(--bg-card);
   border-top: 1.5px solid var(--line-gold);
-  border-radius: var(--r-modal) var(--r-modal) 0 0;
+  border-radius: var(--r-modal) var(--r-modal) 0 0; corner-shape: var(--corner-shape);
   box-shadow: var(--shadow-sheet);
   padding: var(--space-2-5) var(--space-4) calc(var(--space-4) + var(--home-clear));
-  animation: sheet-rise 0.22s ease-out;
+  /* How it rises: see SHEET MOTION after the dice sheet below. */
 }
 /* The handle that says "this came up, and can go back down". */
 .action-sheet__grab {
@@ -136,7 +140,7 @@
   width: 38px; height: 5px; border-radius: 3px; background: var(--line);
 }
 .action-sheet__head { text-align: center; }
-.action-sheet__title { font-family: var(--font-display); font-size: var(--fs-title); color: var(--heading); }
+.action-sheet__title { font-family: var(--font-display); font-size: var(--fs-title); color: var(--heading); text-wrap: balance; }
 .action-sheet__sub {
   margin: var(--space-1) 0 0;
   font-family: var(--font-body); font-style: italic; font-size: var(--fs-body);
@@ -147,7 +151,7 @@
    and the hairlines between them do the separating. */
 .action-sheet__list {
   flex-shrink: 0; display: flex; flex-direction: column;
-  border: 1px solid var(--line-soft); border-radius: var(--r-lg);
+  border: 1px solid var(--line-soft); border-radius: var(--r-lg); corner-shape: var(--corner-shape);
   background: var(--bg-inset); overflow: hidden;
 }
 .action-sheet__row {
@@ -164,7 +168,7 @@
 /* The list clips its corners (overflow: hidden), which would cut the usual
    outset focus ring down to a stray line under the row — so it is drawn
    inside the row instead, the way .pick-card__head does it. */
-.action-sheet__row:focus-visible { outline-offset: -3px; border-radius: var(--r-lg); }
+.action-sheet__row:focus-visible { outline-offset: -3px; border-radius: var(--r-lg); corner-shape: var(--corner-shape); }
 /* Icons in a round gold-on-parchment well, so a row reads at a glance before
    its words do — and the wells line the labels up down the list. */
 .action-sheet__icon {
@@ -192,7 +196,7 @@
    them, so "do nothing" can't be mistaken for one of the things to do. */
 .action-sheet__cancel {
   flex-shrink: 0; min-height: 50px; padding: var(--space-3);
-  border: 1.5px solid var(--line-warm); border-radius: var(--r-md);
+  border: 1.5px solid var(--line-warm); border-radius: var(--r-md); corner-shape: var(--corner-shape);
   background: var(--bg-page);
   font-family: var(--font-label); font-size: var(--fs-input);
   letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-soft);
@@ -217,7 +221,7 @@
 .alert__icon--danger { background: var(--danger-wash); border-color: var(--danger-bright); color: var(--danger-bright); }
 .alert__icon--warn   { background: var(--warning-wash); border-color: var(--warning-bright); color: var(--warning-bright); }
 .alert__icon--ok     { background: var(--success-wash); border-color: var(--success-bright); color: var(--success-bright); }
-.alert__title { font-family: var(--font-display); font-size: var(--fs-title); color: var(--heading); }
+.alert__title { font-family: var(--font-display); font-size: var(--fs-title); color: var(--heading); text-wrap: balance; }
 .alert__text {
   margin: 0;
   font-family: var(--font-body); font-size: var(--fs-body); line-height: 1.6; color: var(--ink-soft);
@@ -234,7 +238,7 @@
    as one block of consequences rather than more prose. */
 .alert__list {
   align-self: stretch; list-style: none; text-align: left; margin: 0; padding: 0;
-  border: 1px solid var(--line-soft); border-radius: var(--r-md); background: var(--bg-inset);
+  border: 1px solid var(--line-soft); border-radius: var(--r-md); corner-shape: var(--corner-shape); background: var(--bg-inset);
 }
 .alert__list li {
   padding: var(--space-2) var(--space-3-5);
@@ -246,13 +250,13 @@
 .alert__actions { flex-shrink: 0; display: flex; gap: var(--space-2-5); align-self: stretch; margin-top: var(--space-2); }
 .calc-row { display: flex; align-items: center; gap: var(--space-2-5); margin-bottom: var(--space-4); }
 .calc-step {
-  flex-shrink: 0; width: 38px; height: 44px; border-radius: 9px;
+  flex-shrink: 0; width: 38px; height: 44px; border-radius: 9px; corner-shape: var(--corner-shape);
   border: 1.5px solid var(--line); background: var(--bg-card); color: var(--accent-bright);
   font-family: var(--font-label); font-size: var(--fs-display); line-height: 1;
 }
 .calc-input {
   flex: 1; width: 100%; min-width: 0; text-align: center;
-  border: 1px solid var(--line-hair); border-radius: 9px; background: var(--bg-input);
+  border: 1px solid var(--line-hair); border-radius: 9px; corner-shape: var(--corner-shape); background: var(--bg-input);
   padding: var(--space-2) var(--space-1-5); font-family: var(--font-display); font-size: var(--fs-hero); color: var(--ink); outline: none;
 }
 /* Same focus treatment as .field__input — see the note there. */
@@ -263,7 +267,7 @@
 .calc-input { -moz-appearance: textfield; }
 .calc-actions { display: flex; gap: var(--space-2-5); }
 .btn-heal, .btn-damage {
-  flex: 1; border-radius: var(--r-sm); padding: var(--space-3);
+  flex: 1; border-radius: var(--r-sm); corner-shape: var(--corner-shape); padding: var(--space-3);
   font-family: var(--font-label); font-size: var(--fs-body); letter-spacing: 0.08em; text-transform: uppercase;
   box-shadow: var(--shadow-soft);
 }
@@ -291,12 +295,53 @@
   flex-direction: column;
   background: var(--bg-page);
   border-top: 1.5px solid var(--rule-strong);
-  border-radius: 20px 20px 0 0;
+  border-radius: 20px 20px 0 0; corner-shape: var(--corner-shape);
   box-shadow: var(--shadow-tray);
   padding: var(--space-2-5) var(--space-3) calc(var(--space-3) + env(safe-area-inset-bottom, 0px));
-  animation: sheet-rise 0.22s ease-out;
 }
-@keyframes sheet-rise { from { transform: translateY(14%); opacity: 0; } to { transform: none; opacity: 1; } }
+
+/* ---- sheet motion ----
+   Both bottom sheets — the action sheets (§11a) and this roller — rise the
+   same way, and it is a TRANSITION, not a keyframe animation. The difference
+   matters the moment a sheet can be grabbed (main.js, "SHEETS — drag to
+   dismiss"): a keyframe animation owns `transform` until it finishes, so a
+   finger landing mid-rise would be ignored and then the sheet would jump. A
+   transition can be interrupted at any frame, and the next value it is given
+   starts from wherever it is now, at the speed it is going.
+
+   @starting-style is the rise: the frame a sheet first renders (its .modal
+   going from display:none to flex), it starts there and transitions in.
+   A browser without @starting-style shows the sheet in place, no rise.
+
+   --sheet-y is where the finger has dragged it (0 when at rest), written by
+   main.js on the .modal so the scrim behind can read --sheet-p (0–1, how
+   far toward closed) and lighten as the sheet goes down. JS writes only the
+   numbers; what they become is decided here. */
+.action-sheet,
+.dice-sheet {
+  transform: translateY(var(--sheet-y, 0px));
+  transition: transform 0.22s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.22s ease-out;
+}
+@starting-style {
+  .action-sheet,
+  .dice-sheet { transform: translateY(14%); opacity: 0; }
+}
+/* data-sheet-drag on the .modal (main.js, "SHEETS — drag to dismiss"):
+     drag   a finger holds it — exactly where the finger says, no easing
+            between one touch event and the next;
+     back   let go short: the transition above carries it home;
+     out    let go far enough, or flicked: the same transition carries it
+            down out of sight, and the popup closes behind it.
+   The scrim lightens as the sheet goes down — the room coming back. A drag
+   never selects the text it passes over. */
+.modal[data-sheet-drag="drag"] .action-sheet,
+.modal[data-sheet-drag="drag"] .dice-sheet { transition: none; }
+.modal[data-sheet-drag] { -webkit-user-select: none; user-select: none; }
+.modal[data-sheet-drag] .modal__scrim {
+  opacity: calc(1 - var(--sheet-p, 0));
+  transition: opacity 0.22s ease-out;
+}
+.modal[data-sheet-drag="drag"] .modal__scrim { transition: none; }
 
 .dice-sheet__grab {
   width: 42px; height: 4px; border-radius: 2px;
@@ -307,15 +352,17 @@
   display: flex; align-items: center; justify-content: flex-end;
   padding: 0 var(--space-1) var(--space-2);
 }
+/* A 30px bed grown to a fingertip and pulled back, as .modal__close. */
 .dice-sheet__close {
-  width: 30px; height: 30px;
+  width: var(--tap-min); height: var(--tap-min);
+  margin: calc((30px - var(--tap-min)) / 2);
   display: flex; align-items: center; justify-content: center;
   color: var(--ink-muted);
   position: relative;
 }
 .dice-sheet__close::before,
 .dice-sheet__close::after {
-  content: ""; position: absolute; top: 14px; left: 7px;
+  content: ""; position: absolute; top: calc(50% - 0.9px); left: calc(50% - 8.5px);
   width: 17px; height: 1.8px; background: var(--ink-muted);
 }
 .dice-sheet__close::before { transform: rotate(45deg); }
@@ -323,7 +370,7 @@
 
 /* expression + result readout */
 .dice-sheet__display {
-  border: 1px solid var(--line-hair); border-radius: var(--r-sm);
+  border: 1px solid var(--line-hair); border-radius: var(--r-sm); corner-shape: var(--corner-shape);
   background: var(--bg-card);
   box-shadow: inset 0 0 0 3px var(--bg-card), inset 0 0 0 4px var(--line-gold);
   padding: var(--space-2-5) var(--space-3-5) var(--space-3);
@@ -388,7 +435,7 @@
 .key {
   display: flex; align-items: center; justify-content: center;
   min-height: 46px;
-  border: 1.5px solid var(--line); border-radius: var(--r-sm);
+  border: 1.5px solid var(--line); border-radius: var(--r-sm); corner-shape: var(--corner-shape);
   background: var(--bg-card); color: var(--ink);
   font-family: var(--font-label); font-size: var(--fs-title);
   box-shadow: var(--shadow-soft);
@@ -528,7 +575,7 @@
   display: flex; flex-direction: column; align-items: center; gap: var(--space-0-5);
   margin: var(--space-0-5) 0 var(--space-2-5);
   padding: var(--space-2) var(--space-3-5);
-  border: 1.5px solid var(--danger-bright); border-radius: var(--r-xs);
+  border: 1.5px solid var(--danger-bright); border-radius: var(--r-xs); corner-shape: var(--corner-shape);
   background: var(--danger-wash);
 }
 /* A display: value beats the browser's default [hidden] rule, so a class that
@@ -575,7 +622,7 @@
    read apart at a glance on a row you are pressing mid-fight. */
 .effect-tick {
   flex-shrink: 0; padding: var(--space-1) var(--space-2-5);
-  border: 1.5px solid var(--damage-border); border-radius: var(--r-xs);
+  border: 1.5px solid var(--damage-border); border-radius: var(--r-xs); corner-shape: var(--corner-shape);
   background: var(--damage); color: var(--damage-text);
   font-family: var(--font-label); font-size: var(--fs-small); white-space: nowrap;
 }
@@ -629,7 +676,7 @@
 .poison-toggle {
   display: flex; align-items: center; justify-content: center; gap: var(--space-2);
   margin: var(--space-2-5) auto 0; padding: var(--space-2) var(--space-3);
-  border: 1.5px solid var(--line); border-radius: var(--r-xs);
+  border: 1.5px solid var(--line); border-radius: var(--r-xs); corner-shape: var(--corner-shape);
   background: var(--bg-inset);
   font-family: var(--font-label); font-size: var(--fs-small); color: var(--ink-muted);
 }
@@ -659,7 +706,7 @@
    without looking. */
 .roll-card__actions { display: flex; margin-top: var(--space-4); }
 .roll-card__again {
-  flex: 1; border-radius: var(--r-sm); padding: var(--space-3);
+  flex: 1; border-radius: var(--r-sm); corner-shape: var(--corner-shape); padding: var(--space-3);
   font-family: var(--font-label); font-size: var(--fs-note);
   letter-spacing: 0.08em; text-transform: uppercase;
   box-shadow: var(--shadow-soft);
@@ -712,10 +759,15 @@
   /* The sheet still arrives, but by fading in where it already sits — no
      rise. Fade only, as the toast does (toast.css): a change of opacity is
      not movement, and an instant pop would lose the cue that something
-     opened. */
-  .dice-sheet,
-  .action-sheet { animation-name: sheet-fade; }
+     opened. It does not follow a dragging finger either (transform: none,
+     as the swipe-back's screens do in frame.css): the drag still closes it
+     on release, without the sheet travelling. */
+  .action-sheet,
+  .dice-sheet { transform: none; transition: opacity 0.22s ease-out; }
+  @starting-style {
+    .action-sheet,
+    .dice-sheet { transform: none; opacity: 0; }
+  }
 }
-@keyframes sheet-fade { from { opacity: 0; } to { opacity: 1; } }
 
 

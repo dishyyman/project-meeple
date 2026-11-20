@@ -361,14 +361,37 @@ test('End Fight asks; heroes keep their vitals, the enemies\' fight is cleared',
   expect(saved.enemies.find((e) => e.id === 'enemy_goblin').stats.hp).toBe(6);
 });
 
-test('a stat card deleted mid-fight takes its enemies out of the fight', async ({ page }) => {
+test('a stat card deleted mid-fight takes its enemies out of the fight — and Undo brings both back', async ({ page }) => {
   await openCampaign(page);
   await startFight(page, { Goblin: 2, 'Ogre Brute': 1 }, ['Goblin']);
   await press(page, '.tabbar__btn[data-campaign-tab="enemies"]');
   await page.locator('[data-enemy="enemy_ogre"] [data-enemy-menu]').click();
   await page.locator('[data-enemy-remove]').click();
-  await page.locator('[data-enemy-del-confirm]').click();
   await press(page, '.tabbar__btn[data-campaign-tab="combat"]');
   expect(await nextNames(page)).toEqual(['Elara', 'Brom', 'Goblin ×2']);
   expect((await stored(page)).combat.fighters).toHaveLength(3);
+
+  // Undo puts back the stat card AND its place in the fight — the whole
+  // campaign as it stood, not just the record.
+  await expect(page.locator('[data-toast-text]')).toHaveText('Ogre Brute deleted.');
+  await press(page, '[data-toast-action]');
+  expect(await nextNames(page)).toEqual(['Elara', 'Brom', 'Goblin ×2', 'Ogre Brute']);
+  expect((await stored(page)).combat.fighters).toHaveLength(4);
+  expect((await stored(page)).enemies.map((e) => e.id)).toEqual(['enemy_goblin', 'enemy_ogre']);
+});
+
+test('an Undo the fight has moved past does nothing, rather than rolling the fight back', async ({ page }) => {
+  await openCampaign(page);
+  await startFight(page, { Goblin: 1 });
+  await press(page, '.tabbar__btn[data-campaign-tab="enemies"]');
+  await page.locator('[data-enemy="enemy_ogre"] [data-enemy-menu]').click();
+  await page.locator('[data-enemy-remove]').click();
+  await press(page, '.tabbar__btn[data-campaign-tab="combat"]');
+  // Play goes on before Undo is pressed: Elara takes her turn.
+  await go(page, 'Elara');
+  const moved = await stored(page);
+  await press(page, '[data-toast-action]');
+  // Putting the Ogre back would also have taken Elara's turn back. It stays.
+  expect((await stored(page)).enemies.map((e) => e.id)).toEqual(['enemy_goblin']);
+  expect((await stored(page)).combat).toEqual(moved.combat);
 });

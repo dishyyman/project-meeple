@@ -45,7 +45,7 @@
   display: flex; align-items: center; gap: var(--space-3);
   padding: var(--space-3-5);
   margin-bottom: var(--space-6);
-  border: 1.5px solid var(--line-warm); border-radius: var(--r-md);
+  border: 1.5px solid var(--line-warm); border-radius: var(--r-md); corner-shape: var(--corner-shape);
   background: var(--bg-parchment2);
 }
 .account__avatar {
@@ -104,7 +104,7 @@
      so Home introduces no new idiom. */
   display: flex; flex-direction: row; align-items: center;
   gap: var(--space-3-5); width: 100%; text-align: left;
-  border: 1px solid var(--line-hair); border-radius: var(--r-md);
+  border: 1px solid var(--line-hair); border-radius: var(--r-md); corner-shape: var(--corner-shape);
   background: var(--bg-card); padding: var(--space-4) var(--space-4);
   box-shadow: var(--shadow-hair);
 }
@@ -114,7 +114,7 @@
   /* 44px: large enough to carry the glyph at a glance, small enough that the
      row stays a row. The badge keeps the gold border it had as a tile. */
   width: 44px; height: 44px; flex-shrink: 0;
-  border: 1.5px solid var(--line-gold); border-radius: var(--r-sm);
+  border: 1.5px solid var(--line-gold); border-radius: var(--r-sm); corner-shape: var(--corner-shape);
   display: flex; align-items: center; justify-content: center;
   /* Ink rather than the ember, which these badges used to take. Home is the
      one screen that was overspending the 10%: four accent glyphs plus the

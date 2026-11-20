@@ -158,7 +158,7 @@
 /* ----------------------------------------------------------------- */
 /* 4. SCREEN + TAB VISIBILITY (state-driven, no inline display)       */
 /* ----------------------------------------------------------------- */
-.screen { display: none; height: 100%; }
+.screen { display: none; height: 100%; transition: opacity 0.18s ease-out; }
 .app[data-view="home"]       .screen--home       { display: block; }
 .app[data-view="characters"] .screen--characters { display: block; }
 .app[data-view="campaigns"]  .screen--campaigns  { display: block; }
@@ -206,6 +206,44 @@
   .screen[data-swiping="under"] { display: none; }
 }
 
+/* ---- changing screens: the cross-fade (main.js, "SCREEN CHANGE") ----
+   A change of screen is a cross-fade, not a cut. The screen arriving fades
+   in from the first frame it renders (@starting-style, with the .screen
+   transition above). The one it replaced stays a moment longer, marked
+   data-leaving by main.js: lifted out of the flow and stacked over the new
+   one, out of reach (pointer-events, and main.js makes it inert), fading
+   away. 180ms, and the new screen takes taps from the first frame — nothing
+   waits for the fade.
+
+   Built the way the swipe above is — both screens on show, one positioned
+   over the other — rather than with document.startViewTransition(). That API
+   applies the change in a callback a frame later, and only a change made
+   THERE animates; every screen change in this app is a synchronous data-view
+   flip that the code after it (and the history, and the tests) reads at
+   once. Keeping that synchronous is worth more than the API.
+
+   Opacity only, so it stays under Reduce Motion: a fade is not movement
+   (design-system.md, "Reduced motion"). An interrupted fade turns round
+   from where it is: a screen called back mid-fade is simply un-marked, and
+   its opacity heads back up from there. */
+/* The leaving screen fades from where it is, because main.js marks it before
+   the browser next styles the page. One thing can spoil that: code that READS
+   layout between the data-view flip and the mark. The browser then styles the
+   old screen as hidden, and with no "before" left to transition from, it cuts
+   (the new one still fades in). Nothing on a navigation path does that today
+   — resetPull() only writes — so keep it that way. */
+@starting-style {
+  .screen { opacity: 0; }
+}
+.screen[data-leaving] {
+  position: absolute; inset: 0; width: 100%; z-index: 1;
+  display: flex; flex-direction: column;
+  opacity: 0; pointer-events: none;
+}
+.screen--home[data-leaving],
+.screen--characters[data-leaving],
+.screen--campaigns[data-leaving] { display: block; }
+
 /* The sheet's side — hero and vitals (pages/sheet.html). On a phone it is
    the top of the Action tab and shows with it; two-pane, below, it is a
    pane of its own and always on show. */
@@ -220,7 +258,8 @@
    grid on the screen it uncovers. */
 @container app (width >= 1024px) or ((width >= 840px) and (orientation: landscape)) {
   .app[data-view="sheet"] .screen--sheet,
-  .screen--sheet[data-swiping="under"] { display: grid; }
+  .screen--sheet[data-swiping="under"],
+  .screen--sheet[data-leaving] { display: grid; }
   .sheet__side,
   .sheet__pane-head { display: block; }
 }

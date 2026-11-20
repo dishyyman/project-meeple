@@ -149,22 +149,39 @@ test('one list in edit mode does not put delete buttons on the other', async ({ 
   await expect(page.locator('[data-list="campaigns"] .persona-card__chevron').first()).toBeVisible();
 });
 
-test('delete from the list asks first; Cancel keeps it, Delete removes it from storage', async ({ page }) => {
+test('delete from the list acts at once and offers Undo; Undo puts it back, letting the toast go keeps it gone', async ({ page }) => {
   await openApp(page);
   await toCampaigns(page);
   await create(page, 'Doomed');
   const [id] = (await storedIndex(page)).ids;
+  const record = await storedCampaign(page, id);
   await backToList(page);
 
   await page.getByRole('button', { name: 'Edit' }).click();
   await page.getByRole('button', { name: 'Delete Doomed' }).click();
-  expect(await appAttr(page, 'data-modal')).toBe('campaign-del');
-  await expect(page.locator('[data-bind="campaignDelName"]')).toHaveText('Doomed');
-  await page.locator('.modal--campaign-del').getByRole('button', { name: 'Cancel' }).click();
+  // No question first: gone from the list AND from storage, this instant —
+  // a reload while the toast is up honours the delete.
+  expect(await appAttr(page, 'data-modal')).toBe('closed');
+  expect(await listNames(page)).toEqual([]);
+  expect(await storedCampaign(page, id)).toBeNull();
+  const toast = page.locator('.toast');
+  await expect(toast).toContainText('Doomed deleted.');
+  await toast.getByRole('button', { name: 'Undo' }).click();
   expect(await listNames(page)).toEqual(['Doomed']);
+  expect((await storedIndex(page)).ids).toEqual([id]);
+  // The same record, written again with its revision moved on (a sync must
+  // see the restore as the newest change, not as the old copy).
+  const back = await storedCampaign(page, id);
+  expect(back.name).toBe(record.name);
+  expect(back.rev).toBeGreaterThan(record.rev);
 
+  // Again, and this time let the toast go. (Emptying the list ended edit
+  // mode — there was nothing left to edit — so it is entered again.)
+  await page.getByRole('button', { name: 'Edit' }).click();
   await page.getByRole('button', { name: 'Delete Doomed' }).click();
-  await page.locator('.modal--campaign-del').getByRole('button', { name: 'Delete' }).click();
+  await expect(toast.getByRole('button', { name: 'Undo' })).toBeVisible();
+  await page.evaluate(() => document.querySelector('[data-toast-dismiss]').click());
+  await expect(page.locator('.app')).toHaveAttribute('data-toast', 'off');
   expect(await listNames(page)).toEqual([]);
   expect(await storedCampaign(page, id)).toBeNull();
   expect((await storedIndex(page)).ids).toEqual([]);
@@ -172,7 +189,7 @@ test('delete from the list asks first; Cancel keeps it, Delete removes it from s
   await expect(page.locator('[data-block="campaignsLead"]')).toBeVisible();
 });
 
-test('delete from inside a campaign goes back to the list', async ({ page }) => {
+test('delete from inside a campaign goes back to the list, with Undo', async ({ page }) => {
   await openApp(page);
   await toCampaigns(page);
   await create(page, 'Keep');
@@ -180,9 +197,11 @@ test('delete from inside a campaign goes back to the list', async ({ page }) => 
   await create(page, 'Doomed');
   await page.getByRole('button', { name: 'Campaign options' }).click();
   await page.locator('.modal--campaign-menu').getByRole('button', { name: 'Delete Campaign' }).click();
-  await page.locator('.modal--campaign-del').getByRole('button', { name: 'Delete' }).click();
+  expect(await appAttr(page, 'data-modal')).toBe('closed');
   expect(await appAttr(page, 'data-view')).toBe('campaigns');
   expect(await listNames(page)).toEqual(['Keep']);
+  await page.locator('.toast').getByRole('button', { name: 'Undo' }).click();
+  expect(await listNames(page)).toEqual(['Keep', 'Doomed']);
 });
 
 /* A save someone edited by hand — or an attacker's file one day. Every

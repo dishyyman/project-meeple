@@ -34,7 +34,7 @@
 .set-row {
   display: flex; align-items: flex-start; gap: var(--space-3);
   width: 100%; text-align: left;
-  border: 1px solid var(--line-hair); border-radius: var(--r-md);
+  border: 1px solid var(--line-hair); border-radius: var(--r-md); corner-shape: var(--corner-shape);
   background: var(--bg-card); padding: var(--space-3-5);
   box-shadow: var(--shadow-hair);
 }
@@ -47,7 +47,7 @@
    can run to two lines and the glyph would drift down with it. */
 .set-row__icon {
   flex-shrink: 0; width: 34px; height: 34px;
-  border: 1.5px solid var(--line-gold); border-radius: var(--r-xs);
+  border: 1.5px solid var(--line-gold); border-radius: var(--r-xs); corner-shape: var(--corner-shape);
   display: flex; align-items: center; justify-content: center;
   /* Ink in a gold box, the same badge the Home screen's nav rows wear, and for
      the same reason: a list of eight rows tinted with the accent spends the
@@ -122,7 +122,7 @@
 .mode-pick {
   display: flex; flex-direction: column; align-items: center; gap: var(--space-2);
   padding: var(--space-3-5) var(--space-1-5) var(--space-3);
-  border: 1px solid var(--line-hair); border-radius: var(--r-sm);
+  border: 1px solid var(--line-hair); border-radius: var(--r-sm); corner-shape: var(--corner-shape);
   background: var(--bg-card); box-shadow: var(--shadow-hair);
   color: var(--ink-muted);
 }

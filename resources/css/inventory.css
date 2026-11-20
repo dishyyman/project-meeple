@@ -77,7 +77,7 @@
 .modal--backpack .modal__card { display: flex; flex-direction: column; max-height: 100%; }
 .bp-card { flex: 1; min-height: 0; overflow-y: auto; margin: 0 -2px; padding: 0 var(--space-0-5) var(--space-0-5); scroll-padding-block: var(--space-2); }  /* focus-ring room (the bottom padding too — the last row can't scroll past the end), see .scroll */
 .bp-card__head { display: flex; align-items: center; gap: var(--space-1-5); }
-.bp-card__name { flex: 1; min-width: 0; font-family: var(--font-display); font-size: var(--fs-title); line-height: 1.15; color: var(--ink); }
+.bp-card__name { flex: 1; min-width: 0; font-family: var(--font-display); font-size: var(--fs-title); line-height: 1.15; color: var(--ink); text-wrap: balance; }
 /* Round edit/delete affordance, shared by the backpack card and note rows —
    the same two acts should not look like two different controls. */
 .icon-act {
@@ -123,13 +123,13 @@
 .mods:empty { margin-bottom: 0; }
 .mod-row {
   display: flex; gap: var(--space-2-5); align-items: center;
-  border: 1px solid var(--line-hair); border-radius: var(--r-xs);
+  border: 1px solid var(--line-hair); border-radius: var(--r-xs); corner-shape: var(--corner-shape);
   background: var(--bg-card); padding: var(--space-2-5);
 }
 .mod-row__left { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: var(--space-2); }
 .mod-row__stat {
   width: 100%;
-  border: 1.5px solid var(--line); border-radius: var(--r-xs);
+  border: 1.5px solid var(--line); border-radius: var(--r-xs); corner-shape: var(--corner-shape);
   background: var(--bg-input); padding: var(--space-2) var(--space-2-5);
   font-family: var(--font-body); font-size: var(--fs-body); color: var(--ink);
 }
@@ -192,7 +192,7 @@
 .field__input,
 .field__area {
   width: 100%;
-  border: 1px solid var(--line-hair); border-radius: var(--r-xs);
+  border: 1px solid var(--line-hair); border-radius: var(--r-xs); corner-shape: var(--corner-shape);
   background: var(--bg-input); padding: var(--space-2-5) var(--space-3);
   font-family: var(--font-body); font-size: var(--fs-input); color: var(--ink);
   outline: none;
@@ -219,7 +219,7 @@
 .form-actions { display: flex; gap: var(--space-2-5); }
 .btn-ghost,
 .btn-save {
-  flex: 1; border-radius: var(--r-sm); padding: var(--space-3);
+  flex: 1; border-radius: var(--r-sm); corner-shape: var(--corner-shape); padding: var(--space-3);
   font-family: var(--font-label); font-size: var(--fs-body);
   letter-spacing: 0.08em; text-transform: uppercase;
 }
@@ -322,7 +322,7 @@
 .effect-row {
   position: relative; overflow: hidden;
   display: flex; align-items: center; justify-content: space-between; gap: var(--space-3);
-  border: 1px solid var(--line-hair); border-radius: var(--r-sm);
+  border: 1px solid var(--line-hair); border-radius: var(--r-sm); corner-shape: var(--corner-shape);
   background: var(--bg-card); padding: var(--space-3) var(--space-3) var(--space-3) var(--space-4);
   box-shadow: var(--shadow-hair);
 }
@@ -347,7 +347,7 @@
 .skill-step__btn {
   width: 28px; height: 28px; flex-shrink: 0;
   display: flex; align-items: center; justify-content: center;
-  border: 1.5px solid var(--line); border-radius: var(--r-xs);
+  border: 1.5px solid var(--line); border-radius: var(--r-xs); corner-shape: var(--corner-shape);
   background: var(--bg-page); color: var(--accent-bright);
   font-family: var(--font-label); font-size: var(--fs-row); line-height: 1;
   transition: transform 0.06s ease;
@@ -365,7 +365,7 @@
 .effect-add {
   width: 100%; height: 44px;
   display: flex; align-items: center; justify-content: center;
-  border: 1.5px dashed var(--line-warm); border-radius: var(--r-sm);
+  border: 1.5px dashed var(--line-warm); border-radius: var(--r-sm); corner-shape: var(--corner-shape);
   background: transparent; color: var(--gold);
   transition: transform 0.06s ease, background 0.12s ease;
 }
@@ -390,7 +390,7 @@
 .skill-pick,
 .armor-pick {
   display: block; width: 100%; text-align: left;
-  border: 1px solid var(--line-hair); border-radius: var(--r-xs);
+  border: 1px solid var(--line-hair); border-radius: var(--r-xs); corner-shape: var(--corner-shape);
   background: var(--bg-card); padding: var(--space-2) var(--space-3);
 }
 /* .skill-pick is deliberately absent: an editor row is a div wrapping a
@@ -428,7 +428,7 @@
   font-family: var(--font-label);
   font-size: var(--fs-caption); letter-spacing: 0.1em; text-transform: uppercase;
   color: var(--gold);
-  border: 1px solid var(--line-warm); border-radius: var(--r-xs);
+  border: 1px solid var(--line-warm); border-radius: var(--r-xs); corner-shape: var(--corner-shape);
   padding: var(--space-1) var(--space-1-5); white-space: nowrap;
 }
 
@@ -545,7 +545,7 @@
 .tag-picks__row { display: flex; flex-wrap: wrap; gap: var(--space-1-5); }
 .tag-pick {
   font-family: var(--font-body); font-size: var(--fs-note); color: var(--ink-muted);
-  border: 1px solid var(--line-hair); border-radius: var(--r-xs);
+  border: 1px solid var(--line-hair); border-radius: var(--r-xs); corner-shape: var(--corner-shape);
   background: var(--bg-card); padding: var(--space-1-5) var(--space-3);
 }
 .tag-pick:active { background: var(--bg-parchment2); }

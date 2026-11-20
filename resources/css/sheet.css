@@ -143,7 +143,7 @@
 .portrait-drop {
   display: flex; flex-direction: column; align-items: center; gap: var(--space-2);
   padding: var(--space-6) var(--space-6);
-  border: 1.5px dashed var(--line-warm); border-radius: var(--r-md);
+  border: 1.5px dashed var(--line-warm); border-radius: var(--r-md); corner-shape: var(--corner-shape);
   background: var(--wash-lift);
   box-shadow: var(--shadow-soft);
 }
@@ -188,7 +188,7 @@
 .portrait-fail {
   font-family: var(--font-body); font-size: var(--fs-note); line-height: 1.45;
   color: var(--danger-bright); background: var(--bg-card);
-  border: 1px solid var(--danger-bright); border-radius: var(--r-xs);
+  border: 1px solid var(--danger-bright); border-radius: var(--r-xs); corner-shape: var(--corner-shape);
   padding: var(--space-2) var(--space-2-5); max-width: 280px; text-align: center;
 }
 .portrait-fail[hidden] { display: none; }
@@ -248,6 +248,7 @@
 .hero__name {
   font-family: var(--font-display); font-size: var(--fs-hero); line-height: 1.08; color: var(--on-dark);
   text-shadow: 0 1px 8px var(--scrim);
+  text-wrap: balance;   /* a long name breaks into two even lines over the portrait */
 }
 .hero__meta {
   font-family: var(--font-body); font-style: italic; font-size: var(--fs-input); color: var(--on-dark-soft);
@@ -264,7 +265,7 @@
    vitals card's identity, along with the corner diamonds. */
 .vitals {
   position: relative;
-  border: 1px solid var(--line-hair); border-radius: var(--r-md);
+  border: 1px solid var(--line-hair); border-radius: var(--r-md); corner-shape: var(--corner-shape);
   background: var(--bg-card); padding: var(--space-4) var(--space-4);
   box-shadow: var(--shadow-hair), inset 0 0 0 4px var(--bg-card), inset 0 0 0 5px var(--line-gold);
 }
@@ -280,7 +281,10 @@
 .vital__head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: var(--space-1-5); }
 .vital__label { color: var(--vital-label); } /* uses .eyebrow too */
 .vital__value { font-family: var(--font-label); font-size: var(--fs-body); color: var(--ink-soft); }
-.vital__row { display: flex; align-items: center; gap: var(--space-2); }
+/* The gap is the 26px stepper's hit slop, (--tap-min − 26) / 2 = 9px: the
+   stepper's tap square then ends exactly where the track begins. Any less and
+   whichever comes later in the row takes a sliver of the other's taps. */
+.vital__row { display: flex; align-items: center; gap: calc((var(--tap-min) - 26px) / 2); }
 .vital__track { flex: 1; display: flex; gap: var(--space-1); }
 .cell { flex: 1; height: 10px; border-radius: 2px; background: var(--fill-off); }
 .cell.is-on { background: var(--fill); }
@@ -294,13 +298,22 @@
 }
 
 /* wounds row */
-.wounds { display: flex; align-items: center; justify-content: space-between; padding-top: var(--space-3); border-top: 1px solid var(--line-soft); }
+/* The tally rows (Wounds, then Patches) are laid out on a fingertip grid:
+   every box is drawn at 22px but tapped through a --tap-min square (the
+   hit-slop list, primitives.css), so boxes sit one square apart across a row
+   and the two rows one square apart down the card. Each square then meets its
+   neighbours' without overlapping — a tap between two boxes goes to the
+   nearer one, never to whichever comes later in the page. The gaps below are
+   written as that arithmetic rather than as a step on the space scale.
+   The row's own top padding is small because the 44px band already carries
+   11px of air above each box. */
+.wounds { display: flex; align-items: center; justify-content: space-between; padding-top: var(--space-1); border-top: 1px solid var(--line-soft); }
 /* Wounds sit below the health/mana rule, so their label reads quieter than
    the vital labels above it. */
 .wounds__label { color: var(--ink-muted); }
-.wounds__pips { display: flex; gap: var(--space-2); }
+.wounds__pips { display: flex; align-items: center; min-height: var(--tap-min); gap: calc(var(--tap-min) - 22px); }
 .pip {
-  width: 22px; height: 22px; border-radius: 5px;
+  width: 22px; height: 22px; border-radius: 5px; corner-shape: var(--corner-shape);
   display: flex; align-items: center; justify-content: center;
   border: 1.5px solid var(--line-warm); color: transparent;
 }
@@ -313,7 +326,8 @@
   stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round;
 }
 .pip.is-on { border-color: var(--wound); background: var(--wound); color: var(--on-accent); }
-.wounds__controls { display: flex; align-items: center; gap: var(--space-3); }
+/* Reset (26px) to the first pip (22px): centres one square apart. */
+.wounds__controls { display: flex; align-items: center; gap: calc(var(--tap-min) - (26px + 22px) / 2); }
 /* Sized and bordered like .stepper so the three round controls in the vitals
    block read as one family, but inked at --ink-muted to match the Wounds
    label rather than compete with the health/mana steppers above it. */
@@ -333,7 +347,7 @@
    to undo it with — so it repeats that row's geometry exactly rather than
    inventing a third alignment in the same column. It carries no top rule of
    its own: a divider between two halves of one idea would split them. */
-.patches { display: flex; align-items: center; justify-content: space-between; padding-top: var(--space-3); }
+.patches { display: flex; align-items: center; justify-content: space-between; }
 /* A display: value beats the browser's default rule for [hidden], so a class
    that sets one has to say this itself — same as .btn-dashed and the wizard
    picker's search. renderPatches() hides the whole block for a character with
@@ -341,14 +355,14 @@
    label. */
 .patches[hidden] { display: none; }
 .patches__label { color: var(--ink-muted); }
-.patches__boxes { display: flex; gap: var(--space-2); }
+.patches__boxes { display: flex; align-items: center; min-height: var(--tap-min); gap: calc(var(--tap-min) - 22px); }
 /* The same 22px tally box the Wound pips are, down to the radius and the
    border weight — the two rows sit one above the other and are counted the
    same way, so they are the same object. What a Patch box holds is a bare
    medical cross: the drawn med-kit case that used to be in here was mostly
    border at this size, and a frame inside a frame read as noise. */
 .patch {
-  width: 22px; height: 22px; border-radius: 5px;
+  width: 22px; height: 22px; border-radius: 5px; corner-shape: var(--corner-shape);
   padding: 0; background: none;
   display: flex; align-items: center; justify-content: center;
   /* SPENT — the greyed state. The box and a faint cross both stay, so the slot
@@ -407,7 +421,7 @@
    carry an ✕ and Patches a cross because each says something about itself; a
    point is a bare unit of budget and has nothing to say beyond being there. */
 .point {
-  width: 22px; height: 22px; border-radius: 5px;
+  width: 22px; height: 22px; border-radius: 5px; corner-shape: var(--corner-shape);
   padding: 0; background: none;
   border: 1.5px solid var(--line-warm);
 }
@@ -436,7 +450,7 @@
    side, so the heavier edge was multiplied by four and did the most damage
    here — the quad read as a grid of buttons rather than four readouts. */
 .combat-cell {
-  border: 1px solid var(--line-hair); border-radius: var(--r-sm);
+  border: 1px solid var(--line-hair); border-radius: var(--r-sm); corner-shape: var(--corner-shape);
   background: var(--bg-card); padding: var(--space-3) var(--space-1) var(--space-2); text-align: center;
   box-shadow: var(--shadow-hair);
 }
@@ -452,7 +466,7 @@
    the two screens always implied. */
 .gear-row {
   display: flex; align-items: center; justify-content: space-between; gap: var(--space-3);
-  border: 1px solid var(--line-hair); border-radius: var(--r-sm);
+  border: 1px solid var(--line-hair); border-radius: var(--r-sm); corner-shape: var(--corner-shape);
   background: var(--bg-card); padding: var(--space-3) var(--space-3-5); box-shadow: var(--shadow-hair);
 }
 .gear-row__name { font-family: var(--font-label); font-size: var(--fs-row); color: var(--ink); }
@@ -470,7 +484,7 @@
    inside is what the card is for. */
 .stat-card {
   position: relative;   /* the source popover anchors to this */
-  border: 1px solid var(--line-hair); border-radius: var(--r-sm);
+  border: 1px solid var(--line-hair); border-radius: var(--r-sm); corner-shape: var(--corner-shape);
   background: var(--bg-card); box-shadow: var(--shadow-hair);
 }
 /* lift the pressed card so its panel clears the cards after it in the grid */
@@ -496,7 +510,7 @@
   display: none;
   position: absolute; top: calc(100% + 7px); z-index: 6;
   min-width: 100%; width: max-content; max-width: 190px;
-  border: 1px solid var(--line-hair); border-radius: var(--r-sm);
+  border: 1px solid var(--line-hair); border-radius: var(--r-sm); corner-shape: var(--corner-shape);
   background: var(--bg-card); box-shadow: var(--shadow-card);
   padding: var(--space-2) var(--space-3) var(--space-2-5);
 }
@@ -540,8 +554,11 @@
    Lighter than .gear-row above: those are the character tab's summary
    cards, these are a list of what is equipped. */
 .slot-row {
+  /* A fingertip tall (--tap-min) on its own height: the slots stack, so
+     borrowing height through the hit-slop list would overlap the next one. */
+  min-height: var(--tap-min);
   display: flex; align-items: center; justify-content: space-between; gap: var(--space-3);
-  border: 1px solid var(--line-hair); border-radius: var(--r-xs);
+  border: 1px solid var(--line-hair); border-radius: var(--r-xs); corner-shape: var(--corner-shape);
   background: var(--bg-card); padding: var(--space-2-5) var(--space-3);
 }
 .slot-row__name { font-family: var(--font-display); font-size: var(--fs-input); color: var(--ink); }
@@ -564,7 +581,7 @@
    :focus-within, because the pill is what reads as the field. */
 .notes-search:focus-within { border-color: var(--focus); box-shadow: var(--focus-ring); }
 .notes-search__input {
-  flex: 1; min-width: 0;
+  flex: 1; min-width: 0; min-height: var(--tap-min);
   border: 0; background: transparent; outline: none;
   padding: var(--space-2) 0;
   /* --fs-input, not --fs-body: under 16px, iOS zooms the page on focus. */
@@ -578,7 +595,7 @@
 
 /* ---- composer ---- */
 .note-form {
-  border: 1px solid var(--line-hair); border-radius: var(--r-md);
+  border: 1px solid var(--line-hair); border-radius: var(--r-md); corner-shape: var(--corner-shape);
   background: var(--bg-card); box-shadow: var(--shadow-hair);
   padding: var(--space-3-5) var(--space-4) var(--space-4); margin-bottom: var(--space-4);
 }

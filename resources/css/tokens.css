@@ -348,6 +348,21 @@
   --r-md: 12px;
   --r-sm: 10px;
   --r-xs: 8px;
+  /* The SHAPE of those corners — the radius says how big, this says how the
+     curve meets the straight edge. `squircle` eases in gradually, the way the
+     corners of an iPhone and every card in iOS do (SwiftUI's .continuous),
+     instead of a circle's arc butting onto a straight line. Written beside
+     every border-radius that takes an --r-* value (and the few hand-set card
+     corners), never beside a circle (50%), a pill (999px) or a hairline bar:
+     a squircle at 50% is a rounded square, not a dot.
+
+     Chromium and current WebKit (Safari 26) draw corner-shape; an older
+     browser ignores it and draws the plain round corner, which is exactly the
+     look this replaces — so nothing breaks anywhere. A squircle at the same
+     radius reads a touch tighter than the arc, which is why the radii above
+     were not touched: tightening is the right direction for a field journal.
+     Set this to `round` to put every corner back. */
+  --corner-shape: squircle;
 
   /* Type */
   /* Readability experiment: display type was 'MedievalSharp', which is
@@ -403,6 +418,13 @@
   --space-10:  40px;
   --space-12:  48px;
   --space-16:  64px;
+
+  /* The smallest square a finger is asked to hit — Apple's 44pt. A control
+     may be DRAWN smaller (a 22px Wound box, a 26px stepper); its tap area
+     still reaches this, through the hit-slop list in primitives.css. Two
+     controls side by side are spaced so their areas meet without crossing,
+     which is why the tally rows' gaps are written in terms of it. */
+  --tap-min: 44px;
 }
 
 /* Full mode: the layout constants become the real screen's safe area.

@@ -41,6 +41,9 @@
 .wizard__pip + .wizard__pip::before {
   content: ""; position: absolute; top: 5px; right: 50%; left: -50%;
   height: 1.5px; background: var(--line-soft); z-index: 0;
+  /* Drawing only. It belongs to the NEXT pip but lies across this one, so
+     without this a tap on the line would land on the wrong step. */
+  pointer-events: none;
 }
 .wizard__pip-dot {
   position: relative; z-index: 1;
@@ -66,7 +69,7 @@
    state is a warning — amber, with the triangle — and blocks nothing. */
 .wizard__budget {
   display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-2-5);
-  border: 1.5px solid var(--line-warm); border-radius: var(--r-xs);
+  border: 1.5px solid var(--line-warm); border-radius: var(--r-xs); corner-shape: var(--corner-shape);
   background: var(--bg-parchment2); padding: var(--space-2) var(--space-3); margin-bottom: var(--space-3-5);
   font-family: var(--font-label); font-size: var(--fs-label);
   letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-muted);
@@ -93,7 +96,7 @@
    The whole card is the expander; the tick is the commit. Two acts, so two
    controls — tapping to read must never quietly choose for you. */
 .pick-card {
-  border: 1px solid var(--line-hair); border-radius: var(--r-md);
+  border: 1px solid var(--line-hair); border-radius: var(--r-md); corner-shape: var(--corner-shape);
   background: var(--bg-card); box-shadow: var(--shadow-hair);
   margin-bottom: var(--space-2-5); overflow: hidden;
 }
@@ -105,7 +108,7 @@
 /* Ring inside the card, for the reason .collapse__toggle gives (primitives.css):
    the head fills an overflow: hidden card, so a ring outside it is cut away.
    Rounded to the card's radius less its border. */
-.pick-card__head:focus-visible { outline-offset: -3px; border-radius: calc(var(--r-md) - 1px); }
+.pick-card__head:focus-visible { outline-offset: -3px; border-radius: calc(var(--r-md) - 1px); corner-shape: var(--corner-shape); }
 .pick-card__name {
   flex: 1; min-width: 0;
   font-family: var(--font-display); font-size: var(--fs-row); color: var(--ink); line-height: 1.15;
@@ -131,7 +134,7 @@
 .pick-card__trait {
   border-left: 2.5px solid var(--gold-bright);
   background: var(--bg-parchment2);
-  padding: var(--space-2) var(--space-3); margin-bottom: var(--space-3); border-radius: 0 var(--r-xs) var(--r-xs) 0;
+  padding: var(--space-2) var(--space-3); margin-bottom: var(--space-3); border-radius: 0 var(--r-xs) var(--r-xs) 0; corner-shape: var(--corner-shape);
 }
 .pick-card__trait-label {
   display: block; font-family: var(--font-label); font-size: var(--fs-caption);
@@ -151,7 +154,7 @@
 .pick-card__stat {
   display: flex; flex-direction: column; align-items: center; gap: 1px;
   min-width: 58px; padding: var(--space-1-5) var(--space-2);
-  border: 1.5px solid var(--line); border-radius: var(--r-xs);
+  border: 1.5px solid var(--line); border-radius: var(--r-xs); corner-shape: var(--corner-shape);
   background: var(--bg-parchment2);
 }
 .pick-card__stat-val { font-family: var(--font-display); font-size: var(--fs-row); color: var(--ink); }
@@ -177,7 +180,7 @@
 .pick-card__tag--role { border-color: var(--accent); color: var(--accent-bright); }
 
 .pick-card__choose {
-  width: 100%; border-radius: var(--r-sm); padding: var(--space-3);
+  width: 100%; border-radius: var(--r-sm); corner-shape: var(--corner-shape); padding: var(--space-3);
   border: 1.5px solid var(--accent-deep); background: var(--accent); color: var(--on-accent);
   font-family: var(--font-label); font-size: var(--fs-note);
   letter-spacing: 0.08em; text-transform: uppercase;
@@ -219,7 +222,7 @@
    "a catalog entry you either have or have not taken". */
 .load-row {
   display: flex; align-items: center; gap: var(--space-3); width: 100%; text-align: left;
-  border: 1.5px solid var(--line); border-radius: var(--r-sm);
+  border: 1.5px solid var(--line); border-radius: var(--r-sm); corner-shape: var(--corner-shape);
   background: var(--bg-card); padding: var(--space-3) var(--space-3); margin-bottom: var(--space-2);
 }
 .load-row[data-chosen] { border-color: var(--accent); border-width: 2px; background: var(--bg-parchment2); }
@@ -261,7 +264,7 @@
    data-open, written by renderWizLoadout(); data-done marks a section
    that has been answered, so a collapsed list still reads as progress. */
 .loadout-sec {
-  border: 1.5px solid var(--line); border-radius: var(--r-md);
+  border: 1.5px solid var(--line); border-radius: var(--r-md); corner-shape: var(--corner-shape);
   background: var(--bg-card); margin-bottom: var(--space-2-5); overflow: hidden;
 }
 .loadout-sec[data-open] { border-color: var(--rule-strong); box-shadow: var(--shadow-card); }
@@ -309,7 +312,7 @@
   position: relative;
   grid-column: span 1;
   min-height: 74px;
-  border: 1px solid var(--line-hair); border-radius: var(--r-sm);
+  border: 1px solid var(--line-hair); border-radius: var(--r-sm); corner-shape: var(--corner-shape);
   background: var(--bg-parchment2);
 }
 .gear-slot__open {

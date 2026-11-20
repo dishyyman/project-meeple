@@ -113,7 +113,7 @@ Every stored or imported value is **checked, not trusted**. A corrupt value degr
 
 ## A7. Deletion
 
-**Hard delete, with confirmation.** Deleting a character removes its record and portrait immediately after a confirm dialog that warns it's permanent and suggests exporting first. There is no undo and no trash.
+**Hard delete, confirmed, then Undo.** Deleting a character first asks (a confirm dialog naming what is lost and suggesting an export). Once confirmed, its record and portrait leave storage at once. For six seconds the toast offers **Undo**, which writes both keys back from a copy held in memory (and, if storage refuses, holds them like any other refused write). Nothing survives a reload: there is no trash, and the export beside the row is the way back after the toast has gone. Notes, campaigns, heroes and stat cards follow the same rule, without the confirm.
 
 ## A8. Migration rules (as practiced)
 

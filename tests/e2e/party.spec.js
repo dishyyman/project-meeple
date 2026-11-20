@@ -244,11 +244,24 @@ test('a hero typed in: added, edited, noted, removed — and kept over a reload'
   });
   expect(saved).toMatchObject({ name: 'Brin Ashford', notes: 'Owes the guild 40 gold.', source: 'manual' });
 
-  // Removing asks first.
+  // Removing acts at once and offers Undo, which brings the hero back whole.
   await card(page, 'Brin Ashford').locator('[data-hero-menu]').click();
   await page.locator('.modal--hero-menu').getByRole('button', { name: 'Remove from Party' }).click();
-  expect(await appAttr(page, 'data-modal')).toBe('hero-del');
-  await page.locator('.modal--hero-del').getByRole('button', { name: 'Remove' }).click();
+  expect(await appAttr(page, 'data-modal')).toBe('closed');
+  await expect(page.locator('.hero-card')).toHaveCount(0);
+  await expect(page.locator('[data-toast-text]')).toHaveText('Brin Ashford removed from the party.');
+  await page.locator('.toast').getByRole('button', { name: 'Undo' }).click();
+  await expect(health(card(page, 'Brin Ashford'))).toHaveText('12 / 12');
+  const back = await page.evaluate(() => {
+    const { ids } = JSON.parse(localStorage.getItem('meeple.campaigns'));
+    return JSON.parse(localStorage.getItem(`meeple.campaign.${ids[0]}`)).heroes[0];
+  });
+  expect(back).toMatchObject({ name: 'Brin Ashford', notes: 'Owes the guild 40 gold.' });
+
+  // And removed for good when the toast is let go.
+  await card(page, 'Brin Ashford').locator('[data-hero-menu]').click();
+  await page.locator('.modal--hero-menu').getByRole('button', { name: 'Remove from Party' }).click();
+  await press(page, '[data-toast-dismiss]');
   await expect(page.locator('.hero-card')).toHaveCount(0);
   await expect(page.locator('[data-block="partyEmpty"]')).toBeVisible();
 });

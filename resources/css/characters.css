@@ -24,7 +24,7 @@
    used to be the card itself. */
 .persona-card {
   display: block; width: 100%; text-align: left;
-  border: 1px solid var(--line-hair); border-radius: var(--r-md);
+  border: 1px solid var(--line-hair); border-radius: var(--r-md); corner-shape: var(--corner-shape);
   background: var(--bg-card); padding: var(--space-3-5); box-shadow: var(--shadow-hair);
 }
 .persona-card__main { display: flex; align-items: center; gap: var(--space-4); width: 100%; }
@@ -40,7 +40,7 @@
 .persona-card__open:disabled { cursor: default; }
 .persona-card__portrait {
   width: 54px; height: 66px; flex-shrink: 0;
-  border-radius: var(--r-xs); border: 1.5px solid var(--line);
+  border-radius: var(--r-xs); corner-shape: var(--corner-shape); border: 1.5px solid var(--line);
   background-color: var(--bg-parchment2);
   background-image: repeating-linear-gradient(45deg, var(--hatch) 0 6px, transparent 6px 12px);
 }
@@ -95,18 +95,23 @@
   opacity: 0; pointer-events: none;
   transition: width 140ms ease, opacity 140ms ease, margin 140ms ease;
 }
+/* Drawn on a 30px bed, but each is a full fingertip (--tap-min) wide and tall,
+   pulled back by the difference so the row lays out exactly as it did. Their
+   own box rather than the hit-slop ::after (primitives.css), because the
+   overflow: hidden that lets them grow open from nothing would clip one. */
 [data-editing] .persona-card__del,
 [data-editing] .persona-card__export,
 [data-editing] .persona-card__grip {
-  width: 30px; opacity: 1; pointer-events: auto;
+  width: var(--tap-min); opacity: 1; pointer-events: auto;
+  margin: calc((30px - var(--tap-min)) / 2);
 }
 .persona-card__del {
   display: flex; align-items: center; justify-content: center;
-  height: 30px; border-radius: 50%; color: var(--danger-bright);
+  height: var(--tap-min); border-radius: 50%; color: var(--danger-bright);
 }
 .persona-card__grip {
   display: flex; flex-direction: column; align-items: center; justify-content: center;
-  gap: var(--space-1); height: 30px; color: var(--line-warm);
+  gap: var(--space-1); height: var(--tap-min); color: var(--line-warm);
   /* The grip is the only draggable surface, so it also has to be the only
      one that suppresses the browser's own touch scrolling and text
      selection — doing that on the whole row would make the list unscrollable. */
@@ -124,7 +129,7 @@
    the same 30px bed as its neighbours so all three share a baseline. */
 .persona-card__export {
   display: flex; align-items: center; justify-content: center;
-  height: 30px; color: var(--ink-muted);
+  height: var(--tap-min); color: var(--ink-muted);
 }
 
 /* ---- dragging ----

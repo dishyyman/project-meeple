@@ -32,6 +32,16 @@ button {
 }
 svg { display: block; }
 
+/* How lines break. A heading balanced across its lines reads as one shape
+   ("Delete / character?" becomes "Delete character?" over two even halves,
+   not a long line and an orphan); a paragraph set "pretty" avoids a lone
+   word on its last line. Both are hints a browser that does not know them
+   ignores, so nothing here can make a line break worse. Titles that are a
+   classed <div> rather than an <h*> (.modal__title, .alert__title, …) carry
+   the same `balance` in their own rule, in their own file. */
+h1, h2, h3, h4, h5, h6 { text-wrap: balance; }
+p { text-wrap: pretty; }
+
 /* The app's focus ring, for everything a keyboard can reach. Before this,
    most controls showed the browser's own ring — visible, but not the app's,
    and differently drawn in each browser. This is the ring the portrait

@@ -16,7 +16,11 @@ const {
 // Back to Home after a reload, the way init() leaves it.
 async function reloadApp(page) {
   await page.reload();
-  await page.waitForFunction(() => document.querySelector('.app')?.getAttribute('data-view') === 'home');
+  // data-view="home" is already in index.html before boot.js has injected a
+  // single screen, so it alone can pass with no buttons on the page yet. Wait
+  // as openApp() does: for init() to have run and painted the sheet.
+  await page.waitForFunction(() => document.querySelector('.app')?.getAttribute('data-view') === 'home'
+    && document.querySelector('[data-bind="healthMax"]')?.textContent !== '');
 }
 
 test('Flow 6 — edit and save: toast, inert Save, survives reload; a blank name is refused', async ({ page }) => {
@@ -189,23 +193,91 @@ test('Flow 8 — back up the roster, delete a character, restore it', async ({ p
   expect(await rosterNames(page)).toEqual(['Elara Starwhisper']);
 });
 
-test('Flow 11 — a deleted character stays deleted after reload (the seed included)', async ({ page }) => {
+test('Flow 11 — a character delete asks first, then goes at once, and stays deleted after a reload (the seed included)', async ({ page }) => {
   await openApp(page);
   await press(page, '[data-nav="characters"]');
   await press(page, '[data-roster-edit]');
   await press(page, '[data-char-del]');
-  // The confirmation says it is permanent, as an amber warning.
+  // The one delete that asks first, and says what is lost, as an amber warning.
   await expect.poll(() => appAttr(page, 'data-modal')).toBe('char-del');
+  await expect(page.locator('[data-bind="charDelName"]')).toHaveText('Elara Starwhisper');
   await expect(page.locator('.modal--char-del .status--warn')).toContainText('permanent');
-  await press(page, '[data-char-del-confirm]');
-  expect(await rosterNames(page)).toEqual([]);
+  // Cancel keeps the character.
+  await press(page, '.modal--char-del [data-modal="close"]');
+  expect(await rosterNames(page)).toEqual(['Elara Starwhisper']);
 
+  await press(page, '[data-char-del]');
+  await press(page, '[data-char-del-confirm]');
+  // Confirmed: the row is gone, and an Undo is offered as well.
+  expect(await appAttr(page, 'data-modal')).toBe('closed');
+  expect(await rosterNames(page)).toEqual([]);
+  await expect(page.locator('[data-toast-text]')).toHaveText('Elara Starwhisper deleted.');
+  await expect(page.locator('[data-toast-action]')).toHaveText('Undo');
+
+  // A reload while the toast is still up honours the delete: the Undo lived
+  // in memory, storage was told at once.
   await reloadApp(page);
   await press(page, '[data-nav="characters"]');
   expect(await rosterNames(page)).toEqual([]);
   // Nothing left in storage under the deleted id.
   const keys = await page.evaluate(() => Object.keys(localStorage).filter((k) => k.startsWith('meeple.character.')));
   expect(keys).toEqual([]);
+});
+
+test('Flow 11b — Undo puts a deleted character back whole: the latest play state and the portrait', async ({ page }) => {
+  await openApp(page);
+  await openFirstCharacter(page);
+  // Something only the latest save knows, and a portrait in its own key.
+  await press(page, '[data-step="health:-1"]');
+  const health = await healthNow(page).textContent();
+  const id = await page.evaluate(() => JSON.parse(localStorage.getItem('meeple.roster')).activeId);
+  const PIXEL = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
+  await page.evaluate(([k, v]) => localStorage.setItem(`meeple.character.${k}.portrait`, v), [id, PIXEL]);
+
+  await press(page, '[data-nav="characters"]');
+  await press(page, '[data-roster-edit]');
+  await press(page, '[data-char-del]');
+  await press(page, '[data-char-del-confirm]');
+  expect(await storedCharacterKeys(page)).toEqual([]);
+  await press(page, '[data-toast-action]');
+
+  expect(await rosterNames(page)).toEqual(['Elara Starwhisper']);
+  expect(await storedRoster(page)).toEqual([id]);
+  expect((await storedSave(page, id)).health).toBe(Number(health));
+  expect(await page.evaluate((k) => localStorage.getItem(`meeple.character.${k}.portrait`), id)).toBe(PIXEL);
+  // And it survives a reload — it is a character again, not a ghost row.
+  await reloadApp(page);
+  await openFirstCharacter(page);
+  await expect(healthNow(page)).toHaveText(health);
+});
+
+/* A journal note is prose nothing can rebuild. Its delete acts at once and
+   offers Undo — which puts the same note back in the same place, saved. */
+test('a deleted note goes at once, and Undo puts it back where it was', async ({ page }) => {
+  await openApp(page);
+  await openFirstCharacter(page);
+  await press(page, '[data-tab="notes"]');
+  for (const [title, body] of [['First', 'One.'], ['Second', 'Two.']]) {
+    await press(page, '[data-note-add]');
+    await page.fill('[data-note-title]', title);
+    await page.fill('[data-note-body]', body);
+    await press(page, '[data-note-save]');
+  }
+  const titles = () => page.locator('[data-list="notes"] .note-row__title').allInnerTexts();
+  const order = await titles();
+  const id = await page.evaluate(() => JSON.parse(localStorage.getItem('meeple.roster')).activeId);
+  const storedTitles = () => page.evaluate((k) =>
+    JSON.parse(localStorage.getItem(`meeple.character.${k}`)).notes.map((n) => n.title), id);
+
+  await press(page, `[data-note-delete="${await page.locator('[data-list="notes"] .note-row').first().getAttribute('data-collapse')}"]`);
+  expect(await appAttr(page, 'data-modal')).toBe('closed');
+  expect(await titles()).toEqual(order.slice(1));
+  expect(await storedTitles()).not.toContain(order[0]);
+  await expect(page.locator('[data-toast-text]')).toHaveText('Note deleted.');
+
+  await press(page, '[data-toast-action]');
+  expect(await titles()).toEqual(order);
+  expect((await storedTitles()).sort()).toEqual([...order].sort());
 });
 
 /* ---------------------------------------------------------------------

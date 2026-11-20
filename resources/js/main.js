@@ -634,7 +634,6 @@
     slotIndex: null,             // which hand, or null when adding rather than swapping
     noteQuery: '',               // active notes search, lowercased; '' = show all
     noteEditing: null,           // note id being edited, null = composing a new one
-    noteDeleting: null,          // note id awaiting delete confirmation
     rosterEdit: false,           // Personae list in edit mode (reorder/export/delete)
     charDeleting: null,          // character id awaiting delete confirmation
     // The share screen's subject and format — { id, portrait }. null when it
@@ -643,7 +642,6 @@
     share: null,
     drag: null,                  // live list drag (roster or campaigns) — see beginListDrag()
     campaignsEdit: false,        // Campaigns list in edit mode (reorder/delete)
-    campaignDeleting: null,      // campaign id awaiting delete confirmation
     campaignForm: null,          // { id } while the new/rename form is open; id null = new
     calcTarget: null,            // hero or fight-member id when the calculator is aimed at one, else the open character
     pierce: false,               // the calculator's Armor Piercing toggle (GM side only)
@@ -651,11 +649,9 @@
     heroMenu: null,              // hero id whose options sheet is open
     heroForm: null,              // { id } while the typed-in hero form is open; id null = new
     heroNotes: null,             // hero id whose notes are open
-    heroDeleting: null,          // hero id awaiting the remove confirmation
     heroFileFor: null,           // hero id an "Update from File" is for, while the picker is open
     enemyForm: null,             // { id, attacks } while the enemy editor is open; id null = new
     enemyMenu: null,             // enemy id whose options sheet is open
-    enemyDeleting: null,         // enemy id awaiting the delete confirmation
     combatDraft: null,           // { [enemyId]: { count, share } } while Start Combat is open
     rulesFrom: null,             // { view } Rules was opened from — where its back returns
     memberMenu: null,            // fight-member id whose ✎ sheet is open
@@ -1532,8 +1528,8 @@
 
   function toggleRosterEdit() {
     state.rosterEdit = !state.rosterEdit;
-    // Leaving edit mode abandons any half-finished act rather than carrying it
-    // into read mode, where its confirmation would have no context.
+    // Leaving edit mode abandons a half-finished drag rather than carrying it
+    // into read mode, where it would have no context.
     if (!state.rosterEdit) { state.charDeleting = null; endListDrag(); }
     renderRoster();
   }
@@ -1662,6 +1658,12 @@
 
   /* ---- deleting ------------------------------------------------------- */
 
+  /* The one delete in the app that asks first AND offers Undo after. Every
+     other removal acts at once with Undo (design-system.md, "Destructive
+     actions"); a character is the exception by design decision (2026-11-20):
+     it is the most destructive act in the app, so it gets both guards — the
+     question before, for the deliberate pause, and the Undo after, for the
+     slip that taps straight through the question. */
   function askDeleteCharacter(id) {
     const row = roster.find((r) => r.id === id);
     if (!row) return;
@@ -1670,15 +1672,31 @@
     app.setAttribute('data-modal', 'char-del');
   }
 
-  /* Permanent, as the confirmation promises. Both of the character's storage
-     keys go, not just the save — a portrait left behind would be orphaned
-     bytes that nothing can ever reach or clear. */
+  /* Confirmed: gone at once, with Undo for six seconds (TOAST_ACTION_MS, held
+     while the pointer or focus is on the toast).
+
+     Both of the character's storage keys go, not just the save — a portrait
+     left behind would be orphaned bytes that nothing can ever reach or clear.
+     What they held is kept in this closure for the toast and nowhere else, so
+     a reload while the toast is up honours the delete, and the export beside
+     the row is still the way back after that. */
   function deleteCharacter() {
     const id = state.charDeleting;
     state.charDeleting = null;
     closeModal();
     const at = roster.findIndex((r) => r.id === id);
     if (at === -1) return;
+    const name = roster[at].name;
+    // The open character's newest state is written first, so what Undo puts
+    // back is what the player last saw, not the save from a few taps ago.
+    if (character.id === id) save();
+    let stored = null;
+    try { stored = localStorage.getItem(saveKey(id)); } catch (_) { /* unavailable — the held copy, if any, is the newer anyway */ }
+    const stash = {
+      id, at,
+      save: heldSaves.has(id) ? heldSaves.get(id) : stored,
+      portrait: readPortrait(id),
+    };
 
     try {
       localStorage.removeItem(saveKey(id));
@@ -1705,6 +1723,30 @@
       app.setAttribute('data-view', 'characters');
       renderRoster();
     }
+    // The delete button went with its row: the next row's takes focus, then
+    // the last one's, then the list's Done — and with the list now empty
+    // (Done disabled), its "create a character" button (focusIfLost()).
+    const dels = $$('.screen--characters [data-char-del]');
+    focusIfLost(dels[at], dels[dels.length - 1],
+      $('.screen--characters [data-roster-edit]:not(:disabled)'),
+      $('.screen--characters [data-action="create-character"]'));
+    showToast(`${name} deleted.`, 'ok', { label: 'Undo', run: () => restoreCharacter(stash) });
+  }
+
+  /* Undo for deleteCharacter(): both keys written back, the row back where it
+     was. A write storage refuses is HELD like any other (so the character is
+     still there this session, and the storage notice says so) rather than
+     the Undo quietly failing. If deleting emptied the roster, the blank
+     placeholder that took the open slot gives it back. Refuses quietly if the
+     character is somehow in the roster already. */
+  function restoreCharacter(stash) {
+    if (roster.some((r) => r.id === stash.id)) return;
+    if (stash.save) holdSave(stash.id, stash.save, writeSave(stash.id, stash.save));
+    if (stash.portrait) holdPortrait(stash.id, stash.portrait, writePortrait(stash.id, stash.portrait));
+    roster.splice(Math.min(stash.at, roster.length), 0, summarise(stash.id));
+    if (!character.id) openCharacter(stash.id);
+    saveRoster();
+    renderAll();
   }
 
   // Keep this character's Personae row in step with the sheet. Called after any
@@ -1836,8 +1878,8 @@
 
   function toggleCampaignsEdit() {
     state.campaignsEdit = !state.campaignsEdit;
-    // Leaving edit mode abandons a half-finished act, as the roster's does.
-    if (!state.campaignsEdit) { state.campaignDeleting = null; endListDrag(); }
+    // Leaving edit mode abandons a half-finished drag, as the roster's does.
+    if (!state.campaignsEdit) endListDrag();
     renderCampaigns();
   }
 
@@ -1953,22 +1995,18 @@
 
   /* ---- delete ----------------------------------------------------------- */
 
-  function askDeleteCampaign(id) {
-    const c = campaigns.find((x) => x.id === id);
-    if (!c) return;
-    state.campaignDeleting = id;
-    setText('campaignDelName', c.name);
-    app.setAttribute('data-modal', 'campaign-del');
-  }
-
-  // Permanent, as the alert says. The record goes, any held copy goes (or
-  // retryHeld() would write it straight back), and the index is rewritten.
-  function deleteCampaign() {
-    const id = state.campaignDeleting;
-    state.campaignDeleting = null;
+  /* At once, with Undo — from the list's edit mode or the campaign's own
+     options sheet — for the reasons deleteCharacter() gives. The record goes,
+     any held copy goes (or retryHeld() would write it straight back), and the
+     index is rewritten. Every campaign is held whole in memory, so the
+     removed one is simply kept in this closure for the toast. */
+  function deleteCampaign(id) {
+    // From inside the campaign the options sheet is still up; it closes first
+    // (and hands focus back the way every modal does).
     closeModal();
     const at = campaigns.findIndex((c) => c.id === id);
     if (at === -1) return;
+    const gone = campaigns[at];
     try { localStorage.removeItem(campaignKey(id)); } catch (_) { /* storage unavailable — the list still drops it */ }
     heldCampaigns.delete(id);
     campaigns.splice(at, 1);
@@ -1979,6 +2017,22 @@
     renderCampaigns();
     // Deleted from inside it: there is nothing left to show, so back to the list.
     if (app.getAttribute('data-view') === 'campaign') app.setAttribute('data-view', 'campaigns');
+    const dels = $$('.screen--campaigns [data-campaign-del]');
+    focusIfLost(dels[at], dels[dels.length - 1],
+      $('.screen--campaigns [data-campaigns-edit]:not(:disabled)'),
+      $('.screen--campaigns [data-campaign-new]'));
+    showToast(`${gone.name} deleted.`, 'ok', { label: 'Undo', run: () => restoreCampaign(gone, at) });
+  }
+
+  /* Undo for deleteCampaign(): the record back in its place in the list, and
+     written again through saveCampaign() — which bumps its revision, so a
+     later sync sees the restore as the newest change, not as the old copy.
+     Refuses quietly if a campaign with that id is somehow back already. */
+  function restoreCampaign(c, at) {
+    if (campaigns.some((x) => x.id === c.id)) return;
+    campaigns.splice(Math.min(at, campaigns.length), 0, c);
+    saveCampaign(c);
+    renderCampaigns();
   }
 
   /* ---- the Party tab ----------------------------------------------------
@@ -2470,25 +2524,54 @@
     showToast('Notes saved.');
   }
 
-  function askRemoveHero(h) {
-    state.heroDeleting = h.id;
-    setText('heroDelName', h.name);
-    app.setAttribute('data-modal', 'hero-del');
-  }
-
-  function removeHero() {
+  /* Straight from the hero's options sheet, with Undo rather than a "Remove
+     hero?" — the reasoning in deleteCharacter(). Only the card goes: the
+     player's own character is on their own device and never touched. */
+  function removeHero(id) {
     const c = activeCampaign();
-    const id = state.heroDeleting;
     closeModal();
     if (!c) return;
     const at = c.heroes.findIndex((h) => h.id === id);
     if (at === -1) return;
-    c.heroes.splice(at, 1);
+    const before = JSON.stringify(c);
+    const [gone] = c.heroes.splice(at, 1);
     // A hero who leaves the party leaves any fight too.
     CMP.settleCombat(c);
     saveCampaign(c);
     renderParty();
     renderCombat();
+    offerCampaignUndo(`${gone.name} removed from the party.`, c, before);
+  }
+
+  /* The Undo for a removal INSIDE a campaign — a hero, or a stat card. A
+     removal there ripples: settleCombat() takes the leaver's turns out of a
+     fight in progress, and may end the round. Re-inserting one record would
+     leave the fight disagreeing with it, so Undo puts back the WHOLE campaign
+     as it stood the moment before (`before`, a snapshot taken then).
+
+     That is only safe if nothing else has happened since — a wound dealt in
+     those six seconds would be silently rolled back with it. So the toast
+     also remembers the campaign as the removal left it, and Undo refuses
+     quietly if it no longer matches (the portrait's rule: a stale Undo never
+     undoes the wrong thing). Rebuilt through normalizeCampaign(), the one
+     door in, and saved, which bumps the revision past both snapshots. */
+  function offerCampaignUndo(text, c, before) {
+    const after = JSON.stringify(c);
+    showToast(text, 'ok', {
+      label: 'Undo',
+      run: () => {
+        const at = campaigns.findIndex((x) => x.id === c.id);
+        if (at === -1 || JSON.stringify(campaigns[at]) !== after) return;
+        const back = CMP.normalizeCampaign(JSON.parse(before));
+        if (!back) return;
+        back.id = c.id;
+        campaigns[at] = back;
+        saveCampaign(back);
+        renderParty();
+        renderEnemies();
+        renderCombat();
+      },
+    });
   }
 
   /* ---- the Enemies tab --------------------------------------------------
@@ -2737,25 +2820,23 @@
     renderEnemies();
   }
 
-  function askDeleteEnemy(e) {
-    state.enemyDeleting = e.id;
-    setText('enemyDelName', e.name);
-    app.setAttribute('data-modal', 'enemy-del');
-  }
-
-  function deleteEnemy() {
+  /* Straight from the stat card's options sheet, with Undo (see removeHero()
+     and offerCampaignUndo()). The Monster Compendium keeps its own copy:
+     a campaign delete never reaches it. */
+  function deleteEnemy(id) {
     const c = activeCampaign();
-    const id = state.enemyDeleting;
     closeModal();
     if (!c) return;
     const at = c.enemies.findIndex((e) => e.id === id);
     if (at === -1) return;
-    c.enemies.splice(at, 1);
+    const before = JSON.stringify(c);
+    const [gone] = c.enemies.splice(at, 1);
     // Its enemies leave a fight in progress with it.
     CMP.settleCombat(c);
     saveCampaign(c);
     renderEnemies();
     renderCombat();
+    offerCampaignUndo(`${gone.name} deleted.`, c, before);
   }
 
   /* A monster file: one enemy from its menu, or every enemy from the
@@ -3360,6 +3441,30 @@
   const esc = (s) => String(s).replace(/[&<>"]/g, (c) => (
     { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]
   ));
+
+  /* A removal that acts at once (and offers Undo) takes the pressed button
+     with it, and the browser drops focus to the page — a keyboard player
+     would be sent back to the top. Put focus on the first candidate that is
+     on screen instead: the row that took the removed one's place, then the
+     list's own add button. Only when focus really was lost; a tap that never
+     focused anything is left alone. A modal's own close already does this
+     for anything removed from an options sheet (see onModalChange). Focus
+     still inside a popup that has just closed (the character-delete alert)
+     counts as lost too: that popup is no longer on screen.
+
+     Run as a microtask, AFTER the modal system's own: while a popup was up,
+     the page behind it was inert, and that is lifted by watchModals()'s
+     observer — itself a microtask queued when the popup closed. Focusing
+     before then fails silently. Going second also lets a popup's own focus
+     return (to the opener, or what replaced it) win when it finds one. */
+  function focusIfLost(...candidates) {
+    queueMicrotask(() => {
+      const now = document.activeElement;
+      if (now && now !== document.body && now.isConnected && !now.closest('.modal')) return;
+      const el = candidates.find((c) => c && c.isConnected && c.getClientRects().length && !c.closest('[inert]'));
+      if (el) el.focus({ preventScroll: true });
+    });
+  }
 
   /* ------------------------------------------------------------------ */
   /* MARKUP BUILDERS — return class-only HTML strings                   */
@@ -4243,6 +4348,9 @@
 
   function engageSwipe() {
     const v = app.getAttribute('data-view');
+    // A screen still fading out from the last change is let go first: the
+    // swipe stacks exactly two screens, and a third would show through.
+    clearLeaving();
     swipe.engaged = true;
     swipe.top = $(`.screen--${v}`);
     const target = backTarget();
@@ -4270,8 +4378,15 @@
     paintSwipe(commit ? swipe.w : 0);
     setTimeout(() => {
       // Back FIRST, then let go of the screens: the one underneath is
-      // already where it belongs, so it becomes the view without a jump.
-      if (commit) goBack();
+      // already where it belongs, so it becomes the view without a jump —
+      // and without the cross-fade a screen change otherwise gets (the
+      // swipe was the animation). `quiet` is spent by the change it covers,
+      // or dropped here if back stayed on this screen (a creation step).
+      if (commit) {
+        leaving.quiet = true;
+        goBack();
+        queueMicrotask(() => { leaving.quiet = false; });
+      }
       clearSwipe();
     }, SWIPE_SETTLE_MS);
   }
@@ -4316,6 +4431,264 @@
 
     app.addEventListener('touchend', () => { if (swipe.tracking) releaseSwipe(false); });
     app.addEventListener('touchcancel', () => { if (swipe.tracking) releaseSwipe(true); });
+  }
+
+  /* ================================================================== */
+  /* SHEETS — drag to dismiss                                           */
+  /* ------------------------------------------------------------------ */
+  /* A bottom sheet (every action sheet, and the dice roller) follows a    */
+  /* finger pulled down from it, and closes when let go far enough down    */
+  /* or flicked — the way every phone's sheets do. Short of that it        */
+  /* springs back. Cancel and ✕ stay: a drag is a shortcut, never the only */
+  /* way out (a keyboard or a switch cannot make one).                     */
+  /*                                                                       */
+  /* INTERRUPTIBLE. The rise and the settle are CSS transitions (dice.css  */
+  /* "sheet motion"), so a finger landing on a MOVING sheet catches it     */
+  /* where it is at that frame — read off its computed transform — rather  */
+  /* than where it was headed, and the drag carries on from there. Nothing */
+  /* is ever blocked while it moves: the sheet takes taps throughout.      */
+  /*                                                                       */
+  /* The swipe-back's gesture, turned on its side: the same thresholds and */
+  /* the same split — JS writes the numbers (--sheet-y, --sheet-p on the   */
+  /* .modal) and a data-sheet-drag state; dice.css decides what they look  */
+  /* like. Under Reduce Motion the sheet does not travel with the finger   */
+  /* (dice.css), but the gesture still closes it on release.              */
+  /* ================================================================== */
+  const SHEET_ENGAGE = 10;        // px of downward travel before a touch is a drag, not a tap
+  const SHEET_COMMIT = 0.35;      // share of the sheet's height that closes it on release
+  const SHEET_FLICK = 0.5;        // px/ms: a flick closes it from anywhere past…
+  const SHEET_FLICK_MIN = 30;     // …this many px
+  const SHEET_SETTLE_MS = 240;    // a touch longer than the CSS transition
+  const SHEET_CLICK_GUARD_MS = 350; // a drag's own release is not a tap on what is under it
+  /* Speed is measured over the last 100ms of the drag, not the last event:
+     a finger often slows in the frame before it lifts, and one slow sample
+     would turn an obvious flick into a "let go short". */
+  const SHEET_VELOCITY_MS = 100;
+  const sheet = {
+    modal: null, el: null, name: '', tracking: false, engaged: false,
+    x0: 0, y0: 0, from: 0, off: 0, h: 0, samples: [],
+    timer: 0, releasedAt: -Infinity,
+  };
+
+  // px/ms downward over the recent samples (0 with fewer than two).
+  function sheetSpeed() {
+    const s = sheet.samples;
+    if (s.length < 2) return 0;
+    const [t0, y0] = s[0], [t1, y1] = s[s.length - 1];
+    return t1 > t0 ? (y1 - y0) / (t1 - t0) : 0;
+  }
+
+  function paintSheet(off) {
+    sheet.off = off;
+    sheet.modal.style.setProperty('--sheet-y', `${off}px`);
+    sheet.modal.style.setProperty('--sheet-p', String(Math.min(1, off / (sheet.h || 1))));
+  }
+
+  // Back to rest: no state, no numbers — the CSS defaults take over.
+  function clearSheet() {
+    clearTimeout(sheet.timer);
+    sheet.timer = 0;
+    if (sheet.modal) {
+      sheet.modal.removeAttribute('data-sheet-drag');
+      sheet.modal.style.removeProperty('--sheet-y');
+      sheet.modal.style.removeProperty('--sheet-p');
+    }
+    Object.assign(sheet, { modal: null, el: null, name: '', tracking: false, engaged: false });
+  }
+
+  // A sheet whose content has been scrolled down scrolls back up first; only
+  // at the top does pulling down mean "close". Checked from the touched
+  // element up to the sheet, so a scrolled list inside it counts too.
+  function scrolledWithin(target, el) {
+    for (let n = target; n && n !== el.parentElement; n = n.parentElement) {
+      if (n.scrollTop > 0) return true;
+    }
+    return false;
+  }
+
+  // A finger (or the mouse) goes down on a sheet. Returns nothing; tracking
+  // starts, and the next moves decide whether it is a drag.
+  function grabSheet(target, x, y, t) {
+    const el = target.closest && target.closest('.action-sheet, .dice-sheet');
+    const modal = el && el.closest('.modal');
+    const name = app.getAttribute('data-modal');
+    if (!modal || !modal.classList.contains(`modal--${name}`)) return;
+    if (scrolledWithin(target, el)) return;
+    // Mid-settle or mid-rise, the sheet is somewhere between rest and where
+    // it was going. Catch it THERE: that offset is where the drag starts.
+    const moving = sheet.timer !== 0 && sheet.modal === modal;
+    const now = new DOMMatrix(getComputedStyle(el).transform).m42;
+    clearTimeout(sheet.timer);
+    sheet.timer = 0;
+    Object.assign(sheet, {
+      modal, el, name, tracking: true, engaged: false,
+      x0: x, y0: y, from: Math.max(0, now), h: el.offsetHeight, samples: [[t, y]],
+    });
+    // A sheet caught in motion is held at once, under the finger, before any
+    // travel — the way a sheet on a phone stops when you touch it.
+    if (moving || now > 0.5) engageSheet();
+  }
+
+  function engageSheet() {
+    sheet.engaged = true;
+    sheet.modal.setAttribute('data-sheet-drag', 'drag');
+    paintSheet(sheet.from);
+  }
+
+  // Returns true once the move is the sheet's, so the caller stops the page
+  // from scrolling under it.
+  function dragSheet(x, y, t) {
+    if (!sheet.tracking) return false;
+    const dx = x - sheet.x0, dy = y - sheet.y0;
+    if (!sheet.engaged) {
+      // Sideways, or up (the content scrolling): not ours. Let it be.
+      if ((Math.abs(dx) > SHEET_ENGAGE && Math.abs(dx) > Math.abs(dy)) || dy < -SHEET_ENGAGE) {
+        sheet.tracking = false;
+        return false;
+      }
+      if (dy < SHEET_ENGAGE) return false;
+      engageSheet();
+    }
+    sheet.samples.push([t, y]);
+    while (sheet.samples.length > 2 && t - sheet.samples[0][0] > SHEET_VELOCITY_MS) sheet.samples.shift();
+    // Down only: above its resting place there is nothing to reveal.
+    paintSheet(Math.max(0, sheet.from + dy));
+    return true;
+  }
+
+  function releaseSheet(cancelled) {
+    if (!sheet.tracking) return;
+    sheet.tracking = false;
+    if (!sheet.engaged) { clearSheet(); return; }
+    sheet.releasedAt = performance.now();
+    const commit = !cancelled && (sheet.off > sheet.h * SHEET_COMMIT
+      || (sheetSpeed() > SHEET_FLICK && sheet.off > SHEET_FLICK_MIN));
+    // Nothing to watch under Reduce Motion: the sheet never moved. Act now.
+    if (reducedMotion()) {
+      const name = sheet.name;
+      clearSheet();
+      if (commit && app.getAttribute('data-modal') === name) closeModal();
+      return;
+    }
+    // Let go: on its way out (down by its own height) or back to rest, by
+    // the CSS transition — which a new touch can catch (grabSheet).
+    sheet.modal.setAttribute('data-sheet-drag', commit ? 'out' : 'back');
+    paintSheet(commit ? sheet.h : 0);
+    const name = sheet.name;
+    sheet.timer = setTimeout(() => {
+      sheet.timer = 0;
+      // Closed only if it is still the sheet on screen — Escape or the scrim
+      // in the meantime may already have closed it, or opened another.
+      if (commit && app.getAttribute('data-modal') === name) closeModal();
+      clearSheet();
+    }, SHEET_SETTLE_MS);
+  }
+
+  function wireSheets() {
+    /* Touch: listeners on the sheets themselves, not the app. touchmove has
+       to be non-passive (it stops the page scrolling under a drag), and a
+       non-passive listener makes the browser wait on it before scrolling —
+       a cost worth paying inside a sheet, and nowhere else. */
+    for (const el of $$('.action-sheet, .dice-sheet')) {
+      el.addEventListener('touchstart', (e) => {
+        if (e.touches.length !== 1) { releaseSheet(true); return; }
+        const t = e.touches[0];
+        grabSheet(e.target, t.clientX, t.clientY, e.timeStamp);
+      }, { passive: true });
+      el.addEventListener('touchmove', (e) => {
+        const t = e.touches[0];
+        if (dragSheet(t.clientX, t.clientY, e.timeStamp)) e.preventDefault();
+      }, { passive: false });
+      el.addEventListener('touchend', () => releaseSheet(false));
+      el.addEventListener('touchcancel', () => releaseSheet(true));
+
+      /* A mouse can drag one too (a laptop with a trackpad, the desktop
+         preview). Touch is left to the touch listeners above: a pointer
+         stream for a finger is cut short the moment the browser decides it
+         is a scroll, which is exactly the decision this has to make itself. */
+      el.addEventListener('pointerdown', (e) => {
+        if (e.pointerType !== 'mouse' || e.button !== 0) return;
+        grabSheet(e.target, e.clientX, e.clientY, e.timeStamp);
+        if (!sheet.tracking) return;
+        const move = (m) => { if (dragSheet(m.clientX, m.clientY, m.timeStamp)) m.preventDefault(); };
+        const up = () => {
+          window.removeEventListener('pointermove', move);
+          window.removeEventListener('pointerup', up);
+          window.removeEventListener('pointercancel', up);
+          releaseSheet(false);
+        };
+        window.addEventListener('pointermove', move);
+        window.addEventListener('pointerup', up);
+        window.addEventListener('pointercancel', up);
+      });
+    }
+    // The mouse's release over a row would also CLICK that row ("Short Rest")
+    // — the drag was not a choice. Swallowed in the capture phase, before the
+    // app's own handler sees it, and only just after a drag let go.
+    app.addEventListener('click', (e) => {
+      if (performance.now() - sheet.releasedAt < SHEET_CLICK_GUARD_MS && e.target.closest('.action-sheet, .dice-sheet')) {
+        e.stopPropagation();
+        e.preventDefault();
+      }
+    }, true);
+    // However a sheet goes — Cancel, Escape, the scrim, the phone's back, or
+    // another popup taking its place — a drag on it is over, and its numbers
+    // go with it, so it opens next time at rest.
+    new MutationObserver(() => {
+      if (sheet.modal && app.getAttribute('data-modal') !== sheet.name) clearSheet();
+    }).observe(app, { attributes: true, attributeFilter: ['data-modal'] });
+  }
+
+  /* ================================================================== */
+  /* SCREEN CHANGE — the cross-fade                                     */
+  /* ------------------------------------------------------------------ */
+  /* frame.css draws it; this only says which screen is on its way out.   */
+  /* Every way the view changes passes through data-view (the history    */
+  /* follows it the same way, wireHistory()), so one observer sees them   */
+  /* all: a button, the phone's back, an import, a delete. The observer   */
+  /* runs before the next frame is painted, so the screen being left      */
+  /* never blinks out between its last frame and its fade.                */
+  /*                                                                      */
+  /* The leaving screen is also made inert and aria-hidden for its 200ms: */
+  /* a screen reader, the Tab key or a stray tap must meet only the new   */
+  /* screen, never two copies of a back button.                           */
+  /* ================================================================== */
+  const SCREEN_FADE_MS = 200;     // a touch longer than the CSS transition (frame.css)
+  // `quiet`: the next change has already been animated (a committed swipe
+  // slid the old screen away), so it gets no fade on top.
+  const leaving = { el: null, timer: 0, quiet: false };
+
+  function clearLeaving() {
+    clearTimeout(leaving.timer);
+    leaving.timer = 0;
+    const el = leaving.el;
+    leaving.el = null;
+    if (!el) return;
+    el.removeAttribute('data-leaving');
+    el.removeAttribute('aria-hidden');
+    el.inert = false;
+  }
+
+  function wireScreenFade() {
+    new MutationObserver((records) => {
+      // Several changes in one task (a delete that lands on a list) fade
+      // from the screen the player was looking at to the one they end on.
+      const from = records[0].oldValue;
+      const to = app.getAttribute('data-view');
+      // A fade in progress ends now — and if the player has come straight
+      // back to that screen, un-marking it is all it takes: its opacity
+      // turns round from wherever it had got to.
+      clearLeaving();
+      if (leaving.quiet) { leaving.quiet = false; return; }
+      if (!from || from === to) return;
+      const el = $(`.screen--${from}`);
+      if (!el) return;
+      leaving.el = el;
+      el.setAttribute('data-leaving', '');
+      el.setAttribute('aria-hidden', 'true');
+      el.inert = true;
+      leaving.timer = setTimeout(clearLeaving, SCREEN_FADE_MS);
+    }).observe(app, { attributes: true, attributeFilter: ['data-view'], attributeOldValue: true });
   }
 
   /* ------------------------------------------------------------------ */
@@ -5618,26 +5991,42 @@
     save();
   }
 
-  function askDeleteNote(id) {
-    const n = noteById(id);
-    if (!n) return;
-    state.noteDeleting = id;
-    setText('noteDelTitle', n.title);
-    app.setAttribute('data-modal', 'note-del');
-  }
+  /* Delete acts at once and offers Undo, where it used to stop and ask. A
+     note is prose the player typed and nothing can rebuild, which is exactly
+     why it gets a way back — but a "Delete note?" on every removal is a
+     second tap for the player who meant it, and the one who slipped tends to
+     tap straight through it. Undo catches the slip and costs the deliberate
+     player nothing (the portrait's reasoning; see removePortrait()).
 
-  function deleteNote() {
-    const id = state.noteDeleting;
-    state.noteDeleting = null;
-    if (!id) return;
-    character.notes = character.notes.filter((n) => n.id !== id);
+     The note is held in this closure only. Storage has already been told it
+     is gone, so a reload while the toast is up honours the delete. */
+  function deleteNote(id) {
+    const at = character.notes.findIndex((n) => n.id === id);
+    if (at === -1) return;
+    const [gone] = character.notes.splice(at, 1);
     delete state.open[id];
     // The note being edited could be the one just deleted — saving after that
     // would resurrect it, so the composer closes with it.
     if (state.noteEditing === id) closeNoteForm();
     renderNotes();
     save();
-    closeModal();
+    // The pressed button went with its note. Keyboard focus moves to the row
+    // that took its place, or to New note when the list is now empty, rather
+    // than falling to the page.
+    const next = character.notes[at] || character.notes[at - 1];
+    focusIfLost(next && $(`.note-row__head[data-toggle="${CSS.escape(next.id)}"]`), $('[data-note-add]'));
+    const owner = character.id;
+    showToast('Note deleted.', 'ok', { label: 'Undo', run: () => restoreNote(owner, gone, at) });
+  }
+
+  /* Undo for deleteNote(): the same note, back where it was. Refuses quietly
+     if the world moved on — a different character is open (opening one also
+     takes the toast down), or the note is somehow back already. */
+  function restoreNote(owner, note, at) {
+    if (character.id !== owner || noteById(note.id)) return;
+    character.notes.splice(Math.min(at, character.notes.length), 0, note);
+    renderNotes();
+    save();
   }
 
   /* ---- backpack: one item at a time ------------------------------- */
@@ -6401,25 +6790,21 @@
   function closeModal() {
     cancelTumble();
     state.editingId = null;
-    // Dismissing the confirmation IS declining the delete — leaving the id set
-    // would arm the next confirm button press against a character nobody was
-    // looking at.
+    // Dismissing the character-delete confirmation IS declining the delete —
+    // leaving the id set would arm the next confirm press against a character
+    // nobody was looking at. (Every other delete acts at once with Undo, so
+    // that is the only one pending.) A campaign's form is the same: declined.
     state.charDeleting = null;
-    // Same for a campaign: dismissing its confirmation or its form is
-    // declining, and nothing may stay armed against the next press.
-    state.campaignDeleting = null;
     state.campaignForm = null;
     // And for a hero: the calculator or picker re-aimed at one, its options,
-    // its form, its notes, its removal.
+    // its form, its notes.
     state.calcTarget = null;
     state.effectTarget = null;
     state.heroMenu = null;
     state.heroForm = null;
     state.heroNotes = null;
-    state.heroDeleting = null;
     state.enemyForm = null;
     state.enemyMenu = null;
-    state.enemyDeleting = null;
     state.combatDraft = null;
     state.memberMenu = null;
     // Same reasoning for the creation slot picker: while this is set, every
@@ -10042,7 +10427,7 @@
       // processed below never has its own element pulled out from under it.
       if (state.openStat && !e.target.closest('.stat-card')) showStatPop(null);
 
-      const t = e.target.closest('[data-nav],[data-tab],[data-edit-tab],[data-edit-attr],[data-skill-rank],[data-toggle],[data-step],[data-calc],[data-menu],[data-wound],[data-wound-reset],[data-calc-step],[data-calc-apply],[data-action],[data-key],[data-dice-back],[data-dice-roll],[data-roll],[data-roll-again],[data-inv-add],[data-inv-open],[data-item-save],[data-bp-step],[data-bp-edit],[data-bp-delete],[data-mod-add],[data-mod-remove],[data-stat-toggle],[data-effect-open],[data-effect-add],[data-effect-step],[data-effect-tick],[data-effects-clear],[data-tick-confirm],[data-skill-edit],[data-skill-draft],[data-skill-filter],[data-skill-save],[data-detail],[data-gear-add],[data-armor-add],[data-detail-remove],[data-pick],[data-tag],[data-note-add],[data-note-save],[data-note-cancel],[data-note-edit],[data-note-delete],[data-note-del-confirm],[data-portrait-pick],[data-portrait-remove],[data-portrait-menu],[data-rest],[data-patch],[data-patch-confirm],[data-poison-toggle],[data-adv],[data-rules-toggle],[data-id-save],[data-portrait-crop],[data-crop-save],[data-crop-reset],[data-open-character],[data-wiz],[data-wiz-step],[data-wiz-expand],[data-wiz-pick],[data-wiz-attr],[data-wiz-skill],[data-wiz-sec],[data-wiz-slot],[data-wiz-clear],[data-wiz-pick-group],[data-equip-drop],[data-roster-edit],[data-char-del],[data-char-del-confirm],[data-char-export],[data-import-open],[data-share-format],[data-share-send],[data-backup-export],[data-compendium-export],[data-compendium-reset],[data-file-open],[data-file-apply],[data-ap-mode],[data-ap-theme],[data-toast-dismiss],[data-toast-action],[data-campaigns-edit],[data-campaign-new],[data-open-campaign],[data-campaign-del],[data-campaign-del-open],[data-campaign-del-confirm],[data-campaign-tab],[data-campaign-menu],[data-campaign-rename],[data-campaign-save],[data-pierce-toggle],[data-hero-add],[data-hero-import],[data-hero-menu],[data-hero-calc],[data-hero-wound],[data-hero-effect-open],[data-hero-effect-step],[data-hero-edit],[data-hero-update],[data-hero-notes-open],[data-hero-notes-save],[data-hero-remove],[data-hero-del-confirm],[data-hero-save],[data-enemy-new],[data-enemy-add],[data-monster-add],[data-monster-remove],[data-monsters-import],[data-enemies-export],[data-enemy-menu],[data-enemy-edit],[data-enemy-dup],[data-enemy-export],[data-enemy-remove],[data-enemy-del-confirm],[data-enemy-save],[data-enemy-attack-add],[data-enemy-attack-remove],[data-combat-start-open],[data-combat-start],[data-start-step],[data-start-share],[data-combat-end-open],[data-combat-end],[data-combat-pick],[data-combat-end-turn],[data-combat-next-round],[data-member-edit],[data-member-act],[data-member-calc],[data-member-wound],[data-member-effect-open],[data-member-effect-step]');
+      const t = e.target.closest('[data-nav],[data-tab],[data-edit-tab],[data-edit-attr],[data-skill-rank],[data-toggle],[data-step],[data-calc],[data-menu],[data-wound],[data-wound-reset],[data-calc-step],[data-calc-apply],[data-action],[data-key],[data-dice-back],[data-dice-roll],[data-roll],[data-roll-again],[data-inv-add],[data-inv-open],[data-item-save],[data-bp-step],[data-bp-edit],[data-bp-delete],[data-mod-add],[data-mod-remove],[data-stat-toggle],[data-effect-open],[data-effect-add],[data-effect-step],[data-effect-tick],[data-effects-clear],[data-tick-confirm],[data-skill-edit],[data-skill-draft],[data-skill-filter],[data-skill-save],[data-detail],[data-gear-add],[data-armor-add],[data-detail-remove],[data-pick],[data-tag],[data-note-add],[data-note-save],[data-note-cancel],[data-note-edit],[data-note-delete],[data-portrait-pick],[data-portrait-remove],[data-portrait-menu],[data-rest],[data-patch],[data-patch-confirm],[data-poison-toggle],[data-adv],[data-rules-toggle],[data-id-save],[data-portrait-crop],[data-crop-save],[data-crop-reset],[data-open-character],[data-wiz],[data-wiz-step],[data-wiz-expand],[data-wiz-pick],[data-wiz-attr],[data-wiz-skill],[data-wiz-sec],[data-wiz-slot],[data-wiz-clear],[data-wiz-pick-group],[data-equip-drop],[data-roster-edit],[data-char-del],[data-char-del-confirm],[data-char-export],[data-import-open],[data-share-format],[data-share-send],[data-backup-export],[data-compendium-export],[data-compendium-reset],[data-file-open],[data-file-apply],[data-ap-mode],[data-ap-theme],[data-toast-dismiss],[data-toast-action],[data-campaigns-edit],[data-campaign-new],[data-open-campaign],[data-campaign-del],[data-campaign-del-open],[data-campaign-tab],[data-campaign-menu],[data-campaign-rename],[data-campaign-save],[data-pierce-toggle],[data-hero-add],[data-hero-import],[data-hero-menu],[data-hero-calc],[data-hero-wound],[data-hero-effect-open],[data-hero-effect-step],[data-hero-edit],[data-hero-update],[data-hero-notes-open],[data-hero-notes-save],[data-hero-remove],[data-hero-save],[data-enemy-new],[data-enemy-add],[data-monster-add],[data-monster-remove],[data-monsters-import],[data-enemies-export],[data-enemy-menu],[data-enemy-edit],[data-enemy-dup],[data-enemy-export],[data-enemy-remove],[data-enemy-save],[data-enemy-attack-add],[data-enemy-attack-remove],[data-combat-start-open],[data-combat-start],[data-start-step],[data-start-share],[data-combat-end-open],[data-combat-end],[data-combat-pick],[data-combat-end-turn],[data-combat-next-round],[data-member-edit],[data-member-act],[data-member-calc],[data-member-wound],[data-member-effect-open],[data-member-effect-step]');
       if (!t) return;
       /* The app root is STATE, never a control. It carries data-view, data-tab,
          data-edit-tab, data-campaign-tab, data-menu and data-modal so the stylesheet can switch on
@@ -10184,9 +10569,8 @@
       if (t.hasAttribute('data-campaigns-edit'))     { toggleCampaignsEdit(); return; }
       if (t.hasAttribute('data-campaign-new'))       { openCampaignForm(null); return; }
       if (t.dataset.openCampaign)                    { openCampaign(t.dataset.openCampaign); return; }
-      if (t.dataset.campaignDel)                     { askDeleteCampaign(t.dataset.campaignDel); return; }
-      if (t.hasAttribute('data-campaign-del-open'))  { askDeleteCampaign(activeCampaignId); return; }
-      if (t.hasAttribute('data-campaign-del-confirm')) { deleteCampaign(); return; }
+      if (t.dataset.campaignDel)                     { deleteCampaign(t.dataset.campaignDel); return; }
+      if (t.hasAttribute('data-campaign-del-open'))  { deleteCampaign(activeCampaignId); return; }
       if (t.dataset.campaignTab)                     { setCampaignTab(t.dataset.campaignTab); return; }
       if (t.hasAttribute('data-campaign-menu'))      { app.setAttribute('data-modal', 'campaign-menu'); return; }
       if (t.hasAttribute('data-campaign-rename'))    { openCampaignForm(activeCampaignId); return; }
@@ -10196,7 +10580,6 @@
       if (t.hasAttribute('data-hero-import'))        { openHeroFilePicker(null); return; }
       if (t.hasAttribute('data-hero-save'))          { saveHeroForm(); return; }
       if (t.hasAttribute('data-hero-notes-save'))    { saveHeroNotes(); return; }
-      if (t.hasAttribute('data-hero-del-confirm'))   { removeHero(); return; }
       // From a hero's options sheet: the hero is the one it was opened for.
       if (t.matches('[data-hero-edit],[data-hero-update],[data-hero-notes-open],[data-hero-remove]')) {
         const h = heroIn(activeCampaign(), state.heroMenu);
@@ -10204,7 +10587,7 @@
         if (t.hasAttribute('data-hero-edit')) openHeroForm(h);
         else if (t.hasAttribute('data-hero-update')) openHeroFilePicker(h.id);
         else if (t.hasAttribute('data-hero-notes-open')) openHeroNotes(h);
-        else askRemoveHero(h);
+        else removeHero(h.id);
         return;
       }
       // --- Game Master Tools: the Enemies tab ---
@@ -10221,7 +10604,6 @@
       if (t.hasAttribute('data-enemy-save'))         { saveEnemyForm(); return; }
       if (t.hasAttribute('data-enemy-attack-add'))   { addEnemyAttackRow(); return; }
       if (t.dataset.enemyAttackRemove !== undefined) { removeEnemyAttackRow(parseInt(t.dataset.enemyAttackRemove, 10)); return; }
-      if (t.hasAttribute('data-enemy-del-confirm'))  { deleteEnemy(); return; }
       if (t.hasAttribute('data-enemy-menu')) {
         const e = enemyOf(t);
         if (e) openEnemyMenu(e);
@@ -10234,7 +10616,7 @@
         if (t.hasAttribute('data-enemy-edit')) openEnemyForm(e);
         else if (t.hasAttribute('data-enemy-dup')) copyEnemy(e);
         else if (t.hasAttribute('data-enemy-export')) exportEnemies([e], e.name);
-        else askDeleteEnemy(e);
+        else deleteEnemy(e.id);
         return;
       }
       // --- Game Master Tools: the Combat tab ---
@@ -10520,8 +10902,7 @@
       if (t.hasAttribute('data-note-cancel')) { closeNoteForm(); return; }
       if (t.hasAttribute('data-note-save'))   { saveNote(); return; }
       if (t.dataset.noteEdit !== undefined)   { openNoteForm(t.dataset.noteEdit); return; }
-      if (t.dataset.noteDelete !== undefined) { askDeleteNote(t.dataset.noteDelete); return; }
-      if (t.hasAttribute('data-note-del-confirm')) { deleteNote(); return; }
+      if (t.dataset.noteDelete !== undefined) { deleteNote(t.dataset.noteDelete); return; }
 
       if (t.dataset.action === 'rest') { openRest(); return; }
       if (t.dataset.action === 'share') { openShare(); return; }
@@ -11066,6 +11447,8 @@
     wire();
     // Back by swipe and by the phone's own gesture — see BACK.
     wireSwipe();
+    wireSheets();
+    wireScreenFade();
     wireHistory();
     // Start on Home. It used to be the sheet, from the prototype where the sheet
     // was the only screen worth showing — but Home is the screen every other one

@@ -110,10 +110,14 @@
 
 /* dashed "add" button */
 .btn-dashed {
+  /* Full-width and stacked in lists, so it reaches a fingertip (--tap-min)
+     with its own height rather than through the hit-slop list below — a
+     slop that reached over the row beside it would steal that row's taps. */
+  min-height: var(--tap-min);
   display: flex; align-items: center; justify-content: center; gap: var(--space-2);
   width: 100%;
   border: 1.5px dashed var(--line-warm);
-  border-radius: var(--r-md);
+  border-radius: var(--r-md); corner-shape: var(--corner-shape);
   background: transparent;
   padding: var(--space-4);
   font-family: var(--font-label);
@@ -123,7 +127,7 @@
      to the button itself — no caller ever has to space it by hand. */
   margin-top: var(--space-3);
 }
-.btn-dashed--sm { border-radius: var(--r-xs); padding: var(--space-3) var(--space-3); color: var(--ink-faint); margin-top: var(--space-2); }
+.btn-dashed--sm { border-radius: var(--r-xs); corner-shape: var(--corner-shape); padding: var(--space-3) var(--space-3); color: var(--ink-faint); margin-top: var(--space-2); }
 /* JS hides "Add Modifier" while a row is unanswered; display:flex above would
    otherwise beat the browser's default rule for [hidden]. */
 .btn-dashed[hidden] { display: none; }
@@ -145,7 +149,7 @@
    screens and boxed in prose that should read as prose. */
 .collapse {
   border: 1px solid var(--line-hair);
-  border-radius: var(--r-sm);
+  border-radius: var(--r-sm); corner-shape: var(--corner-shape);
   background: var(--bg-card);
   box-shadow: var(--shadow-hair);
   overflow: hidden;
@@ -173,7 +177,7 @@
 .collapse__toggle { display: flex; min-width: 0; text-align: left; }
 /* Stretched over the whole head, so a tap anywhere on the row is a tap on the
    toggle — the target the row has always had. */
-.collapse__toggle::after { content: ""; position: absolute; inset: 0; border-radius: calc(var(--r-sm) - 1px); }
+.collapse__toggle::after { content: ""; position: absolute; inset: 0; border-radius: calc(var(--r-sm) - 1px); corner-shape: var(--corner-shape); }
 /* Anything you can press in `right` (the roll boxes) is lifted above the
    stretched target, so it takes its own tap. Static content there (labels,
    the caret) stays under it and still opens the row. */
@@ -231,7 +235,7 @@
 }
 .val-box {
   min-width: 46px; height: 38px; padding: 0 var(--space-2-5);
-  border: 1.5px solid var(--line); border-radius: var(--r-xs);
+  border: 1.5px solid var(--line); border-radius: var(--r-xs); corner-shape: var(--corner-shape);
   background: var(--bg-inset);
   display: flex; align-items: center; justify-content: center;
   font-family: var(--font-label); font-size: var(--fs-row); color: var(--ink);
@@ -301,8 +305,56 @@
   font-family: var(--font-label); font-size: var(--fs-small);
   letter-spacing: 0.05em; text-transform: uppercase;
   color: var(--on-accent); background: var(--accent);
-  border: 1.5px solid var(--accent-deep); border-radius: var(--r-xs);
+  border: 1.5px solid var(--accent-deep); border-radius: var(--r-xs); corner-shape: var(--corner-shape);
   padding: var(--space-2) var(--space-3-5);
   box-shadow: var(--shadow-soft);
 }
 .account__btn:active { transform: translate(1px, 1px); box-shadow: none; }
+
+/* ---- hit slop ----
+   Every control here is DRAWN smaller than a fingertip — a 22px Wound box, a
+   26px stepper, a text link in a section rule — and every one is still hit
+   by a 44px square (--tap-min) centred on it. The extra area is an invisible
+   ::after: the drawing does not change, only where a tap lands. The same
+   idea as React Native's hitSlop, and as the stretched ::after the
+   collapsible headers already use.
+
+     width/height  max(100%, --tap-min): a control already bigger than 44 in
+                   one direction keeps its own size in that one.
+     centred       with `translate`, not `transform`, so a control that has a
+                   transform of its own (a :active nudge, a centring
+                   translateY) is not fought.
+
+   Where two of these sit side by side, their rows are spaced so the squares
+   MEET rather than overlap (sheet.css: the tally rows) — an overlap would
+   hand the tap to whichever control comes later in the page.
+
+   A list rather than a utility class on the markup, like the modal registry
+   in dice.css: it is the one place to see every small target in the app, and
+   adding one is a line here rather than a class threaded through templates.
+   :where() keeps the position rule at zero weight, so a control that is
+   absolutely placed by its own file stays exactly where it was.
+
+   Only things that take a tap belong here. A .val-box that is a readout
+   (a skill's +4) is listed by its --roll modifier, not as .val-box: an
+   invisible square around a number would swallow taps meant for the
+   steppers either side of it.
+
+   The three ✕ close buttons are not here — they draw their cross with
+   ::before and ::after, so they grow their own box instead (dice.css,
+   menu.css). */
+:where(.icon-btn, .glass-btn, .account__btn, .text-btn, .rule__action, .rule__add,
+  .notes-bar__add, .tabbar__btn, .val-box--roll, .portrait-drop,
+  .stepper, .vital__track, .wounds__reset, .pip, .patch,
+  .calc-step, .effect-step__btn, .effect-tick, .dossier-row__title, .wiz-chip, .wizard__pip, .step-btn, .fighter__go) {
+  position: relative;
+}
+:where(.icon-btn, .glass-btn, .account__btn, .text-btn, .rule__action, .rule__add,
+  .notes-bar__add, .tabbar__btn, .val-box--roll, .portrait-drop,
+  .stepper, .vital__track, .wounds__reset, .pip, .patch,
+  .calc-step, .effect-step__btn, .effect-tick, .dossier-row__title, .wiz-chip, .wizard__pip, .step-btn, .fighter__go)::after {
+  content: "";
+  position: absolute; left: 50%; top: 50%;
+  width: max(100%, var(--tap-min)); height: max(100%, var(--tap-min));
+  translate: -50% -50%;
+}
