@@ -34,6 +34,10 @@
 .set-row {
   display: flex; align-items: flex-start; gap: var(--space-3);
   width: 100%; text-align: left;
+  /* Email us is an <a>, the rest are buttons (settings.html says why). The
+     button reset in base.css covers these two for buttons; a link needs them
+     said, or it would draw underlined and in the browser's link blue. */
+  color: inherit; text-decoration: none;
   border: 1px solid var(--line-hair); border-radius: var(--r-md); corner-shape: var(--corner-shape);
   background: var(--bg-card); padding: var(--space-3-5);
   box-shadow: var(--shadow-hair);
@@ -42,6 +46,22 @@
    was, matching every other pressable card on the sheet. */
 .set-row:active { transform: translate(1px, 1px); box-shadow: none; }
 .set-row[hidden] { display: none; }   /* beats display:flex above */
+
+/* A row with a small companion control beside it — Email us and its copy
+   button. Side by side rather than nested: a button inside a link is invalid
+   markup and reads as one jumbled control. Stretched to the row's height and
+   drawn as the same card, so the pair reads as one unit with two doors. */
+.set-row-pair { display: flex; align-items: stretch; gap: var(--space-2); }
+.set-row-pair > .set-row { flex: 1; min-width: 0; }
+.set-row-pair__side {
+  flex-shrink: 0; width: var(--tap-min);
+  display: flex; align-items: center; justify-content: center;
+  border: 1px solid var(--line-hair); border-radius: var(--r-md); corner-shape: var(--corner-shape);
+  background: var(--bg-card); box-shadow: var(--shadow-hair);
+  /* Muted: the row beside it is the way in, and this is the fallback. */
+  color: var(--ink-muted);
+}
+.set-row-pair__side:active { transform: translate(1px, 1px); box-shadow: none; }
 
 /* Aligned to the NAME, not to the middle of the row: the note beneath
    can run to two lines and the glyph would drift down with it. */

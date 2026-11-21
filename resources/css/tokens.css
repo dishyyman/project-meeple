@@ -402,11 +402,12 @@
   --corner-shape: squircle;
 
   /* Type */
-  /* Readability experiment: display type was 'MedievalSharp', which is
-     characterful but hard to read at a glance — especially long character
+  /* Display type was 'MedievalSharp' until the readability experiment:
+     characterful, but hard to read at a glance — especially long character
      names. Marcellus is the same face already used for combat readouts
-     (Evasion, Armor), so display and label type now agree. Swap this one
-     value back to 'MedievalSharp' to undo. */
+     (Evasion, Armor), so display and label type now agree. MedievalSharp is
+     no longer even downloaded (2026-11-20); to bring it back, add it to the
+     Google Fonts link in index.html as well as here. */
   --font-display: 'Marcellus', serif;      /* names, section flourishes */
   --font-label:   'Marcellus', serif;       /* labels, numbers, uppercase */
   --font-body:    'Spectral', serif;        /* descriptions, italics */
@@ -422,8 +423,15 @@
   --fs-label:   11px;   /* small uppercase labels */
   --fs-small:   12px;   /* eyebrows, counts, add buttons */
   --fs-note:    13px;   /* hints, empty states, italic notes */
-  --fs-body:    14px;   /* body and rules text */
+  --fs-body:    14px;   /* body text on the sheet, buttons, Rules tables */
   --fs-input:   16px;   /* form inputs, ✦ section rules, compact row titles */
+  /* Long-form reading: the Rules screen, the one place with paragraphs long
+     enough to need it. The same 16px as --fs-input today, but a separate
+     step on purpose — it answers "how big is comfortable to READ", not "how
+     big stops iOS zooming", and the two may move apart. 14px body is right
+     for a sheet scanned mid-fight; the Player's Guide is read, often by
+     someone new to the game, and deserves the bigger size. */
+  --fs-read:    16px;
   --fs-row:     18px;   /* row titles, value boxes */
   --fs-title:   21px;   /* screen and modal titles */
   --fs-display: 24px;   /* large headings and readouts */

@@ -13,6 +13,11 @@ Framework-free web app (vanilla HTML/CSS/JS) — no build step, no runtime depen
 
 - **Plan first, always.** Before writing code for anything non-trivial, describe the approach and wait for a thumbs-up. Small, obvious edits (typos, a token value, a one-line fix) don't need a plan.
 - **Comment generously.** Explain *why*, not just *what* — especially for game rules, derived stats, and the dice parser. Future-me should be able to read a function and understand the design intent without reverse-engineering it.
+- **Pressure-test what's on screen.** Before calling UI work done — and above all in a QA pass on how the app *feels and reads* — go element by element and ask two questions:
+  1. **Could this be deleted with zero loss of information?** Then delete it, or say why it stays.
+  2. **Does this make a claim we can't prove?** A number, a promise ("sync across devices"), a label for something that isn't built. Then make it true, say it honestly ("Coming soon"), or take it out.
+
+  Report what the two questions turned up, even when the answer is "nothing". Ask them more, not less, as the app nears players.
 - **When there's a tradeoff, prioritize in this order:**
   1. **Consistency** — match the existing patterns below even if a newer approach exists.
   2. **Accessibility** — semantic HTML, keyboard operability, ARIA only where semantics fall short.

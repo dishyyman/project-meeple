@@ -52,3 +52,18 @@ test('the check itself catches what it should, and nothing it should not', () =>
     assert.equal(hit(ok), false, ok);
   }
 });
+
+/* The other half of keeping the look in one place: every font the app
+   DOWNLOADS is one a --font-* token actually names. MedievalSharp sat in the
+   Google Fonts link for weeks after the switch to Marcellus — a request on
+   every launch for a face nothing drew (removed 2026-11-20). */
+test('every font index.html downloads is one a --font-* token uses', () => {
+  const html = fs.readFileSync(path.join(__dirname, '..', '..', 'index.html'), 'utf8');
+  const tokens = fs.readFileSync(path.join(CSS, 'tokens.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+  const link = /fonts\.googleapis\.com\/css2\?([^"]+)/.exec(html);
+  assert.ok(link, 'the Google Fonts link should be in index.html');
+  const loaded = [...link[1].matchAll(/family=([^:&]+)/g)].map((m) => decodeURIComponent(m[1].replace(/\+/g, ' ')));
+  const used = [...tokens.matchAll(/--font-[\w-]+\s*:\s*'([^']+)'/g)].map((m) => m[1]);
+  assert.deepEqual(loaded.filter((f) => !used.includes(f)), [], 'downloaded but never used');
+  assert.deepEqual(used.filter((f) => !loaded.includes(f)), [], 'used but never downloaded');
+});
