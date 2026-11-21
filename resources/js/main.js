@@ -8541,8 +8541,8 @@
   /*   Compendium  the game's content in and out, per                    */
   /*               docs/library-schema.md.                               */
   /*   Appearance  theme and light/dark, through theme.js — see below.   */
-  /*   Feedback    buttons only; neither destination exists yet, so      */
-  /*               both fall through to the not-yet-implemented stub.    */
+  /*   Feedback    Email us: a mailto: link built from FEEDBACK (below), */
+  /*               plus a copy-the-address button. Discord is a stub.    */
   /*                                                                     */
   /* Both imports go through one door: pick a file, read and validate    */
   /* it, then ASK what to do with it. The question can only be put well  */
@@ -8614,6 +8614,7 @@
     renderBackupNote();
     renderCompendiumNote();
     renderAppearance();
+    renderFeedback();
   }
 
   /* ---- backup --------------------------------------------------------- */
@@ -8627,16 +8628,22 @@
      question that actually matters ("did it get everything?") and costs a
      roster length. The share window still weighs its file, where the number
      decides whether an attachment will send. */
-  function renderBackupNote() {
+  /* What this device holds, as words: "2 characters · 1 campaign". Empty
+     kinds are left out rather than said as zero. Shared by the backup line
+     and the feedback email's details, so the two can never disagree. */
+  function savedSummary() {
     const count = roster.length;
     const camps = campaigns.length;
     const mons = monsters.length;
-    const parts = [
+    return [
       count ? `${count} character${count === 1 ? '' : 's'}` : '',
       camps ? `${camps} campaign${camps === 1 ? '' : 's'}` : '',
       mons ? `${mons} monster${mons === 1 ? '' : 's'}` : '',
-    ].filter(Boolean);
-    setText('backupNote', parts.length ? parts.join(' · ') : 'Nothing yet — nothing to export.');
+    ].filter(Boolean).join(' · ');
+  }
+
+  function renderBackupNote() {
+    setText('backupNote', savedSummary() || 'Nothing yet — nothing to export.');
   }
 
   /* The whole roster, in roster order, portraits and all. Photos are NOT
@@ -9108,6 +9115,122 @@
     // and closing afterwards would immediately dismiss it.
     closeModal();
     ask.run(mode);
+  }
+
+  /* ---- feedback: Email us ----------------------------------------------
+     ★ THE ONE PLACE TO CHANGE WHAT A FEEDBACK EMAIL SAYS ★
+
+     Settings → Email us is a mailto: link (settings.html says why a link).
+     Its href is built from FEEDBACK below, at two moments:
+       · when Settings is painted, so the link is real before it is touched;
+       · again at the instant it is tapped (wire()), so the details describe
+         the app as it is RIGHT THEN — a theme changed a second ago is the
+         one reported, not the one on screen when Settings opened.
+
+     To change the message, edit FEEDBACK and nothing else:
+       to, subject   the address and the subject line
+       body          the email, top to bottom, ONE ENTRY PER LINE. Each
+                     entry is one of three things:
+         'Some text'                         a line, exactly as written
+                                             ('' is a blank line)
+         { label: 'Device', fillIn: true }   a question: "Device: " and
+                                             nothing after it, for the
+                                             player to answer
+         { label: 'Saved', value: () => … }  a line the APP fills in:
+                                             "Saved: 1 character"
+     A value that comes back empty ('' or null) drops its line, so a detail
+     that does not apply is left out rather than sent blank. A value that
+     THROWS drops its line too — one broken detail must never cost the
+     player their email.
+     Add, drop or reorder lines by editing the list; nothing else needs to
+     know.
+
+     What is NOT in it, on purpose: anything a player wrote, and anything
+     read off the device itself. No character or campaign names, no notes —
+     counts and settings only. Device and browser are ASKED (fillIn), not
+     sniffed from the browser: an email that already knows your phone model
+     reads as surveillance, however harmless the guess (2026-11-20). And
+     whatever the app fills in sits in plain sight in the draft, so nothing
+     leaves this device without the player seeing it and choosing to send it.
+
+     tests/e2e/feedback.spec.js checks the address, subject and every line of
+     the body — change its expectations when you change these. */
+  const FEEDBACK = {
+    to: 'dish@9ballcreative.com',
+    subject: 'Project Meeple Feedback',
+    body: [
+      'Hi Meeple People,',
+      'I hope you are doing well. Here is my feedback:',
+      '',
+      'Fill out what you think would be helpful.',
+      { label: 'Description of the issue', fillIn: true },
+      { label: 'Suggestions', fillIn: true },
+      // Asked, not guessed — see the header.
+      { label: 'Device', fillIn: true },
+      { label: 'Browser', fillIn: true },
+      '- About my app:',
+      // Which game content is loaded, and whether it is the one the app
+      // ships with — half of all "this rule is wrong" reports hinge on it.
+      { label: 'Compendium', value: () => {
+        const meta = LIBRARY.meeple || {};
+        return `${meta.title || 'Unknown compendium'}${meta.version ? ` v${meta.version}` : ''}`
+          + (hasStoredLibrary() ? ' (imported)' : ' (built-in)');
+      } },
+      { label: 'Appearance', value: () => {
+        const pref = window.MEEPLE_THEME.get();
+        const theme = window.MEEPLE_THEME.THEMES.find((t) => t.id === pref.theme);
+        const shown = document.documentElement.getAttribute('data-mode');
+        return `${theme ? theme.label : pref.theme} · ${pref.mode === 'system' ? `Auto (${shown})` : pref.mode}`;
+      } },
+      { label: 'Saved', value: () => savedSummary() },
+      // Lines you might add later, each one entry:
+      //   the app's own size (in the desktop preview, the drawn device —
+      //   offsetWidth/Height, since the preview may SHRINK it with a
+      //   transform and a bounding box would report the shrunk size):
+      // { label: 'Screen', value: () => `${app.offsetWidth} × ${app.offsetHeight}` },
+      //   the date the draft was started:
+      // { label: 'Date', value: () => new Date().toLocaleDateString() },
+    ],
+  };
+
+  function feedbackBody() {
+    return FEEDBACK.body.map((line) => {
+      if (typeof line === 'string') return line;
+      // A question: the label and a space, so the player types straight on.
+      if (line.fillIn) return `${line.label}: `;
+      let value = '';
+      try { value = line.value(); } catch (_) { value = ''; }   // see the header
+      return value ? `${line.label}: ${value}` : null;          // null = drop the line
+    }).filter((line) => line !== null)
+    // CRLF: the line break the mailto: standard (RFC 6068) asks for.
+      .join('\r\n');
+  }
+
+  /* A mailto: link is a URL, so the subject and body are percent-encoded —
+     a space is %20, a line break %0D%0A. encodeURIComponent does it right;
+     never write the encoded form by hand. The address is left as it is: an
+     address has nothing in it that needs encoding, and it stays readable. */
+  const feedbackHref = () => `mailto:${FEEDBACK.to}`
+    + `?subject=${encodeURIComponent(FEEDBACK.subject)}`
+    + `&body=${encodeURIComponent(feedbackBody())}`;
+
+  function renderFeedback() {
+    const link = $('[data-feedback-email]');
+    if (link) link.href = feedbackHref();
+  }
+
+  /* The copy button beside Email us, for a device with no mail app set up —
+     where the link quietly does nothing and the page cannot tell. The
+     Clipboard API needs a secure page (https, or http://localhost); on plain
+     http — a phone testing Live Server over the network — it is missing, and
+     the toast then says the address instead, which is the next best thing. */
+  async function copyFeedbackAddress() {
+    try {
+      await navigator.clipboard.writeText(FEEDBACK.to);
+      showToast('Support email address copied');
+    } catch (_) {
+      showToast(`Couldn't copy. The address is ${FEEDBACK.to}`, 'warn');
+    }
   }
 
   /* ---- appearance ------------------------------------------------------
@@ -10421,7 +10544,7 @@
       // processed below never has its own element pulled out from under it.
       if (state.openStat && !e.target.closest('.stat-card')) showStatPop(null);
 
-      const t = e.target.closest('[data-nav],[data-tab],[data-edit-tab],[data-edit-attr],[data-skill-rank],[data-toggle],[data-step],[data-calc],[data-menu],[data-wound],[data-wound-reset],[data-calc-step],[data-calc-apply],[data-action],[data-key],[data-dice-back],[data-dice-roll],[data-roll],[data-roll-again],[data-inv-add],[data-inv-open],[data-item-save],[data-bp-step],[data-bp-edit],[data-bp-delete],[data-mod-add],[data-mod-remove],[data-stat-toggle],[data-effect-open],[data-effect-add],[data-effect-step],[data-effect-tick],[data-effects-clear],[data-tick-confirm],[data-skill-edit],[data-skill-draft],[data-skill-filter],[data-skill-save],[data-detail],[data-gear-add],[data-armor-add],[data-detail-remove],[data-pick],[data-tag],[data-note-add],[data-note-save],[data-note-cancel],[data-note-edit],[data-note-delete],[data-portrait-pick],[data-portrait-remove],[data-portrait-menu],[data-rest],[data-patch],[data-patch-confirm],[data-poison-toggle],[data-adv],[data-rules-toggle],[data-id-save],[data-portrait-crop],[data-crop-save],[data-crop-reset],[data-open-character],[data-wiz],[data-wiz-step],[data-wiz-expand],[data-wiz-pick],[data-wiz-attr],[data-wiz-skill],[data-wiz-sec],[data-wiz-slot],[data-wiz-clear],[data-wiz-pick-group],[data-equip-drop],[data-roster-edit],[data-char-del],[data-char-del-confirm],[data-char-export],[data-import-open],[data-share-format],[data-share-send],[data-backup-export],[data-compendium-export],[data-compendium-reset],[data-file-open],[data-file-apply],[data-ap-mode],[data-ap-theme],[data-toast-dismiss],[data-toast-action],[data-campaigns-edit],[data-campaign-new],[data-open-campaign],[data-campaign-del],[data-campaign-del-open],[data-campaign-tab],[data-campaign-menu],[data-campaign-rename],[data-campaign-save],[data-pierce-toggle],[data-hero-add],[data-hero-import],[data-hero-menu],[data-hero-calc],[data-hero-wound],[data-hero-effect-open],[data-hero-effect-step],[data-hero-edit],[data-hero-update],[data-hero-notes-open],[data-hero-notes-save],[data-hero-remove],[data-hero-save],[data-enemy-new],[data-enemy-add],[data-monster-add],[data-monster-remove],[data-monsters-import],[data-enemies-export],[data-enemy-menu],[data-enemy-edit],[data-enemy-dup],[data-enemy-export],[data-enemy-remove],[data-enemy-save],[data-enemy-attack-add],[data-enemy-attack-remove],[data-combat-start-open],[data-combat-start],[data-start-step],[data-start-share],[data-combat-end-open],[data-combat-end],[data-combat-pick],[data-combat-end-turn],[data-combat-next-round],[data-member-edit],[data-member-act],[data-member-calc],[data-member-wound],[data-member-effect-open],[data-member-effect-step]');
+      const t = e.target.closest('[data-nav],[data-tab],[data-edit-tab],[data-edit-attr],[data-skill-rank],[data-toggle],[data-step],[data-calc],[data-menu],[data-wound],[data-wound-reset],[data-calc-step],[data-calc-apply],[data-action],[data-key],[data-dice-back],[data-dice-roll],[data-roll],[data-roll-again],[data-inv-add],[data-inv-open],[data-item-save],[data-bp-step],[data-bp-edit],[data-bp-delete],[data-mod-add],[data-mod-remove],[data-stat-toggle],[data-effect-open],[data-effect-add],[data-effect-step],[data-effect-tick],[data-effects-clear],[data-tick-confirm],[data-skill-edit],[data-skill-draft],[data-skill-filter],[data-skill-save],[data-detail],[data-gear-add],[data-armor-add],[data-detail-remove],[data-pick],[data-tag],[data-note-add],[data-note-save],[data-note-cancel],[data-note-edit],[data-note-delete],[data-portrait-pick],[data-portrait-remove],[data-portrait-menu],[data-rest],[data-patch],[data-patch-confirm],[data-poison-toggle],[data-adv],[data-rules-toggle],[data-id-save],[data-portrait-crop],[data-crop-save],[data-crop-reset],[data-open-character],[data-wiz],[data-wiz-step],[data-wiz-expand],[data-wiz-pick],[data-wiz-attr],[data-wiz-skill],[data-wiz-sec],[data-wiz-slot],[data-wiz-clear],[data-wiz-pick-group],[data-equip-drop],[data-roster-edit],[data-char-del],[data-char-del-confirm],[data-char-export],[data-import-open],[data-share-format],[data-share-send],[data-backup-export],[data-compendium-export],[data-compendium-reset],[data-file-open],[data-file-apply],[data-ap-mode],[data-ap-theme],[data-feedback-email],[data-copy-email],[data-toast-dismiss],[data-toast-action],[data-campaigns-edit],[data-campaign-new],[data-open-campaign],[data-campaign-del],[data-campaign-del-open],[data-campaign-tab],[data-campaign-menu],[data-campaign-rename],[data-campaign-save],[data-pierce-toggle],[data-hero-add],[data-hero-import],[data-hero-menu],[data-hero-calc],[data-hero-wound],[data-hero-effect-open],[data-hero-effect-step],[data-hero-edit],[data-hero-update],[data-hero-notes-open],[data-hero-notes-save],[data-hero-remove],[data-hero-save],[data-enemy-new],[data-enemy-add],[data-monster-add],[data-monster-remove],[data-monsters-import],[data-enemies-export],[data-enemy-menu],[data-enemy-edit],[data-enemy-dup],[data-enemy-export],[data-enemy-remove],[data-enemy-save],[data-enemy-attack-add],[data-enemy-attack-remove],[data-combat-start-open],[data-combat-start],[data-start-step],[data-start-share],[data-combat-end-open],[data-combat-end],[data-combat-pick],[data-combat-end-turn],[data-combat-next-round],[data-member-edit],[data-member-act],[data-member-calc],[data-member-wound],[data-member-effect-open],[data-member-effect-step]');
       if (!t) return;
       /* The app root is STATE, never a control. It carries data-view, data-tab,
          data-edit-tab, data-campaign-tab, data-menu and data-modal so the stylesheet can switch on
@@ -10673,6 +10796,11 @@
       if (t.hasAttribute('data-backup-export'))     { exportBackup(); return; }
       if (t.hasAttribute('data-compendium-export')) { exportCompendium(); return; }
       if (t.hasAttribute('data-compendium-reset'))  { askCompendiumReset(); return; }
+      // Email us: re-stamp the details onto the link and let the tap go on —
+      // no preventDefault. The browser reads the href only after this
+      // handler has run, so it opens the mail app with the fresh one.
+      if (t.hasAttribute('data-feedback-email'))    { t.href = feedbackHref(); return; }
+      if (t.hasAttribute('data-copy-email'))        { copyFeedbackAddress(); return; }
       // Appearance: theme.js applies and stores the choice; this repaints the
       // picker to show it. A tap ASSIGNS, so exactly one of each is chosen.
       if (t.dataset.apMode)  { window.MEEPLE_THEME.set({ mode:  t.dataset.apMode });  renderAppearance(); return; }

@@ -288,8 +288,9 @@ MedievalSharp is still loaded so the display font can be swapped back in one lin
 | `--fs-label` | 11px | Small uppercase labels, budget readouts | 11, 11.5 |
 | `--fs-small` | 12px | Eyebrows, counts, add buttons | 12 |
 | `--fs-note` | 13px | Hints, empty states, italic notes, field errors | 12.5, 13, 13.5 |
-| `--fs-body` | 14px | Body and rules text, buttons | 14, 14.5 |
+| `--fs-body` | 14px | Body text on the sheet, buttons, Rules tables | 14, 14.5 |
 | `--fs-input` | 16px | Form inputs, ✦ section rules, compact row titles | 15, 16 |
+| `--fs-read` | 16px | Long-form reading — the Rules screen's body, sub-headings (tables one step under, at `--fs-body`) | — |
 | `--fs-row` | 18px | Row titles, value boxes | 17, 18, 19 |
 | `--fs-title` | 21px | Screen and modal titles | 20, 21, 22 |
 | `--fs-display` | 24px | Large headings (menu title) and readouts | 23, 24 |
@@ -312,7 +313,8 @@ MedievalSharp is still loaded so the display font can be swapped back in one lin
 | H2 — modal title | Marcellus | `--fs-title` / 400 | `.modal__title` |
 | H3 — section rule | Marcellus | `--fs-input` / 400, +0.04em, gold | `✦ Section ✦` |
 | Row title | Marcellus | `--fs-row` (`--fs-input` on light rows) | `.collapse__title` |
-| Body | Spectral | `--fs-body` / 400 / 1.55 | Rules text in rows |
+| Body | Spectral | `--fs-body` / 400 / 1.55 | Text in rows on the sheet |
+| Reading | Spectral | `--fs-read` / 400 / 1.6, ≤ 70ch | The Rules screen (the Player's Guide) |
 | Input text | Spectral | `--fs-input` / 400 | `.field__input` |
 | Small / note | Spectral italic | `--fs-note` / 1.5 | Hints, empty states |
 | Eyebrow / label | Marcellus | `--fs-small` uppercase, +0.12em | `.eyebrow` |

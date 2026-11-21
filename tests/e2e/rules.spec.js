@@ -66,3 +66,30 @@ test('Rules opened from Settings returns to Settings', async ({ page }) => {
   await press(page, '.screen--rules [data-back]');
   expect(await appAttr(page, 'data-view')).toBe('settings');
 });
+
+/* The Player's Guide is the one long read in the app, and many readers are
+   new to the game, so it is set at --fs-read rather than the sheet's 14px
+   --fs-body (2026-11-20). Read back against the tokens, not a pixel number,
+   so a deliberate change to either size never breaks this — only the Guide
+   slipping back to the scanning size does. */
+test('the Guide is set at the reading size, a step above the sheet\'s body text', async ({ page }) => {
+  await openApp(page);
+  await press(page, '[data-nav="rules"]');
+  await page.locator('[data-rules-search]').fill('wound');
+  const sizes = await page.evaluate(() => {
+    const px = (v) => parseFloat(v);
+    const root = getComputedStyle(document.documentElement);
+    const size = (sel) => px(getComputedStyle(document.querySelector(sel)).fontSize);
+    return {
+      read: px(root.getPropertyValue('--fs-read')),
+      body: px(root.getPropertyValue('--fs-body')),
+      p: size('.rules__p'),
+      h: document.querySelector('.rules__h') ? size('.rules__h') : null,
+      table: document.querySelector('.rules__table') ? size('.rules__table') : null,
+    };
+  });
+  expect(sizes.p).toBe(sizes.read);
+  expect(sizes.read).toBeGreaterThan(sizes.body);
+  if (sizes.h !== null) expect(sizes.h).toBe(sizes.read);
+  if (sizes.table !== null) expect(sizes.table).toBe(sizes.body);
+});

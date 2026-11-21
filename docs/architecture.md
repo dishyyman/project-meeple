@@ -49,9 +49,9 @@ A server, accounts, and cloud sync are on the roadmap (`prd.md` §8, Nice to Hav
 | **Storage (files)** | Downloads via `Blob` + `<a download>`; Web Share API (`navigator.share`) for sending a character file; `FileReader` for imports | Current |
 | **Hosting** | Static files. Locally: VS Code Live Server. Source on GitHub (`dishyyman/project-meeple`). Test deploy: GitHub Pages from `main`, repo root — `dishyyman.github.io/project-meeple/` | Production hosting (custom domain) **Open** |
 | **Payments** | None | Not planned |
-| **Email** | None. "Send an E-mail" feedback button is a stub | **Open** |
+| **Email** | Settings → Email us is a `mailto:` link: the device's own mail app opens with the address, subject and a short template filled in — questions for the player (issue, suggestions, device, browser) and the app's own settings and counts (`FEEDBACK` in `main.js` decides what). A button beside it copies the address. No server sends anything | Current. In-app feedback (no mail app needed) **Open** |
 | **Analytics** | None | **Open** — would need a privacy decision (`security.md`) |
-| **Fonts** | Google Fonts: Marcellus, Spectral, JetBrains Mono (and MedievalSharp, unused) | Current — the only third-party request the app makes |
+| **Fonts** | Google Fonts: Marcellus, Spectral, JetBrains Mono | Current — the only third-party request the app makes |
 | **Icons** | Lucide, inlined as SVG (not a dependency) | Current |
 | **Content tooling** | Node.js scripts: `tools/csv-to-json.mjs` (Google Sheets CSV → library), `tools/rtf-to-rules.mjs` (Player's Guide RTF → rules; **Mac only**, uses macOS `textutil`) | Current. Moving the rules source to a Google Docs HTML export is planned (§13) |
 | **Testing (dev only)** | Node's built-in test runner (unit); Playwright driving the installed Chrome (browser). Declared in a dev-only `package.json` — nothing ships to players (Decision 10) | Current |

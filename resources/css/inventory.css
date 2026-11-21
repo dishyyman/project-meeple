@@ -273,15 +273,16 @@
    place in the app with paragraphs long enough to need a reading measure. */
 /* ~70 characters a line at most, whatever the screen: on a tablet the column
    is wide enough for 110, and lines that long are hard to track back from. */
-.rules__body { font-family: var(--font-body); font-size: var(--fs-body); line-height: 1.6; color: var(--ink-soft); max-width: 70ch; }
+.rules__body { font-family: var(--font-body); font-size: var(--fs-read); line-height: 1.6; color: var(--ink-soft); max-width: 70ch; }
 .rules__p { margin: 0 0 var(--space-3); }
 .rules__body > *:last-child { margin-bottom: 0; }
 /* A sub-heading inside a section — "Harder Tasks", "Move — 1 AP". Set in the
    display face so it reads as a heading, but small enough not to compete with
-   the section title in the row above it. */
+   the section title in the row above it. The same size as the body it heads:
+   the change of face does the work, as it did at 14px. */
 .rules__h {
   margin: var(--space-4) 0 var(--space-2);
-  font-family: var(--font-display); font-size: var(--fs-body);
+  font-family: var(--font-display); font-size: var(--fs-read);
   font-weight: normal; color: var(--ink);
 }
 .rules__body > .rules__h:first-child { margin-top: 0; }
@@ -293,7 +294,9 @@
    entire reason the guide drew a grid — so the WRAPPER scrolls sideways and
    the page itself never does. */
 .rules__tablewrap { overflow-x: auto; -webkit-overflow-scrolling: touch; margin: 0 0 var(--space-3); }
-.rules__table { border-collapse: collapse; width: 100%; font-size: var(--fs-note); }
+/* A step under the reading size, not two: tables are scanned across, and they
+   scroll sideways anyway, so they can afford to stay a little denser. */
+.rules__table { border-collapse: collapse; width: 100%; font-size: var(--fs-body); }
 .rules__table th, .rules__table td {
   border: 1px solid var(--line-hair);
   padding: var(--space-1-5) var(--space-2); text-align: left; vertical-align: top;
