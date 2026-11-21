@@ -123,7 +123,7 @@
          Wounds and Boons are tracked on the card itself afterwards. Prefilled
          with the class base block (8 / 0 / 8 / 5), which is where every
          character starts. -->
-    <div class="modal modal--hero-form">
+    <div class="modal modal--hero-form" data-numpad-host>
       <div class="modal__scrim" data-modal="close"></div>
       <div class="modal__card" role="dialog" aria-modal="true" aria-labelledby="hero-form-title" tabindex="-1">
         <div class="modal__head">
@@ -140,14 +140,14 @@
         </label>
         <p class="hero-form__lead">From their sheet, unwounded and with no Boons or Conditions on.</p>
         <div class="hero-form__grid">
-          <label class="field"><span class="field__label">Health</span><input class="field__input" data-hero-field="hp" type="number" inputmode="numeric" min="1" max="999"></label>
-          <label class="field"><span class="field__label">Mana</span><input class="field__input" data-hero-field="mana" type="number" inputmode="numeric" min="0" max="999"></label>
-          <label class="field"><span class="field__label">Wounds</span><input class="field__input" data-hero-field="wounds" type="number" inputmode="numeric" min="0" max="20"></label>
-          <label class="field"><span class="field__label">Patches</span><input class="field__input" data-hero-field="patches" type="number" inputmode="numeric" min="0" max="20"></label>
-          <label class="field"><span class="field__label">Evasion</span><input class="field__input" data-hero-field="evasion" type="number" inputmode="numeric" min="-999" max="999"></label>
-          <label class="field"><span class="field__label">Armor</span><input class="field__input" data-hero-field="armor" type="number" inputmode="numeric" min="-999" max="999"></label>
-          <label class="field"><span class="field__label">Fortitude</span><input class="field__input" data-hero-field="fortitude" type="number" inputmode="numeric" min="-999" max="999"></label>
-          <label class="field"><span class="field__label">Speed</span><input class="field__input" data-hero-field="speed" type="number" inputmode="numeric" min="-999" max="999"></label>
+          <label class="field"><span class="field__label">Health</span><input class="field__input" data-hero-field="hp" type="text" inputmode="none" data-numpad="count" maxlength="3" autocomplete="off"></label>
+          <label class="field"><span class="field__label">Mana</span><input class="field__input" data-hero-field="mana" type="text" inputmode="none" data-numpad="count" maxlength="3" autocomplete="off"></label>
+          <label class="field"><span class="field__label">Wounds</span><input class="field__input" data-hero-field="wounds" type="text" inputmode="none" data-numpad="count" maxlength="2" autocomplete="off"></label>
+          <label class="field"><span class="field__label">Patches</span><input class="field__input" data-hero-field="patches" type="text" inputmode="none" data-numpad="count" maxlength="2" autocomplete="off"></label>
+          <label class="field"><span class="field__label">Evasion</span><input class="field__input" data-hero-field="evasion" type="text" inputmode="none" data-numpad="signed" maxlength="4" autocomplete="off"></label>
+          <label class="field"><span class="field__label">Armor</span><input class="field__input" data-hero-field="armor" type="text" inputmode="none" data-numpad="signed" maxlength="4" autocomplete="off"></label>
+          <label class="field"><span class="field__label">Fortitude</span><input class="field__input" data-hero-field="fortitude" type="text" inputmode="none" data-numpad="signed" maxlength="4" autocomplete="off"></label>
+          <label class="field"><span class="field__label">Speed</span><input class="field__input" data-hero-field="speed" type="text" inputmode="none" data-numpad="signed" maxlength="4" autocomplete="off"></label>
         </div>
         <p class="field__error status status--error" data-hero-error hidden>A hero needs a name.</p>
         <div class="form-actions">
@@ -234,7 +234,7 @@
          downs at 0. Attacks are rows the GM adds and removes; each damage
          expression is checked by the dice engine before it is kept, because a
          box that errors when pressed is worse than no box. -->
-    <div class="modal modal--enemy-form">
+    <div class="modal modal--enemy-form" data-numpad-host>
       <div class="modal__scrim" data-modal="close"></div>
       <div class="modal__card" role="dialog" aria-modal="true" aria-labelledby="enemy-form-title" tabindex="-1">
         <div class="modal__head">
@@ -252,17 +252,17 @@
           </label>
           <label class="field">
             <span class="field__label">Turns a round</span>
-            <input class="field__input" data-enemy-field="turns" type="number" inputmode="numeric" min="1" max="10">
+            <input class="field__input" data-enemy-field="turns" type="text" inputmode="none" data-numpad="count" maxlength="2" autocomplete="off">
           </label>
         </div>
         <div class="hero-form__grid">
-          <label class="field"><span class="field__label">Health</span><input class="field__input" data-enemy-field="hp" type="number" inputmode="numeric" min="1" max="999"></label>
-          <label class="field"><span class="field__label">Mana <span class="field__optional">optional</span></span><input class="field__input" data-enemy-field="mana" type="number" inputmode="numeric" min="0" max="999"></label>
-          <label class="field"><span class="field__label">Wounds <span class="field__optional">optional</span></span><input class="field__input" data-enemy-field="wounds" type="number" inputmode="numeric" min="0" max="20"></label>
-          <label class="field"><span class="field__label">Evasion</span><input class="field__input" data-enemy-field="evasion" type="number" inputmode="numeric" min="-999" max="999"></label>
-          <label class="field"><span class="field__label">Armor</span><input class="field__input" data-enemy-field="armor" type="number" inputmode="numeric" min="-999" max="999"></label>
-          <label class="field"><span class="field__label">Fortitude</span><input class="field__input" data-enemy-field="fortitude" type="number" inputmode="numeric" min="-999" max="999"></label>
-          <label class="field"><span class="field__label">Speed</span><input class="field__input" data-enemy-field="speed" type="number" inputmode="numeric" min="-999" max="999"></label>
+          <label class="field"><span class="field__label">Health</span><input class="field__input" data-enemy-field="hp" type="text" inputmode="none" data-numpad="count" maxlength="3" autocomplete="off"></label>
+          <label class="field"><span class="field__label">Mana <span class="field__optional">optional</span></span><input class="field__input" data-enemy-field="mana" type="text" inputmode="none" data-numpad="count" maxlength="3" autocomplete="off"></label>
+          <label class="field"><span class="field__label">Wounds <span class="field__optional">optional</span></span><input class="field__input" data-enemy-field="wounds" type="text" inputmode="none" data-numpad="count" maxlength="2" autocomplete="off"></label>
+          <label class="field"><span class="field__label">Evasion</span><input class="field__input" data-enemy-field="evasion" type="text" inputmode="none" data-numpad="signed" maxlength="4" autocomplete="off"></label>
+          <label class="field"><span class="field__label">Armor</span><input class="field__input" data-enemy-field="armor" type="text" inputmode="none" data-numpad="signed" maxlength="4" autocomplete="off"></label>
+          <label class="field"><span class="field__label">Fortitude</span><input class="field__input" data-enemy-field="fortitude" type="text" inputmode="none" data-numpad="signed" maxlength="4" autocomplete="off"></label>
+          <label class="field"><span class="field__label">Speed</span><input class="field__input" data-enemy-field="speed" type="text" inputmode="none" data-numpad="signed" maxlength="4" autocomplete="off"></label>
         </div>
 
         <!-- Attacks and abilities: rows emitted by renderEnemyAttackRows(),

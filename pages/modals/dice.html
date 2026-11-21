@@ -4,22 +4,84 @@
          the vital bars themselves switch on, so the colour of the button you
          press matches the bar it moves. openCalc() writes it, along with the
          two verbs: you Heal and take Damage to Health, but you Restore and
-         Spend Mana. -->
+         Spend Mana.
+
+         A BOTTOM SHEET with the app's own keypad, so a phone never raises
+         its keyboard over the bars (2026-11-20; it was a number field with
+         − / + either side). The same sheet for the player's Health and Mana
+         and for the Game Master's heroes and enemies — openSubjectCalc()
+         re-aims it, and adds Armor Piercing below. -->
     <div class="modal modal--calc">
       <div class="modal__scrim" data-modal="close"></div>
       <div class="modal__card" role="dialog" aria-modal="true" aria-labelledby="calc-title" tabindex="-1" data-resource="health">
+        <!-- The sheet's handle, as every sheet has. -->
+        <div class="action-sheet__grab calc-grab" aria-hidden="true"></div>
         <div class="modal__head">
           <div class="modal__title" id="calc-title" data-bind="calcTitle"></div>
           <div class="modal__meta"><span data-bind="calcCur"></span> / <span data-bind="calcMax"></span></div>
         </div>
         <div class="calc-row">
-          <button class="calc-step" data-calc-step="-1" aria-label="Decrease">−</button>
           <!-- Named by the card's title plus a hidden word, so a screen reader
-               says "Health, amount" rather than a bare "edit text". -->
+               says "Health, amount" rather than a bare "edit text".
+
+               type="text" because it holds expressions ("2d6+3"), and
+               inputmode="none" so a touch screen raises no keyboard for it —
+               the keypad below writes it. Still a real field: a desktop
+               keyboard types into it and Enter applies. The 0 is a
+               placeholder, so the first key replaces nothing. -->
           <span class="visually-hidden" id="calc-amount">amount</span>
-          <input class="calc-input" type="number" inputmode="numeric" data-calc-input value="0"
-                 aria-labelledby="calc-title calc-amount">
-          <button class="calc-step" data-calc-step="1" aria-label="Increase">+</button>
+          <input class="calc-input" type="text" inputmode="none" data-calc-input placeholder="0"
+                 aria-labelledby="calc-title calc-amount" autocomplete="off" spellcheck="false">
+        </div>
+        <!-- What the field adds up to: "= 10" under 6+4, a roll's faces and
+             total once Roll is pressed, a nudge to roll when there are dice
+             still unrolled, or why the expression cannot be read. Empty for
+             a plain number — "12 = 12" tells nobody anything. A live region,
+             so a roll's result is read out when it lands. -->
+        <div class="calc-out" data-calc-out role="status"></div>
+        <!-- THE KEYPAD — the dice roller's keys, cut down to what a heal or a
+             hit needs: digits, + and −, the six common dice, delete, Roll.
+             No ×, ÷, parentheses or dx: nothing in a heal or damage roll
+             calls for them, and every key left out is a bigger key left in.
+             Its own hooks (data-calc-key …) rather than the roller's
+             data-key, because the two keypads edit two different
+             expressions. -->
+        <div class="calc-pad">
+          <div class="keypad__dice">
+            <button class="key key--die" data-calc-key="d4">d4</button>
+            <button class="key key--die" data-calc-key="d6">d6</button>
+            <button class="key key--die" data-calc-key="d8">d8</button>
+            <button class="key key--die" data-calc-key="d10">d10</button>
+            <button class="key key--die" data-calc-key="d12">d12</button>
+            <button class="key key--die" data-calc-key="d20">d20</button>
+          </div>
+          <div class="keypad">
+            <div class="keypad__main">
+              <button class="key" data-calc-key="7">7</button>
+              <button class="key" data-calc-key="8">8</button>
+              <button class="key" data-calc-key="9">9</button>
+              <button class="key" data-calc-key="4">4</button>
+              <button class="key" data-calc-key="5">5</button>
+              <button class="key" data-calc-key="6">6</button>
+              <button class="key" data-calc-key="1">1</button>
+              <button class="key" data-calc-key="2">2</button>
+              <button class="key" data-calc-key="3">3</button>
+              <button class="key key--wide" data-calc-key="0">0</button>
+            </div>
+            <div class="keypad__side">
+              <button class="key key--back" data-calc-back aria-label="Backspace — hold, or Shift+Enter, to clear" aria-keyshortcuts="Shift+Enter">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true" focusable="false"><path d="M8 5h12a1.5 1.5 0 011.5 1.5v11A1.5 1.5 0 0120 19H8L2 12z" stroke-linejoin="round"/><path d="M11.5 9.5 16.5 14.5M16.5 9.5 11.5 14.5"/></svg>
+              </button>
+              <button class="key key--op" data-calc-key="+" aria-label="Plus">+</button>
+              <button class="key key--op" data-calc-key="−" aria-label="Minus">−</button>
+              <!-- Lit only while the field holds dice (aria-disabled
+                   otherwise): with no dice there is nothing to roll. -->
+              <button class="key key--roll" data-calc-roll aria-disabled="true">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 2.2 20.6 7.1v9.8L12 21.8 3.4 16.9V7.1z"/><path d="M12 5.4 17.6 15H6.4z"/><path d="M12 2.2V5.4M3.4 7.1 6.4 15M20.6 7.1 17.6 15M6.4 15 12 21.8 17.6 15"/></svg>
+                <span>Roll</span>
+              </button>
+            </div>
+          </div>
         </div>
         <!-- The same control as the roll card's, for the same rule: healing
              entered here is healing RECEIVED, so Poison reduces it. Shown on
@@ -47,6 +109,67 @@
         </div>
       </div>
     </div>
+
+    <!-- ================= NUMBER PAD (for forms) =================
+         The calculator's keypad, for a FORM's number fields — the Game
+         Master's hero and enemy editors — so tapping one raises this in
+         place of the phone's keyboard (whose number pad, on an iPhone, has
+         no minus key at all: −1 Evasion could not be typed).
+
+         A <template>, cloned by wireNumpads() into every modal marked
+         data-numpad-host, where it docks under the form card (dice.css
+         §11b). One copy of the markup however many forms use it.
+
+         Two modes, by the field it is typing into (its data-numpad):
+           count / signed   digits, delete, ± (lit for signed only), Next
+           dice             the dice row and + / − as well — an attack's
+                            Damage. No Roll: the expression is SAVED, not
+                            rolled; the stat card's box rolls it later.
+         The bar names the field being typed into, and Done puts the pad
+         away. Next walks the form's number fields in order. -->
+    <template data-numpad-template>
+      <div class="numpad" role="group" aria-label="Number pad">
+        <div class="numpad__bar">
+          <span class="numpad__for" data-numpad-for></span>
+          <button class="text-btn numpad__done" data-numpad-done>Done</button>
+        </div>
+        <div class="keypad__dice numpad__dice">
+          <button class="key key--die" data-numpad-key="d4">d4</button>
+          <button class="key key--die" data-numpad-key="d6">d6</button>
+          <button class="key key--die" data-numpad-key="d8">d8</button>
+          <button class="key key--die" data-numpad-key="d10">d10</button>
+          <button class="key key--die" data-numpad-key="d12">d12</button>
+          <button class="key key--die" data-numpad-key="d20">d20</button>
+        </div>
+        <div class="keypad">
+          <div class="keypad__main">
+            <button class="key" data-numpad-key="7">7</button>
+            <button class="key" data-numpad-key="8">8</button>
+            <button class="key" data-numpad-key="9">9</button>
+            <button class="key" data-numpad-key="4">4</button>
+            <button class="key" data-numpad-key="5">5</button>
+            <button class="key" data-numpad-key="6">6</button>
+            <button class="key" data-numpad-key="1">1</button>
+            <button class="key" data-numpad-key="2">2</button>
+            <button class="key" data-numpad-key="3">3</button>
+            <button class="key key--wide" data-numpad-key="0">0</button>
+          </div>
+          <div class="keypad__side">
+            <button class="key key--back" data-numpad-back aria-label="Backspace — hold, or Shift+Enter, to clear" aria-keyshortcuts="Shift+Enter">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true" focusable="false"><path d="M8 5h12a1.5 1.5 0 011.5 1.5v11A1.5 1.5 0 0120 19H8L2 12z" stroke-linejoin="round"/><path d="M11.5 9.5 16.5 14.5M16.5 9.5 11.5 14.5"/></svg>
+            </button>
+            <!-- Count and signed fields: flip the sign. Dimmed on a field
+                 that cannot go below 0 (Health, Wounds…). -->
+            <button class="key key--op numpad__sign" data-numpad-sign aria-label="Plus or minus">±</button>
+            <!-- Dice fields: the two operators a damage roll uses. -->
+            <button class="key key--op numpad__op" data-numpad-key="+" aria-label="Plus">+</button>
+            <button class="key key--op numpad__op" data-numpad-key="-" aria-label="Minus">−</button>
+            <!-- "Done" on the form's last number field (openNumpad). -->
+            <button class="key key--next" data-numpad-next>Next</button>
+          </div>
+        </div>
+      </div>
+    </template>
 
     <!-- ================= QUICK ROLL RESULT ================= -->
     <div class="modal modal--roll">

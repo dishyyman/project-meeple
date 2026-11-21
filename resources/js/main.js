@@ -2664,9 +2664,9 @@
       <button class="icon-act icon-act--delete enemy-attack__remove" data-enemy-attack-remove="${i}" aria-label="Remove ${esc(a.name || 'this attack')}">${ATTACK_TRASH_SVG}</button>
       <div class="enemy-attack__nums">
         <label class="field"><span class="field__label">To-Hit</span>
-          <input class="field__input" data-attack-field="toHit" type="number" inputmode="numeric" min="-99" max="99" value="${esc(String(a.toHit))}"></label>
+          <input class="field__input" data-attack-field="toHit" type="text" inputmode="none" data-numpad="signed" maxlength="3" autocomplete="off" value="${esc(String(a.toHit))}"></label>
         <label class="field"><span class="field__label">Damage <span class="field__optional">dice</span></span>
-          <input class="field__input" data-attack-field="damage" type="text" maxlength="40" value="${esc(a.damage)}" placeholder="2d8+3" autocomplete="off" spellcheck="false"></label>
+          <input class="field__input" data-attack-field="damage" type="text" inputmode="none" data-numpad="dice" maxlength="40" value="${esc(a.damage)}" placeholder="2d8+3" autocomplete="off" spellcheck="false"></label>
       </div>
       <label class="enemy-attack__pierce"><input type="checkbox" data-attack-field="piercing"${a.piercing ? ' checked' : ''}> Armor Piercing</label>
       <label class="field enemy-attack__wide"><span class="field__label">Note <span class="field__optional">optional</span></span>
@@ -4451,6 +4451,9 @@
   /* like. Under Reduce Motion the sheet does not travel with the finger   */
   /* (dice.css), but the gesture still closes it on release.              */
   /* ================================================================== */
+  /* What counts as a sheet: the action sheets, the dice roller, and the
+     heal / damage calculator (whose sheet is its .modal__card). */
+  const SHEET_SEL = '.action-sheet, .dice-sheet, .modal--calc .modal__card';
   const SHEET_ENGAGE = 10;        // px of downward travel before a touch is a drag, not a tap
   const SHEET_COMMIT = 0.35;      // share of the sheet's height that closes it on release
   const SHEET_FLICK = 0.5;        // px/ms: a flick closes it from anywhere past…
@@ -4506,7 +4509,7 @@
   // A finger (or the mouse) goes down on a sheet. Returns nothing; tracking
   // starts, and the next moves decide whether it is a drag.
   function grabSheet(target, x, y, t) {
-    const el = target.closest && target.closest('.action-sheet, .dice-sheet');
+    const el = target.closest && target.closest(SHEET_SEL);
     const modal = el && el.closest('.modal');
     const name = app.getAttribute('data-modal');
     if (!modal || !modal.classList.contains(`modal--${name}`)) return;
@@ -4586,7 +4589,7 @@
        to be non-passive (it stops the page scrolling under a drag), and a
        non-passive listener makes the browser wait on it before scrolling —
        a cost worth paying inside a sheet, and nowhere else. */
-    for (const el of $$('.action-sheet, .dice-sheet')) {
+    for (const el of $$(SHEET_SEL)) {
       el.addEventListener('touchstart', (e) => {
         if (e.touches.length !== 1) { releaseSheet(true); return; }
         const t = e.touches[0];
@@ -4623,7 +4626,7 @@
     // — the drag was not a choice. Swallowed in the capture phase, before the
     // app's own handler sees it, and only just after a drag let go.
     app.addEventListener('click', (e) => {
-      if (performance.now() - sheet.releasedAt < SHEET_CLICK_GUARD_MS && e.target.closest('.action-sheet, .dice-sheet')) {
+      if (performance.now() - sheet.releasedAt < SHEET_CLICK_GUARD_MS && e.target.closest(SHEET_SEL)) {
         e.stopPropagation();
         e.preventDefault();
       }
@@ -6688,7 +6691,7 @@
     setText('calcTitle', resource === 'mana' ? 'Mana' : 'Health');
     setText('calcCur', resource === 'mana' ? character.mana : character.health);
     setText('calcMax', resource === 'mana' ? manaMax() : healthMax());
-    calcInput().value = '0';
+    resetCalcPad();
     // Same reset as showRoll's, and the same reason: the choice belongs to the
     // healing in front of you, not to the last one.
     state.applyPoison = false;
@@ -6698,8 +6701,10 @@
     paintCalcPoison();
     paintCalcPierce();
     app.setAttribute('data-modal', 'calc');
+    // Focus in the field, so a desktop keyboard can type straight away. It
+    // raises nothing on a phone (inputmode="none"), and it starts empty, so
+    // there is nothing to select.
     calcInput().focus();
-    calcInput().select();
   }
 
   /* The calculator's copy of the Poison control. Health only — Mana is spent
@@ -6786,6 +6791,8 @@
 
   function closeModal() {
     cancelTumble();
+    // A form's number pad goes with the form (NUMBER PAD).
+    closeNumpad();
     state.editingId = null;
     // Dismissing the character-delete confirmation IS declining the delete —
     // leaving the id set would arm the next confirm press against a character
@@ -6991,10 +6998,6 @@
       else if (!e.shiftKey && (!inside || at === last)) { e.preventDefault(); first.focus(); }
     });
   }
-  function bumpCalc(delta) {
-    const el = calcInput();
-    el.value = String(Math.max(0, (parseInt(el.value, 10) || 0) + delta));
-  }
 
   /* ------------------------------------------------------------------ */
   /* DICE ROLLER                                                        */
@@ -7162,9 +7165,12 @@
        { kind: 'die',  at, sides } — a complete die term; `at` indexes its 'd'
        { kind: 'open', at }        — a 'd' still waiting for its sides
        { kind: 'number' }          — a plain number
-       { kind: 'other' }           — empty, or an operator or paren */
-  function diceTail() {
-    const t = dice.tokens;
+       { kind: 'other' }           — empty, or an operator or paren
+
+     Takes the token array to read, because two keypads build expressions
+     this way — the roller's and the Health calculator's — and they must
+     agree on what every key does. */
+  function diceTail(t) {
     let i = t.length - 1;
     let digits = '';
     while (i >= 0 && DIGIT.test(t[i])) digits = t[i--] + digits;
@@ -7185,8 +7191,7 @@
      d → 2d → 3d. The count is however many digit tokens sit in front of the
      'd', which may be several — the keypad pushes digits one at a time, so
      "12d6" is ['1','2','d6']. */
-  function bumpDieCount(at) {
-    const t = dice.tokens;
+  function bumpDieCount(t, at) {
     let start = at;
     while (start > 0 && DIGIT.test(t[start - 1])) start--;
     // No digits in front of the 'd' is the bare form, which the grammar reads
@@ -7212,29 +7217,29 @@
      equally have typed by hand. The engine learns nothing about any of this;
      it still receives an ordinary expression.
 
-     Returns true when the press has been handled, false to let diceInsert()
-     append it plainly. */
-  function insertDieKey(tok) {
+     Returns true when the press has been handled, false to let the caller
+     append it plainly. `t` is the token array being edited — see diceTail. */
+  function insertDieKey(t, tok) {
     if (!DIE_KEY.test(tok)) return false;
-    const tail = diceTail();
+    const tail = diceTail(t);
 
     if (tail.kind === 'die') {
       // The same die again: one more of it.
-      if ('d' + tail.sides === tok) bumpDieCount(tail.at);
+      if ('d' + tail.sides === tok) bumpDieCount(t, tail.at);
       // A different die: a new term, carrying the + the player never pressed.
       // "d6 then d4" is 1d6 + 1d4 — nobody taps two die keys meaning to
       // multiply them, and a tap cannot express any other operator.
-      else dice.tokens.push('+', tok);
+      else t.push('+', tok);
       return true;
     }
 
     if (tail.kind === 'open') {
       // Five taps of dx read as "5d": the count is set, the sides are not.
       // Another tap means one more die, exactly as for the standard keys...
-      if (tok === 'd') bumpDieCount(tail.at);
+      if (tok === 'd') bumpDieCount(t, tail.at);
       // ...and a standard key fills the sides in — "5d" then d6 is 5d6. The
       // alternative is a second 'd' that could never parse.
-      else dice.tokens[tail.at] = tok;
+      else t[tail.at] = tok;
       return true;
     }
 
@@ -7246,7 +7251,7 @@
   function diceInsert(tok) {
     cancelTumble();   // editing the expression abandons the roll in progress
     if (dice.justRolled) { dice.tokens = []; dice.justRolled = false; }
-    if (!insertDieKey(tok)) dice.tokens.push(tok);
+    if (!insertDieKey(dice.tokens, tok)) dice.tokens.push(tok);
     renderDice();
   }
 
@@ -7274,20 +7279,23 @@
     renderDice();
   }
 
-  function diceHoldStart() {
-    diceHoldCancel();
+  /* `pad` is whose delete key is held — the roller's `dice`, or the Health
+     calculator's `calcPad` — and `clear` empties it. Two keypads, one
+     gesture, so one implementation. */
+  function diceHoldStart(pad, clear) {
+    diceHoldCancel(pad);
     // Reset here, not on release: a hold that ends off the key never produces
     // a click to consume the flag, and a stale one would eat the next tap.
-    dice.heldClear = false;
-    dice.holdTimer = setTimeout(() => {
-      dice.holdTimer = null;
-      dice.heldClear = true;
-      diceClear();
+    pad.heldClear = false;
+    pad.holdTimer = setTimeout(() => {
+      pad.holdTimer = null;
+      pad.heldClear = true;
+      clear();
     }, DICE_HOLD_MS);
   }
 
-  function diceHoldCancel() {
-    if (dice.holdTimer) { clearTimeout(dice.holdTimer); dice.holdTimer = null; }
+  function diceHoldCancel(pad) {
+    if (pad.holdTimer) { clearTimeout(pad.holdTimer); pad.holdTimer = null; }
   }
 
   function diceRoll() {
@@ -7356,6 +7364,402 @@
       resEl.classList.remove('is-error', 'is-tumbling', 'is-settled');
       brkEl.innerHTML = '';
     }
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* THE CALCULATOR'S KEYPAD — Health and Mana, without the phone's keyboard */
+  /* ------------------------------------------------------------------ */
+  /* The heal / damage calculator used to be a bare number field, so every
+     tap on the Health bar raised the phone's own keyboard over the very bar
+     being changed, and a heal that called for dice meant rolling elsewhere
+     and copying the number across. It carries the dice roller's keys
+     instead, and builds an expression the same way — for the player's
+     Health and Mana and the Game Master's heroes and enemies alike.
+
+     THE FLOW, decided with the designer (2026-11-20):
+       · a number, or a sum of numbers — "12", "6+4" — applies directly:
+         Heal or Damage takes what the field comes to, shown as "= 10";
+       · anything with dice — "2d6+3" — must be ROLLED first. Heal and Damage
+         stay dimmed until Roll has landed, so a number never reaches a bar
+         before the player has seen it. Editing the expression after a roll
+         drops that roll; pressing Roll again rerolls it in the open.
+
+     One expression engine: the keys go through insertDieKey() exactly as the
+     roller's do (d6 then d6 is 2d6, d6 then d4 is d6+d4), and every total
+     comes from evaluateDice(). The amount then goes to heal() / damage()
+     unchanged, which clamp it as they always have — a sum that comes out
+     negative heals or hurts by nothing.
+
+     The field is still a real <input>. A desktop keyboard types into it
+     (read back by calcTyped), and inputmode="none" is what keeps a touch
+     screen's keyboard down. */
+  const calcPad = {
+    tokens: [],       // as dice.tokens: ['2','d6','+','3']
+    rolled: null,     // the settled roll's view ({ total, rolls }), once Roll has landed
+    holdTimer: null,  // the delete key's hold-to-clear, as the roller's
+    heldClear: false,
+  };
+
+  const calcHasDice = () => calcPad.tokens.some((t) => DIE_KEY.test(t));
+
+  // A fresh, empty field for each opening — the 0 is the placeholder
+  // showing through (pages/modals/dice.html).
+  function resetCalcPad() {
+    calcInput().value = '';
+    calcPad.tokens = [];
+    calcPad.rolled = null;
+    renderCalcPad();
+  }
+
+  // Every edit drops a roll that has landed (or is still tumbling): the dice
+  // on screen no longer belong to the expression in the field.
+  function calcEdited() {
+    cancelTumble();
+    calcPad.rolled = null;
+    calcInput().value = calcPad.tokens.join('');
+    renderCalcPad();
+  }
+  function calcKey(tok) {
+    if (!insertDieKey(calcPad.tokens, tok)) calcPad.tokens.push(tok);
+    calcEdited();
+  }
+  function calcBack()  { calcPad.tokens.pop(); calcEdited(); }
+  function calcClear() { calcPad.tokens = []; calcEdited(); }
+
+  /* Typed rather than tapped: the field is split back into the keypad's
+     tokens, so delete still removes a whole "d20" and a die key still adds
+     to the die before it. Only what the keypad itself can enter is kept —
+     digits, dice, + and − (the ASCII - becomes the keypad's −) — so a typed
+     expression is always one the readout can write out (calcBreakdown).
+     The field is only rewritten when that changed something, so the caret
+     stays put while the player types. */
+  function calcTyped(el) {
+    const src = el.value.toLowerCase().replace(/-/g, '−');
+    calcPad.tokens = src.match(/d\d*|\d|[+−]/g) || [];
+    const clean = calcPad.tokens.join('');
+    if (clean !== el.value) el.value = clean;
+    cancelTumble();
+    calcPad.rolled = null;
+    renderCalcPad();
+  }
+
+  /* What the field comes to — the one place Heal, Damage and the readout
+     ask. Exactly one of:
+       { amount }     a number to apply (0 for an empty field, as before)
+       { needsRoll }  dice in it that have not been rolled
+       { error }      the expression cannot be read ("incomplete roll") */
+  function calcPadAmount() {
+    if (calcPad.rolled) return { amount: calcPad.rolled.total };
+    if (!calcPad.tokens.length) return { amount: 0 };
+    if (calcHasDice()) return { needsRoll: true };
+    try { return { amount: evaluateDice(calcPad.tokens).total }; }
+    catch (err) { return { error: err.message }; }
+  }
+
+  // Roll the dice in the field. Decided at once, animated after — the same
+  // tumble as the roller, so it is the same roll in a different place. The
+  // roll only counts (calcPad.rolled) once it has settled: until then Heal
+  // and Damage stay dimmed, so a number cannot be applied mid-tumble.
+  function calcRoll() {
+    if (!calcHasDice()) return;
+    let real;
+    try {
+      real = evaluateDice(calcPad.tokens);
+    } catch (err) {
+      cancelTumble();
+      calcPad.rolled = null;
+      renderCalcPad({ error: err.message });
+      return;
+    }
+    calcPad.rolled = null;
+    animateRoll(calcPad.tokens.slice(), real, (view, settled) => {
+      if (settled) calcPad.rolled = view;
+      renderCalcPad({ result: view, settled });
+    });
+  }
+
+  /* The readout under the field, and which keys are live. `paint` is a roll
+     mid-flight ({ result, settled }) or a failure to show ({ error }); with
+     neither, it is drawn from calcPad alone. */
+  function renderCalcPad(paint) {
+    const out = $('[data-calc-out]');
+    if (!out) return;
+    const roll = $('[data-calc-roll]');
+    if (roll) roll.setAttribute('aria-disabled', String(!calcHasDice()));
+    const value = calcPadAmount();
+    // Dimmed only while there are dice to roll. An unreadable expression
+    // leaves them pressable: the press is what says what is wrong with it,
+    // the way Roll does on the roller — rather than an error under every
+    // half-typed "6+".
+    const waiting = !!value.needsRoll;
+    for (const b of $$('.modal--calc [data-calc-apply]')) b.setAttribute('aria-disabled', String(waiting));
+
+    const total = (n, cls = '') => `<span class="calc-out__total${cls}">${esc(String(n))}</span>`;
+    const view = (paint && paint.result) || calcPad.rolled;
+    if (paint && paint.error) {
+      out.innerHTML = `<span class="status status--error">${esc(paint.error)}</span>`;
+    } else if (view) {
+      const settled = !paint || !paint.result || paint.settled;
+      out.innerHTML = `${calcBreakdown(view)} = ${total(view.total, settled ? '' : ' is-tumbling')}`;
+      if (paint && paint.settled) flashSettle(out.querySelector('.calc-out__total'));
+    } else if (value.needsRoll) {
+      out.innerHTML = '<span class="calc-out__hint">Roll to get the total</span>';
+    } else if ('amount' in value && calcPad.tokens.some((t) => !DIGIT.test(t))) {
+      // A sum: say what it comes to. A plain number is its own answer.
+      out.innerHTML = `= ${total(value.amount)}`;
+    } else {
+      out.innerHTML = '';
+    }
+  }
+
+  /* The roll, written out term by term in the expression's own order:
+     "2d6 (6 + 6) + 3", "10 − 1d4 (3)". The roller's breakdownHtml() lists
+     only the dice, because the roller prints the expression right above
+     them; here a line that dropped the +3 would read as the app getting the
+     sum wrong. Walking the terms (rather than tacking on "total minus the
+     faces") keeps it true when a die is subtracted.
+
+     Safe because the field only ever holds digits, dice, + and − (calcTyped
+     and the keys see to that): every term is a number or one die group, and
+     the groups arrive in view.rolls in the order they were written. */
+  function calcBreakdown(view) {
+    let g = 0;
+    return calcPad.tokens.join('').split(/([+−])/).map((part) => {
+      if (part === '+' || part === '−') return ` ${part} `;
+      if (part.includes('d') && view.rolls[g]) return breakdownHtml([view.rolls[g++]]);
+      return esc(part);
+    }).join('');
+  }
+
+  /* Heal (or Restore) and Damage (or Spend): the calculator's two buttons,
+     and Enter. The amount is what the field comes to (calcPadAmount). */
+  function applyCalc(isHeal) {
+    const value = calcPadAmount();
+    // The button is dimmed and the readout says to roll; nothing to do.
+    if (value.needsRoll) return;
+    if (value.error) { renderCalcPad({ error: value.error }); return; }
+    const raw = value.amount;
+    if (state.calcTarget) { applyHeroCalc(isHeal, raw); return; }
+    /* Poison reduces healing RECEIVED, so it is applied here rather than
+       inside heal() — heal() is the primitive that moves a bar, and Mana
+       restore goes through the very same call. Only a health heal with the
+       toggle on is adjusted; Damage is never touched by it. */
+    const amt = (isHeal && state.applyPoison && state.calcResource !== 'mana')
+      ? healReceived(clampInt(raw))
+      : raw;
+    const downed = isHeal ? (heal(state.calcResource, amt), false)
+                          : damage(state.calcResource, amt);
+    // closeCalc() first: it sets data-modal back to "closed", so opening
+    // the notice before it would have the calculator's own dismissal
+    // immediately close the notice again.
+    closeCalc(); renderEffects(); renderVitals(); renderDerived(); save();
+    if (downed) openDowned(); else announceBoonLoss();
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* NUMBER PAD — a form's number fields, without the phone's keyboard  */
+  /* ------------------------------------------------------------------ */
+  /* The Game Master's hero and enemy editors are columns of numbers, and
+     each tap on one raised the phone's keyboard — on an iPhone a number pad
+     with no minus key, so −1 Evasion could not be entered at all. Every
+     such field is now inputmode="none" with a data-numpad kind, and
+     focusing one docks this pad under the form (pages/modals/dice.html
+     "NUMBER PAD", dice.css §11b):
+
+       count    0 and up (Health, Wounds, Turns…) — digits and delete;
+       signed   may go below 0 (Evasion, Armor, To-Hit…) — ± as well;
+       dice     an attack's Damage — the dice row and + / −, built with
+                insertDieKey() exactly as the calculator and roller build
+                theirs. Saved as written; the stat card's box rolls it.
+
+     THE FIELD KEEPS FOCUS. A press on the pad is not allowed to take it
+     (pointerdown is cancelled on the pad), so the caret stays where the
+     player is typing, a desktop keyboard carries on in the same field, and
+     the field's own focus ring is what marks it. Keyboard users can still Tab
+     onto the keys; the pad stays up while focus is on it.
+
+     TAP A FIELD TO RETYPE IT. Opening on a field selects its contents, and
+     the first key then replaces them — so "10" becomes "25" by pressing
+     2, 5, not ⌫ ⌫ 2 5: what a selected field does with a keyboard too. It
+     is kept as a flag (numpad.fresh) rather than read off the selection,
+     because Safari drops an input's selection when a key is pressed
+     elsewhere. Every key then writes at the END.
+
+     The values the pad writes are plain ASCII ("-2", "2d8-1"): the forms
+     read them back with Number() and validateDice(), and a file or a
+     spreadsheet would write them the same way. */
+  const numpad = {
+    field: null,      // the input being typed into, while the pad is up
+    fresh: false,     // its value was just selected: the next key replaces it
+    writing: false,   // the pad's own write is in flight (its input event is not typing)
+    holdTimer: null,  // the delete key's hold-to-clear, as the keypads'
+    heldClear: false,
+  };
+
+  // One copy of the markup, cloned beside the card in every form that
+  // asks for it (data-numpad-host). Run once, at start-up.
+  function wireNumpads() {
+    const tpl = $('[data-numpad-template]');
+    if (!tpl) return;
+    for (const host of $$('[data-numpad-host]')) host.appendChild(tpl.content.cloneNode(true));
+  }
+
+  const numpadHost = (el) => el && el.closest('[data-numpad-host]');
+
+  // The form's number fields after this one, in reading order — the ones
+  // on screen, so a hidden row is never jumped into.
+  function nextNumpadField(el) {
+    const all = [...numpadHost(el).querySelectorAll('[data-numpad]')].filter((f) => f.getClientRects().length);
+    return all[all.indexOf(el) + 1] || null;
+  }
+
+  /* What the bar calls the field: its label's own words ("Mana", without
+     the "optional" beside it), and for an attack's numbers the attack's
+     name too — there may be four To-Hit fields in the form. */
+  function numpadLabel(el) {
+    const words = el.closest('label')?.querySelector('.field__label')?.firstChild?.textContent.trim() || '';
+    const row = el.closest('[data-attack-row]');
+    const attack = row?.querySelector('[data-attack-field="name"]')?.value.trim();
+    return attack ? `${attack} · ${words}` : words;
+  }
+
+  function openNumpad(el) {
+    const host = numpadHost(el);
+    const pad = host && host.querySelector('.numpad');
+    if (!pad) return;
+    numpad.field = el;
+    host.setAttribute('data-numpad-open', el.dataset.numpad);
+    pad.querySelector('[data-numpad-for]').textContent = numpadLabel(el);
+    // ± stays in place on a field that cannot go negative, dimmed: the pad
+    // keeps its shape as Next walks from Health to Evasion.
+    pad.querySelector('[data-numpad-sign]').setAttribute('aria-disabled', String(el.dataset.numpad !== 'signed'));
+    pad.querySelector('[data-numpad-next]').textContent = nextNumpadField(el) ? 'Next' : 'Done';
+    // The highlight says "the next key retypes this"; the flag is what makes
+    // it so (see TAP A FIELD TO RETYPE IT).
+    el.select();
+    numpad.fresh = !!el.value;
+    // After the card has given up its height to the pad: keep the field in
+    // sight above it.
+    requestAnimationFrame(() => el.scrollIntoView({ block: 'nearest' }));
+  }
+
+  function closeNumpad() {
+    numpad.field = null;
+    numpad.fresh = false;
+    for (const host of $$('[data-numpad-open]')) host.removeAttribute('data-numpad-open');
+  }
+
+  // Done (the bar's, or Next on the last field): the pad goes, and focus
+  // goes to the form itself, so tapping the same field again reopens it.
+  function doneNumpad() {
+    const host = numpadHost(numpad.field);
+    closeNumpad();
+    host?.querySelector('[role="dialog"]')?.focus({ preventScroll: true });
+  }
+
+  // The field the pad is typing into, if it is still there — removing an
+  // attack row takes its fields with it.
+  function numpadTarget() {
+    if (numpad.field && numpad.field.isConnected) return numpad.field;
+    closeNumpad();
+    return null;
+  }
+
+  // Was the value just selected? Then this key replaces it — once.
+  function numpadFresh() {
+    const was = numpad.fresh;
+    numpad.fresh = false;
+    return was;
+  }
+
+  // A dice field's text, as keypad tokens. Operators the pad has no key
+  // for are kept, so editing a hand-typed "d6*2" does not mangle it.
+  const numpadDiceTokens = (str) => str.toLowerCase().replace(/−/g, '-').match(/d\d*|\d|[+\-×÷*/()]/g) || [];
+
+  // Write, put the caret at the end, and tell anything listening — the same
+  // event a keystroke would send.
+  function setNumpadValue(el, v) {
+    el.value = v;
+    el.setSelectionRange(v.length, v.length);
+    numpad.writing = true;
+    try { el.dispatchEvent(new Event('input', { bubbles: true })); }
+    finally { numpad.writing = false; }
+  }
+
+  function numpadKey(tok) {
+    const el = numpadTarget();
+    if (!el) return;
+    const fresh = numpadFresh();
+    if (el.dataset.numpad === 'dice') {
+      const tokens = fresh ? [] : numpadDiceTokens(el.value);
+      if (!insertDieKey(tokens, tok)) tokens.push(tok);
+      const v = tokens.join('');
+      if (el.maxLength < 0 || v.length <= el.maxLength) setNumpadValue(el, v);
+      return;
+    }
+    if (!DIGIT.test(tok)) return;
+    let v = fresh ? '' : el.value;
+    // A lone 0 is replaced rather than followed: 0 then 5 is 5, not 05.
+    if (/^-?0$/.test(v)) v = v.slice(0, -1);
+    // Held to the field's maxlength — 999 for a count, −999 for a stat. The
+    // form clamps to its rules on save; this only stops a fifth digit.
+    if (el.maxLength > 0 && (v + tok).length > el.maxLength) return;
+    setNumpadValue(el, v + tok);
+  }
+
+  // ± flips the sign of what is there — it never replaces it, so a
+  // selected "3" becomes "-3". On an empty field it starts a negative.
+  function numpadSign() {
+    const el = numpadTarget();
+    if (!el || el.dataset.numpad !== 'signed') return;
+    numpad.fresh = false;
+    const v = el.value.startsWith('-') ? el.value.slice(1) : `-${el.value}`;
+    if (el.maxLength > 0 && v.length > el.maxLength) return;
+    setNumpadValue(el, v);
+  }
+
+  function numpadBack() {
+    const el = numpadTarget();
+    if (!el) return;
+    if (numpadFresh()) { setNumpadValue(el, ''); return; }
+    if (el.dataset.numpad === 'dice') {
+      // A whole "d20" at a time, as the keypads delete.
+      const tokens = numpadDiceTokens(el.value);
+      tokens.pop();
+      setNumpadValue(el, tokens.join(''));
+    } else {
+      setNumpadValue(el, el.value.slice(0, -1));
+    }
+  }
+
+  function numpadClear() {
+    const el = numpadTarget();
+    numpad.fresh = false;
+    if (el) setNumpadValue(el, '');
+  }
+
+  function numpadNext() {
+    const el = numpadTarget();
+    if (!el) return;
+    const next = nextNumpadField(el);
+    if (!next) { doneNumpad(); return; }
+    next.focus({ preventScroll: true });
+    openNumpad(next);
+  }
+
+  /* Typed on a desktop keyboard into a count or signed field: anything that
+     is not a digit goes as it is typed, and a minus only at the front of a
+     field that may hold one (the keyboard's "−" read as "-"). A dice field
+     is left as typed — the editor checks it with validateDice() on save and
+     says what is wrong under the row. */
+  function numpadTyped(el) {
+    // A key typed by hand replaced the selection itself; the flag is spent.
+    if (el === numpad.field && !numpad.writing) numpad.fresh = false;
+    if (el.dataset.numpad === 'dice') return;
+    const raw = el.value.replace(/−/g, '-');
+    const neg = el.dataset.numpad === 'signed' && raw.trimStart().startsWith('-');
+    const v = (neg ? '-' : '') + raw.replace(/\D/g, '');
+    if (v !== el.value) el.value = v;
   }
 
   /* ------------------------------------------------------------------ */
@@ -10544,7 +10948,7 @@
       // processed below never has its own element pulled out from under it.
       if (state.openStat && !e.target.closest('.stat-card')) showStatPop(null);
 
-      const t = e.target.closest('[data-nav],[data-tab],[data-edit-tab],[data-edit-attr],[data-skill-rank],[data-toggle],[data-step],[data-calc],[data-menu],[data-wound],[data-wound-reset],[data-calc-step],[data-calc-apply],[data-action],[data-key],[data-dice-back],[data-dice-roll],[data-roll],[data-roll-again],[data-inv-add],[data-inv-open],[data-item-save],[data-bp-step],[data-bp-edit],[data-bp-delete],[data-mod-add],[data-mod-remove],[data-stat-toggle],[data-effect-open],[data-effect-add],[data-effect-step],[data-effect-tick],[data-effects-clear],[data-tick-confirm],[data-skill-edit],[data-skill-draft],[data-skill-filter],[data-skill-save],[data-detail],[data-gear-add],[data-armor-add],[data-detail-remove],[data-pick],[data-tag],[data-note-add],[data-note-save],[data-note-cancel],[data-note-edit],[data-note-delete],[data-portrait-pick],[data-portrait-remove],[data-portrait-menu],[data-rest],[data-patch],[data-patch-confirm],[data-poison-toggle],[data-adv],[data-rules-toggle],[data-id-save],[data-portrait-crop],[data-crop-save],[data-crop-reset],[data-open-character],[data-wiz],[data-wiz-step],[data-wiz-expand],[data-wiz-pick],[data-wiz-attr],[data-wiz-skill],[data-wiz-sec],[data-wiz-slot],[data-wiz-clear],[data-wiz-pick-group],[data-equip-drop],[data-roster-edit],[data-char-del],[data-char-del-confirm],[data-char-export],[data-import-open],[data-share-format],[data-share-send],[data-backup-export],[data-compendium-export],[data-compendium-reset],[data-file-open],[data-file-apply],[data-ap-mode],[data-ap-theme],[data-feedback-email],[data-copy-email],[data-toast-dismiss],[data-toast-action],[data-campaigns-edit],[data-campaign-new],[data-open-campaign],[data-campaign-del],[data-campaign-del-open],[data-campaign-tab],[data-campaign-menu],[data-campaign-rename],[data-campaign-save],[data-pierce-toggle],[data-hero-add],[data-hero-import],[data-hero-menu],[data-hero-calc],[data-hero-wound],[data-hero-effect-open],[data-hero-effect-step],[data-hero-edit],[data-hero-update],[data-hero-notes-open],[data-hero-notes-save],[data-hero-remove],[data-hero-save],[data-enemy-new],[data-enemy-add],[data-monster-add],[data-monster-remove],[data-monsters-import],[data-enemies-export],[data-enemy-menu],[data-enemy-edit],[data-enemy-dup],[data-enemy-export],[data-enemy-remove],[data-enemy-save],[data-enemy-attack-add],[data-enemy-attack-remove],[data-combat-start-open],[data-combat-start],[data-start-step],[data-start-share],[data-combat-end-open],[data-combat-end],[data-combat-pick],[data-combat-end-turn],[data-combat-next-round],[data-member-edit],[data-member-act],[data-member-calc],[data-member-wound],[data-member-effect-open],[data-member-effect-step]');
+      const t = e.target.closest('[data-nav],[data-tab],[data-edit-tab],[data-edit-attr],[data-skill-rank],[data-toggle],[data-step],[data-calc],[data-menu],[data-wound],[data-wound-reset],[data-calc-key],[data-calc-back],[data-calc-roll],[data-numpad-key],[data-numpad-back],[data-numpad-sign],[data-numpad-next],[data-numpad-done],[data-calc-apply],[data-action],[data-key],[data-dice-back],[data-dice-roll],[data-roll],[data-roll-again],[data-inv-add],[data-inv-open],[data-item-save],[data-bp-step],[data-bp-edit],[data-bp-delete],[data-mod-add],[data-mod-remove],[data-stat-toggle],[data-effect-open],[data-effect-add],[data-effect-step],[data-effect-tick],[data-effects-clear],[data-tick-confirm],[data-skill-edit],[data-skill-draft],[data-skill-filter],[data-skill-save],[data-detail],[data-gear-add],[data-armor-add],[data-detail-remove],[data-pick],[data-tag],[data-note-add],[data-note-save],[data-note-cancel],[data-note-edit],[data-note-delete],[data-portrait-pick],[data-portrait-remove],[data-portrait-menu],[data-rest],[data-patch],[data-patch-confirm],[data-poison-toggle],[data-adv],[data-rules-toggle],[data-id-save],[data-portrait-crop],[data-crop-save],[data-crop-reset],[data-open-character],[data-wiz],[data-wiz-step],[data-wiz-expand],[data-wiz-pick],[data-wiz-attr],[data-wiz-skill],[data-wiz-sec],[data-wiz-slot],[data-wiz-clear],[data-wiz-pick-group],[data-equip-drop],[data-roster-edit],[data-char-del],[data-char-del-confirm],[data-char-export],[data-import-open],[data-share-format],[data-share-send],[data-backup-export],[data-compendium-export],[data-compendium-reset],[data-file-open],[data-file-apply],[data-ap-mode],[data-ap-theme],[data-feedback-email],[data-copy-email],[data-toast-dismiss],[data-toast-action],[data-campaigns-edit],[data-campaign-new],[data-open-campaign],[data-campaign-del],[data-campaign-del-open],[data-campaign-tab],[data-campaign-menu],[data-campaign-rename],[data-campaign-save],[data-pierce-toggle],[data-hero-add],[data-hero-import],[data-hero-menu],[data-hero-calc],[data-hero-wound],[data-hero-effect-open],[data-hero-effect-step],[data-hero-edit],[data-hero-update],[data-hero-notes-open],[data-hero-notes-save],[data-hero-remove],[data-hero-save],[data-enemy-new],[data-enemy-add],[data-monster-add],[data-monster-remove],[data-monsters-import],[data-enemies-export],[data-enemy-menu],[data-enemy-edit],[data-enemy-dup],[data-enemy-export],[data-enemy-remove],[data-enemy-save],[data-enemy-attack-add],[data-enemy-attack-remove],[data-combat-start-open],[data-combat-start],[data-start-step],[data-start-share],[data-combat-end-open],[data-combat-end],[data-combat-pick],[data-combat-end-turn],[data-combat-next-round],[data-member-edit],[data-member-act],[data-member-calc],[data-member-wound],[data-member-effect-open],[data-member-effect-step]');
       if (!t) return;
       /* The app root is STATE, never a control. It carries data-view, data-tab,
          data-edit-tab, data-campaign-tab, data-menu and data-modal so the stylesheet can switch on
@@ -10668,7 +11072,7 @@
       // --- dice roller keypad ---
       if (t.dataset.key !== undefined)      { diceInsert(t.dataset.key); return; }
       if (t.hasAttribute('data-dice-back')) {
-        diceHoldCancel();
+        diceHoldCancel(dice);
         // The hold already cleared the expression; this click is only the
         // finger coming off the key, and must not delete a token as well.
         if (dice.heldClear) { dice.heldClear = false; return; }
@@ -10995,27 +11399,28 @@
         return;
       }
 
-      if (t.dataset.calcStep) { bumpCalc(parseInt(t.dataset.calcStep, 10)); return; }
-      if (t.dataset.calcApply) {
-        if (state.calcTarget) { applyHeroCalc(t.dataset.calcApply === 'heal', calcInput().value); return; }
-        const raw = calcInput().value;
-        const isHeal = t.dataset.calcApply === 'heal';
-        /* Poison reduces healing RECEIVED, so it is applied here rather than
-           inside heal() — heal() is the primitive that moves a bar, and Mana
-           restore goes through the very same call. Only a health heal with the
-           toggle on is adjusted; Damage is never touched by it. */
-        const amt = (isHeal && state.applyPoison && state.calcResource !== 'mana')
-          ? healReceived(clampInt(raw))
-          : raw;
-        const downed = isHeal ? (heal(state.calcResource, amt), false)
-                              : damage(state.calcResource, amt);
-        // closeCalc() first: it sets data-modal back to "closed", so opening
-        // the notice before it would have the calculator's own dismissal
-        // immediately close the notice again.
-        closeCalc(); renderEffects(); renderVitals(); renderDerived(); save();
-        if (downed) openDowned(); else announceBoonLoss();
+      // The calculator's keypad.
+      if (t.dataset.calcKey !== undefined) { calcKey(t.dataset.calcKey); return; }
+      if (t.hasAttribute('data-calc-back')) {
+        // Same guard as the roller's delete key: a hold already cleared it.
+        diceHoldCancel(calcPad);
+        if (calcPad.heldClear) { calcPad.heldClear = false; return; }
+        calcBack();
         return;
       }
+      if (t.hasAttribute('data-calc-roll')) { calcRoll(); return; }
+      // A form's number pad (NUMBER PAD).
+      if (t.dataset.numpadKey !== undefined) { numpadKey(t.dataset.numpadKey); return; }
+      if (t.hasAttribute('data-numpad-back')) {
+        diceHoldCancel(numpad);
+        if (numpad.heldClear) { numpad.heldClear = false; return; }
+        numpadBack();
+        return;
+      }
+      if (t.hasAttribute('data-numpad-sign')) { numpadSign(); return; }
+      if (t.hasAttribute('data-numpad-next')) { numpadNext(); return; }
+      if (t.hasAttribute('data-numpad-done')) { doneNumpad(); return; }
+      if (t.dataset.calcApply) { applyCalc(t.dataset.calcApply === 'heal'); return; }
       if (t.dataset.modal === 'close') { closeCalc(); return; }
 
       // --- open the dice roller from the hero FAB ---
@@ -11059,12 +11464,16 @@
        Pointer events rather than mousedown/touchstart, matching the roster
        drag below: one code path for a finger, a mouse and a stylus alike. */
     app.addEventListener('pointerdown', (e) => {
-      if (e.target.closest('[data-dice-back]')) diceHoldStart();
+      if (e.target.closest('[data-dice-back]')) diceHoldStart(dice, diceClear);
+      // The Health calculator's delete key: the same gesture, its own pad.
+      if (e.target.closest('[data-calc-back]')) diceHoldStart(calcPad, calcClear);
+      if (e.target.closest('[data-numpad-back]')) diceHoldStart(numpad, numpadClear);
     });
     // On the DOCUMENT, so a hold that wanders off the key still ends. Only the
     // timer running out clears; every way of letting go cancels.
-    document.addEventListener('pointerup', diceHoldCancel);
-    document.addEventListener('pointercancel', diceHoldCancel);
+    const holdsCancel = () => { diceHoldCancel(dice); diceHoldCancel(calcPad); diceHoldCancel(numpad); };
+    document.addEventListener('pointerup', holdsCancel);
+    document.addEventListener('pointercancel', holdsCancel);
 
     /* ---- hold a Patch box to spend one properly ----------------------
        The same shape as the roller's delete key directly above, and for the
@@ -11146,6 +11555,8 @@
         const hold = el.matches('[data-roll="tohit"]') ? () => openAdv(el, { focus: true })
                    : el.matches('[data-patch]')        ? () => openPatch()
                    : el.matches('[data-dice-back]')    ? () => diceClear()
+                   : el.matches('[data-calc-back]')    ? () => calcClear()
+                   : el.matches('[data-numpad-back]')  ? () => numpadClear()
                    : null;
         if (hold) {
           e.preventDefault();          // or a native button also takes it as a plain press
@@ -11532,12 +11943,54 @@
     const ci = calcInput();
     if (ci) ci.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') {
-        // Enter heals, as it always has — a hero's health when aimed at one.
-        if (state.calcTarget) { applyHeroCalc(true, ci.value); return; }
-        heal(state.calcResource, ci.value); closeCalc(); renderVitals(); renderDerived(); save();
+        e.preventDefault();
+        // Dice still to roll: Enter rolls them, the same as the Roll key, and
+        // a second Enter heals by what came up. Heal never applies a number
+        // the player has not seen.
+        if (calcPadAmount().needsRoll) { calcRoll(); return; }
+        // Otherwise Enter heals, as it always has — a hero's health when aimed
+        // at one. Through applyCalc(), so the Poison toggle counts here too.
+        applyCalc(true);
       }
       if (e.key === 'Escape') closeCalc();
     });
+    /* ---- a form's number pad (NUMBER PAD) ----------------------------
+       Focus on a number field opens it (Tab included); focus on a field
+       that types TEXT (a name, a note) puts it away, because the phone's
+       own keyboard is about to come up for that one. Focus on a button —
+       Save, Cancel, Add Attack, a checkbox — leaves it be: taking the pad
+       away on the press would move the button out from under the finger
+       before the press lands, and the tap would be lost. A tap on
+       a field that already has focus — after Done, say — opens it again,
+       and selects the value so the next key retypes it: the tap's own
+       click would otherwise drop the selection focusing made. */
+    app.addEventListener('focusin', (e) => {
+      const f = e.target.closest && e.target.closest('[data-numpad]');
+      if (f && numpadHost(f)) { if (numpad.field !== f) openNumpad(f); return; }
+      if (numpad.field && e.target.matches && e.target.matches('textarea, input:not([type="checkbox"]):not([type="radio"])')) closeNumpad();
+    });
+    app.addEventListener('click', (e) => {
+      const f = e.target.closest && e.target.closest('[data-numpad]');
+      if (f && numpadHost(f)) openNumpad(f);
+    });
+    // A press on the pad must not take focus from the field it types into.
+    // The click still happens; only the focus move is cancelled.
+    app.addEventListener('pointerdown', (e) => {
+      if (e.target.closest && e.target.closest('.numpad')) e.preventDefault();
+    });
+    app.addEventListener('input', (e) => {
+      if (e.target.matches && e.target.matches('[data-numpad]')) numpadTyped(e.target);
+    });
+    // Escape puts the pad away. The forms themselves keep Escape inert (see
+    // the Escape rule above), so this cannot close a half-filled form.
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && numpad.field) doneNumpad();
+    });
+
+    // Typed on a desktop keyboard (the keypad writes the field itself): read
+    // back into tokens, so the keypad's delete and die keys carry on from
+    // whatever was typed.
+    if (ci) ci.addEventListener('input', () => calcTyped(ci));
   }
 
   /* ------------------------------------------------------------------ */
@@ -11566,6 +12019,9 @@
     // init() does not matter — it runs here simply because the markup exists.
     loadAccount();
     renderAll();
+    // Before wire(): the number pads' keys must exist for anything that
+    // looks them up while wiring.
+    wireNumpads();
     wire();
     // Back by swipe and by the phone's own gesture — see BACK.
     wireSwipe();

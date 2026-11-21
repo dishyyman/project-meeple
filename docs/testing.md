@@ -112,6 +112,7 @@ project-meeple/
     │   ├── characterization.spec.js-snapshots/   # the recorded baselines
     │   ├── smoke.spec.js      # 2 — Flows 1, 2
     │   ├── data-safety.spec.js # 21 — Flows 6, 7, 7b, 7c (full round trip), 8, 11, 11b (delete → Undo puts the character back whole); a note deleted with Undo; storage refusing writes; held changes; import outcomes; old saves
+    │   ├── calc-keypad.spec.js # 10 — the Health calculator's keypad: opens as a sheet with no device keyboard (inputmode="none"), numbers and sums apply directly, dice must be rolled before Heal/Damage take them, editing drops a roll, the roll written out term by term (a subtracted die too), delete and hold-to-clear, desktop typing and Enter, an unreadable expression applies nothing; Mana's Spend by keypad (the GM's calculator is tapped the same way in party.spec.js)
     │   ├── campaigns.spec.js  # 11 — Flow 14: create, name required, rename, tabs, reorder, delete (list and inside), lists' edit modes kept apart, tampered save, storage refusing writes
     │   ├── compendium.spec.js # 8 — Flow 9; malformed compendiums; launch safety net and its grace period
     │   ├── keyboard.spec.js   # 6 — Enter/Space on custom buttons, Shift+Enter holds
@@ -123,6 +124,7 @@ project-meeple/
     │   ├── feedback.spec.js   # 6 — Settings → Email us: a real mailto: link whose address, subject and body decode exactly, line for line; no player-written text, nothing read off the device; details stamped at the tap; the tap reaches the browser; the copy button copies the address, and says it when the clipboard is refused
     │   ├── frame.spec.js      # 9 — the desktop device preview: iPhone by default, a preset's size remembered and rotated, too big scaled to fit, free size, Fit window fills, the old toggle's choice kept, narrow window locks; manifest + icons resolve; opaque iOS status bar
     │   ├── layout.spec.js     # 25 — every layout band, at ten device sizes (iPhone, SE, on its side, Duo closed/open, iPad mini/Pro, desktop): nothing off the side on any screen, the hero in proportion, two panes exactly where expected; the phone layout unchanged; wide screens keep a readable column and popup sizes; the dice keypad on a phone held sideways; the short hero's uploader; the pull over the side pane
+    │   ├── numpad.spec.js     # 7 — the number pad under the GM's forms: number fields raise it (inputmode="none") and text fields do not, a tapped field is retyped, focus stays in the field, Next walks to Done, ± makes a negative the hero card shows, hold to clear, an attack's To-Hit and Damage (dice keys) saved as written, desktop typing held to digits, Done / Escape / closing the form put it away
     │   ├── phone.spec.js      # 6 — the device projects ONLY (iphone, ipad, ipad-landscape): fills the screen, no preview bar, page never scrolls (campaign screens too), both tab bars on screen, fields ≥16px, Add a Portrait takes a tap
     │   ├── combat.spec.js     # 10 — Flow 18: Start Combat (whole party, counts, sharing a turn, no surprise round), the line (pick, End Turn, a boss's three turns, the round count, kept over a reload), Armor per goblin, down greyed and skipped but pickable, a hero as defences + Wounds with no Health/Mana (a Wound −1 Evasion/−1 Speed, flagged lowered), an enemy's Health + defences (its Wounds cost no stats), the ✎ (manual heal even when down, effects, a Wound cleared, Back to Full), End Fight at the foot, a deleted stat card leaving the fight (and Undo bringing both back — refused once the fight has moved on)
     │   ├── enemies.spec.js    # 9 — Flows 16, 17, 19: the Monster Compendium (stock goblins, tap to add a copy, New Enemy saved to both, removal with Undo, campaign deletes never reach it, backups by id), stat cards made and checked, an enemy crits on a natural 20 only, edit/duplicate/delete, monster files (export, import as copies, refusals, hostile), backups carrying campaigns (restore in place, as copies, campaigns-only)
@@ -285,6 +287,8 @@ Each flow lists the steps and the result that must hold. These are the E2E suite
 | Chrome and Safari (WebKit) | every browser test runs in both |
 | Keyboard: custom buttons, the hold gestures, Wound pips | `e2e/keyboard.spec.js` (real key presses, never `press()`) |
 | Modals as dialogs: semantics, focus in/kept/returned, Escape | `e2e/dialogs.spec.js` |
+| The forms' number pad (GM hero and enemy editors) | `e2e/numpad.spec.js` |
+| The heal / damage calculator's keypad (no device keyboard; roll before apply) | `e2e/calc-keypad.spec.js` — that a real phone keeps its keyboard down is a device check |
 | Automated accessibility (axe-core, WCAG 2.1 A/AA) on every screen and main modal | `e2e/a11y.spec.js` |
 
 **Prioritize:**

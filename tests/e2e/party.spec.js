@@ -48,7 +48,8 @@ const playerSave = (page) => page.evaluate(() => localStorage.getItem('meeple.ch
 async function hit(page, c, amount, { pierce = false } = {}) {
   await c.locator('[data-hero-calc="health"]').click();
   expect(await appAttr(page, 'data-modal')).toBe('calc');
-  await page.fill('[data-calc-input]', String(amount));
+  // Tapped on the calculator's own keypad, as a GM on a phone would.
+  for (const d of String(amount)) await page.locator(`.modal--calc [data-calc-key="${d}"]`).click();
   if (pierce) await page.locator('[data-pierce-toggle]').click();
   await page.locator('.modal--calc [data-calc-apply="damage"]').click();
 }

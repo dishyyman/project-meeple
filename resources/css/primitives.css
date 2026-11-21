@@ -353,13 +353,13 @@
 :where(.icon-btn, .glass-btn, .account__btn, .text-btn, .rule__action, .rule__add,
   .notes-bar__add, .tabbar__btn, .val-box--roll, .portrait-drop,
   .stepper, .vital__track, .wounds__reset, .pip, .patch,
-  .calc-step, .effect-step__btn, .effect-tick, .dossier-row__title, .wiz-chip, .wizard__pip, .step-btn, .fighter__go) {
+  .effect-step__btn, .effect-tick, .dossier-row__title, .wiz-chip, .wizard__pip, .step-btn, .fighter__go) {
   position: relative;
 }
 :where(.icon-btn, .glass-btn, .account__btn, .text-btn, .rule__action, .rule__add,
   .notes-bar__add, .tabbar__btn, .val-box--roll, .portrait-drop,
   .stepper, .vital__track, .wounds__reset, .pip, .patch,
-  .calc-step, .effect-step__btn, .effect-tick, .dossier-row__title, .wiz-chip, .wizard__pip, .step-btn, .fighter__go)::after {
+  .effect-step__btn, .effect-tick, .dossier-row__title, .wiz-chip, .wizard__pip, .step-btn, .fighter__go)::after {
   content: "";
   position: absolute; left: 50%; top: 50%;
   width: max(100%, var(--tap-min)); height: max(100%, var(--tap-min));
