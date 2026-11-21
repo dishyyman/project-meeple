@@ -248,23 +248,97 @@
 /* Cancel | verb, side by side and centred; a notice's single OK spans. The
    buttons are .btn-ghost / .btn-save, which already share the row equally. */
 .alert__actions { flex-shrink: 0; display: flex; gap: var(--space-2-5); align-self: stretch; margin-top: var(--space-2); }
-.calc-row { display: flex; align-items: center; gap: var(--space-2-5); margin-bottom: var(--space-4); }
-.calc-step {
-  flex-shrink: 0; width: 38px; height: 44px; border-radius: 9px; corner-shape: var(--corner-shape);
-  border: 1.5px solid var(--line); background: var(--bg-card); color: var(--accent-bright);
-  font-family: var(--font-label); font-size: var(--fs-display); line-height: 1;
+/* The calculator is a BOTTOM SHEET holding the app's own keypad, so a phone
+   never raises its keyboard over the bars being changed. Built from the two
+   sheets already in this file — the roller's keys and paper, the action
+   sheet's handle, rounding and edge — so it reads as one of them rather than
+   a third kind. (Until 2026-11-20 it was a centred card with a number field
+   and − / + either side; the keypad does the stepping now, and the ±1
+   beside each bar on the sheet stay.) */
+/* Doubled class to beat .modal's align/padding, as .modal--action-sheet. */
+.modal.modal--calc { align-items: flex-end; padding: 0; }
+.modal--calc .modal__card {
+  max-width: var(--sheet-max);
+  max-height: calc(100% - var(--statusbar-clear) - var(--space-6));
+  overflow-y: auto;
+  border-width: 1.5px 0 0; border-color: var(--rule-strong);
+  border-radius: var(--r-modal) var(--r-modal) 0 0;
+  box-shadow: var(--shadow-tray);
+  padding: var(--space-2-5) var(--space-3) calc(var(--space-3) + var(--home-clear));
+  /* How it rises and follows a finger: SHEET MOTION in §12. */
 }
+.calc-grab { margin: 0 auto var(--space-3); }
+.modal--calc .modal__head { padding: 0 var(--space-1); margin-bottom: var(--space-3); }
+.calc-row { margin-bottom: var(--space-3); }
+/* The field is the readout — what you typed, right-aligned as on the roller.
+   A real <input> (type="text", inputmode="none"): a desktop keyboard types
+   into it, a touch screen raises nothing for it. */
 .calc-input {
-  flex: 1; width: 100%; min-width: 0; text-align: center;
+  width: 100%; text-align: right;
   border: 1px solid var(--line-hair); border-radius: 9px; corner-shape: var(--corner-shape); background: var(--bg-input);
-  padding: var(--space-2) var(--space-1-5); font-family: var(--font-display); font-size: var(--fs-hero); color: var(--ink); outline: none;
+  padding: var(--space-2) var(--space-3-5); font-family: var(--font-display); font-size: var(--fs-hero); color: var(--ink); outline: none;
 }
 /* Same focus treatment as .field__input — see the note there. */
 .calc-input:focus-visible { border-color: var(--focus); box-shadow: var(--focus-ring); }
-/* strip number-spinner */
-.calc-input::-webkit-outer-spin-button,
-.calc-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
-.calc-input { -moz-appearance: textfield; }
+.calc-input::placeholder { color: var(--ink-faint); }
+
+/* What the field comes to. .status:empty would hide an empty line, but this
+   one is not always a status — so it holds its height instead, and the keys
+   do not jump up and down as "= 10" comes and goes above them. */
+.calc-out {
+  min-height: 1.5em; margin: calc(-1 * var(--space-2)) 0 var(--space-3);
+  text-align: right;
+  font-family: var(--font-body); font-size: var(--fs-input); line-height: 1.5; color: var(--ink-muted);
+}
+.calc-out__total { display: inline-block; font-family: var(--font-display); color: var(--heading); }
+/* The hint to roll first: a quieter voice than a result. */
+.calc-out__hint { font-style: italic; color: var(--ink-faint); }
+.calc-out .status { display: inline-block; text-align: left; }
+
+.calc-pad { display: flex; flex-direction: column; gap: var(--space-2); margin-bottom: var(--space-3); }
+/* Six dice across, above the number pad — the roller's die keys, in a row.
+   Shared by the calculator and the forms' number pad (§11b). */
+.keypad__dice { display: grid; grid-template-columns: repeat(6, 1fr); gap: var(--space-1-5); }
+.keypad__dice .key { padding: 0; }
+/* Four rows a side here, where the roller has seven: Roll takes one row like
+   every other key rather than the roller's two, and 0 runs the width of the
+   digits as it does on every phone's number pad. */
+.calc-pad .keypad__side { grid-template-rows: repeat(4, 1fr); }
+.calc-pad .key--roll { grid-row: auto; }
+.key--wide { grid-column: 1 / -1; }
+
+/* Roll with no dice to roll, and Heal / Damage with dice still unrolled:
+   aria-disabled rather than `disabled`, so focus survives the press that
+   caused it (as .wounds__reset), and the one app-wide dimming. */
+.calc-pad [aria-disabled="true"],
+.calc-actions [aria-disabled="true"] { opacity: var(--disabled-opacity); box-shadow: none; }
+.calc-pad .key[aria-disabled="true"]:active { transform: none; filter: none; }
+
+/* Short and wide (a phone on its side, the open Duo): the keypad beside the
+   readout rather than under it, as the roller does in §12. The left column
+   is everything that is not the keypad, top to bottom; the last row is
+   flexible, so the keypad's height lands there rather than spacing the
+   readout out. Bands: short, and medium or wider (tokens.css). */
+@container app (height < 700px) and (width >= 600px) {
+  .modal--calc .modal__card {
+    display: grid; align-content: start;
+    grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+    grid-template-rows: repeat(5, auto) 1fr;
+    column-gap: var(--space-3);
+    max-width: calc(var(--sheet-max) * 1.4);
+    max-height: calc(100% - var(--statusbar-clear));
+  }
+  /* align-self: start, or whichever item lands in the flexible last row
+     (Heal / Damage, when Poison and Armor Piercing both show) grows tall. */
+  .modal--calc .modal__card > * { grid-column: 1; align-self: start; }
+  .modal--calc .calc-grab { display: none; }
+  .modal--calc .calc-pad { grid-column: 2; grid-row: 1 / -1; margin-bottom: 0; gap: var(--space-1-5); }
+  .modal--calc .calc-pad .keypad,
+  .modal--calc .calc-pad .keypad__main,
+  .modal--calc .calc-pad .keypad__side { gap: var(--space-1-5); }
+  .modal--calc .calc-pad .key { min-height: 44px; }
+}
+
 .calc-actions { display: flex; gap: var(--space-2-5); }
 .btn-heal, .btn-damage {
   flex: 1; border-radius: var(--r-sm); corner-shape: var(--corner-shape); padding: var(--space-3);
@@ -279,6 +353,91 @@
    Spend keeps the damage red: it is still the bar going down. */
 .modal--calc .modal__card[data-resource="mana"] .btn-heal {
   border-color: var(--mana-deep); background: var(--mana); color: var(--mana-text);
+}
+
+/* ----------------------------------------------------------------- */
+/* 11b. NUMBER PAD — the keypad, docked under a form                  */
+/* ----------------------------------------------------------------- */
+/* Cloned into every modal marked data-numpad-host (wireNumpads() in
+   main.js) as the .modal's own child, beside the form card. Hidden until a
+   number field in the form is focused; then data-numpad-open on the .modal
+   (count | signed | dice) docks it to the bottom edge, and the card above
+   gives up the height and scrolls. The keys are the calculator's (§11). */
+.numpad { display: none; }
+/* A column: the card at the top, the pad at the foot. The pad runs to the
+   screen's edges (wider than the padded column, centred by .modal's
+   align-items), and stops at the sheet width on anything wider. */
+.modal[data-numpad-open] { flex-direction: column; justify-content: flex-start; padding-bottom: 0; }
+.modal[data-numpad-open] > .modal__card { flex: 0 1 auto; min-height: 0; margin-bottom: var(--space-2); }
+.modal[data-numpad-open] > .numpad {
+  display: flex; flex-direction: column; gap: var(--space-2);
+  flex-shrink: 0; margin-top: auto;
+  width: calc(100% + 2 * var(--modal-gutter)); max-width: var(--sheet-max);
+  position: relative;
+  background: var(--bg-page);
+  border-top: 1.5px solid var(--rule-strong);
+  border-radius: var(--r-modal) var(--r-modal) 0 0; corner-shape: var(--corner-shape);
+  box-shadow: var(--shadow-tray);
+  padding: var(--space-2) var(--space-3) calc(var(--space-3) + var(--home-clear));
+  transition: transform 0.22s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.22s ease-out;
+}
+/* Rises like every sheet (SHEET MOTION, §12) — but it is not one: it holds
+   no choice to cancel, so it has no handle and no drag. Done puts it away. */
+@starting-style {
+  .modal[data-numpad-open] > .numpad { transform: translateY(14%); opacity: 0; }
+}
+/* What the pad is typing into, and the way to put it away — the bar a
+   phone's own keyboard carries above it. */
+.numpad__bar { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); padding: 0 var(--space-1); }
+.numpad__for {
+  min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-family: var(--font-label); font-size: var(--fs-small);
+  letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-muted);
+}
+.numpad .keypad__side { grid-template-rows: repeat(4, 1fr); }
+/* Next: a key like the rest, its word in the accent — the colour the bar's
+   Done speaks in, and the way a phone's own keyboard marks its Next key.
+   Not an ember FILL: the form's Save already is one, and with the pad
+   beside the form (a phone on its side) both are on screen together.
+   Scoped to .numpad so it outranks .key, which is written later (§12). */
+.numpad .key--next {
+  color: var(--accent-bright);
+  font-family: var(--font-label); font-size: var(--fs-small);
+  letter-spacing: 0.1em; text-transform: uppercase;
+}
+/* By mode. A number field: ± and a tall Next, no dice, no + / −. A dice
+   field: the dice row and + / −, no ±. */
+.modal[data-numpad-open="count"] .numpad__dice,
+.modal[data-numpad-open="signed"] .numpad__dice,
+.modal[data-numpad-open="count"] .numpad__op,
+.modal[data-numpad-open="signed"] .numpad__op,
+.modal[data-numpad-open="dice"] .numpad__sign { display: none; }
+.modal[data-numpad-open="count"] .key--next,
+.modal[data-numpad-open="signed"] .key--next { grid-row: span 2; }
+/* ± on a field that cannot go below 0: there, dimmed, so the pad keeps its
+   shape from field to field. */
+.numpad [aria-disabled="true"] { opacity: var(--disabled-opacity); box-shadow: none; }
+.numpad .key[aria-disabled="true"]:active { transform: none; filter: none; }
+
+/* Short and wide (a phone on its side, the open Duo): side by side instead —
+   the form on the left, the pad down the right — so the form keeps the
+   screen's height. Bands: short, and medium or wider (tokens.css). */
+@container app (height < 700px) and (width >= 600px) {
+  .modal[data-numpad-open] {
+    flex-direction: row; align-items: stretch; gap: var(--space-3);
+    padding-bottom: var(--modal-gutter);
+  }
+  .modal[data-numpad-open] > .modal__card { flex: 1 1 auto; max-height: 100%; margin: 0; }
+  .modal[data-numpad-open] > .numpad {
+    flex: 0 0 min(46%, var(--sheet-max)); width: auto; margin: 0;
+    overflow-y: auto; gap: var(--space-1-5);
+    border: 1.5px solid var(--rule-strong); border-radius: var(--r-modal);
+    padding-bottom: var(--space-3);
+  }
+  .numpad .keypad,
+  .numpad .keypad__main,
+  .numpad .keypad__side { gap: var(--space-1-5); }
+  .numpad .key { min-height: 44px; }
 }
 
 /* ----------------------------------------------------------------- */
@@ -301,9 +460,9 @@
 }
 
 /* ---- sheet motion ----
-   Both bottom sheets — the action sheets (§11a) and this roller — rise the
-   same way, and it is a TRANSITION, not a keyframe animation. The difference
-   matters the moment a sheet can be grabbed (main.js, "SHEETS — drag to
+   Every bottom sheet — the action sheets (§11a), this roller, and the
+   heal / damage calculator (§11) — rises the same way, and it is a
+   TRANSITION, not a keyframe animation. The difference matters the moment a sheet can be grabbed (main.js, "SHEETS — drag to
    dismiss"): a keyframe animation owns `transform` until it finishes, so a
    finger landing mid-rise would be ignored and then the sheet would jump. A
    transition can be interrupted at any frame, and the next value it is given
@@ -318,13 +477,15 @@
    far toward closed) and lighten as the sheet goes down. JS writes only the
    numbers; what they become is decided here. */
 .action-sheet,
-.dice-sheet {
+.dice-sheet,
+.modal--calc .modal__card {
   transform: translateY(var(--sheet-y, 0px));
   transition: transform 0.22s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.22s ease-out;
 }
 @starting-style {
   .action-sheet,
-  .dice-sheet { transform: translateY(14%); opacity: 0; }
+  .dice-sheet,
+  .modal--calc .modal__card { transform: translateY(14%); opacity: 0; }
 }
 /* data-sheet-drag on the .modal (main.js, "SHEETS — drag to dismiss"):
      drag   a finger holds it — exactly where the finger says, no easing
@@ -335,7 +496,8 @@
    The scrim lightens as the sheet goes down — the room coming back. A drag
    never selects the text it passes over. */
 .modal[data-sheet-drag="drag"] .action-sheet,
-.modal[data-sheet-drag="drag"] .dice-sheet { transition: none; }
+.modal[data-sheet-drag="drag"] .dice-sheet,
+.modal[data-sheet-drag="drag"] .modal__card { transition: none; }
 .modal[data-sheet-drag] { -webkit-user-select: none; user-select: none; }
 .modal[data-sheet-drag] .modal__scrim {
   opacity: calc(1 - var(--sheet-p, 0));
@@ -739,11 +901,13 @@
 
 /* the running total reads provisional until the last die locks... */
 .roll-card__total.is-tumbling,
-.dice-sheet__result.is-tumbling { color: var(--ink-faint); }
+.dice-sheet__result.is-tumbling,
+.calc-out__total.is-tumbling { color: var(--ink-faint); }
 
 /* ...then arrives with a single weighty pop */
 .roll-card__total.is-settled,
-.dice-sheet__result.is-settled { animation: roll-settle 0.34s cubic-bezier(0.2, 1.5, 0.4, 1); }
+.dice-sheet__result.is-settled,
+.calc-out__total.is-settled { animation: roll-settle 0.34s cubic-bezier(0.2, 1.5, 0.4, 1); }
 @keyframes roll-settle {
   from { transform: scale(1.3); }
   to   { transform: scale(1); }
@@ -755,7 +919,8 @@
 @media (prefers-reduced-motion: reduce) {
   .die { transition: none; }
   .roll-card__total.is-settled,
-  .dice-sheet__result.is-settled { animation: none; }
+  .dice-sheet__result.is-settled,
+  .calc-out__total.is-settled { animation: none; }
   /* The sheet still arrives, but by fading in where it already sits — no
      rise. Fade only, as the toast does (toast.css): a change of opacity is
      not movement, and an instant pop would lose the cue that something
@@ -763,10 +928,14 @@
      as the swipe-back's screens do in frame.css): the drag still closes it
      on release, without the sheet travelling. */
   .action-sheet,
-  .dice-sheet { transform: none; transition: opacity 0.22s ease-out; }
+  .dice-sheet,
+  .modal--calc .modal__card,
+  .modal[data-numpad-open] > .numpad { transform: none; transition: opacity 0.22s ease-out; }
   @starting-style {
     .action-sheet,
-    .dice-sheet { transform: none; opacity: 0; }
+    .dice-sheet,
+    .modal--calc .modal__card,
+    .modal[data-numpad-open] > .numpad { transform: none; opacity: 0; }
   }
 }
 

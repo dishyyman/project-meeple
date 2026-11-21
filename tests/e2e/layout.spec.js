@@ -147,7 +147,9 @@ test('a wide screen keeps the content to a readable column, and popups to popup 
 
   await press(page, '[data-calc="health"]');
   await expect.poll(() => appAttr(page, 'data-modal')).toBe('calc');
-  expect((await page.locator('.modal--calc .modal__card').boundingBox()).width).toBeLessThanOrEqual(440);
+  // Health's calculator is a SHEET now (its keypad shape), so it stops at
+  // the sheet width (--sheet-max, 520px), like the roller — not a card's 440.
+  expect((await page.locator('.modal--calc .modal__card').boundingBox()).width).toBeLessThanOrEqual(520);
   await page.keyboard.press('Escape');
 
   await press(page, '.hero__btn-menu');
